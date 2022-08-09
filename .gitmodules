@@ -1,0 +1,4 @@
+[submodule "gcdyn"]
+	path = gcdyn
+	url = https://github.com/matsengrp/gcdyn/
+	branch = 29-sampling
