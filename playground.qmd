@@ -1,0 +1,45 @@
+---
+title: Playground
+author: Thanasi Bakis
+format:
+    html:
+        fig-format: svg
+        fontsize: 1em
+        theme:
+            light: flatly
+            dark: darkly
+        toc: true
+    pdf:
+        fig-dpi: 300
+echo: true
+fig-align: center
+highlight-style: github
+warning: true
+---
+
+```{python}
+from Bio.Nexus.Nexus import Nexus
+from gcdyn.phenotype import DMSPhenotype
+```
+
+```{python}
+phenotype = DMSPhenotype(
+    1,
+    1,
+    336,
+    "https://raw.githubusercontent.com/jbloomlab/Ab-CGGnaive_DMS/main/data/CGGnaive_sites.csv",
+    "gcdyn/notebooks/tdms-linear.model",
+    ["delta_log10_KD", "delta_expression", "delta_psr"],
+    -10.43,
+)
+```
+
+```{python}
+trees = Nexus().read("beast_run/tenseqs.trees")
+# TODO: figure out how to read .trees that include state history
+
+example_sequence = "GAGGTGCAGCTTCAGGAGTCAGGACCTAGCCTCGTGAAACCTTCTCAGACTCTGTCCCTCACCTGTTCTGTCACTGGCGACTCCATCACCAGTGGTTACTGGAACTGGATCCGGAAATTCCCAGGAAATAAACTTGAGTACATGGGGTACATAAGCTACAGTGGTAACTCTTACTCCAATCCATCTCTCAAGAGTCGAGTCTCCATCACTCGAGACACATCCATGAACCAGTACTACCTGCAGTTGAATTCTGTGACTACTGAGGACACAGCCACATATTACTGTGCAAGGGACTTCGATGTCTGGGGCGCAGGGACCACGGTCACCGTCTCCTCAGACATTGTGATGACTCAGTCTCAAAAATTCATGTCCACATCAGTAGGAGACAGGGTCAGCGTCACCTGCAAGGCCAGTCAGAATGTGGGTACTAATGTAGCCTGGTATCAACAGAAACCAGGGCAATCTCCTAAAGCACTGATTTACTCGGCATCCTACAGGTACAGTGGAGTCCCTGATCGCTTCACAGGCAGTGGATCTGGGACAGATTTCACTCTCACCATCAGCAATGTGCAGTCTGAAGACTTGGCAGAGTATTTCTGTCAGCAATATAACAGCTATCCTCTCACGTTCGGCTCGGGGACTAAGCTAGAAATAAAA"
+
+# Alyssa mentioned to use this method
+kd = phenotype.calculate_KD([example_sequence])
+```
