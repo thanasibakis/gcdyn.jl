@@ -18,7 +18,9 @@ warning: true
 ---
 
 ```{python}
-from Bio.Nexus.Nexus import Nexus
+import re
+from collections import namedtuple
+from ete3 import Tree
 from gcdyn.phenotype import DMSPhenotype
 ```
 
@@ -35,11 +37,94 @@ phenotype = DMSPhenotype(
 ```
 
 ```{python}
-trees = Nexus().read("beast_run/tenseqs.trees")
-# TODO: figure out how to read .trees that include state history
+SiteChange = namedtuple("SiteChange", ("when", "from_base", "to_base"))
 
-example_sequence = "GAGGTGCAGCTTCAGGAGTCAGGACCTAGCCTCGTGAAACCTTCTCAGACTCTGTCCCTCACCTGTTCTGTCACTGGCGACTCCATCACCAGTGGTTACTGGAACTGGATCCGGAAATTCCCAGGAAATAAACTTGAGTACATGGGGTACATAAGCTACAGTGGTAACTCTTACTCCAATCCATCTCTCAAGAGTCGAGTCTCCATCACTCGAGACACATCCATGAACCAGTACTACCTGCAGTTGAATTCTGTGACTACTGAGGACACAGCCACATATTACTGTGCAAGGGACTTCGATGTCTGGGGCGCAGGGACCACGGTCACCGTCTCCTCAGACATTGTGATGACTCAGTCTCAAAAATTCATGTCCACATCAGTAGGAGACAGGGTCAGCGTCACCTGCAAGGCCAGTCAGAATGTGGGTACTAATGTAGCCTGGTATCAACAGAAACCAGGGCAATCTCCTAAAGCACTGATTTACTCGGCATCCTACAGGTACAGTGGAGTCCCTGATCGCTTCACAGGCAGTGGATCTGGGACAGATTTCACTCTCACCATCAGCAATGTGCAGTCTGAAGACTTGGCAGAGTATTTCTGTCAGCAATATAACAGCTATCCTCTCACGTTCGGCTCGGGGACTAAGCTAGAAATAAAA"
+def extract_node_histories(tree_line):
+    # `tree_line` contains the raw line from .history.trees
+    # representing all the mutations along the entire tree
 
-# Alyssa mentioned to use this method
-kd = phenotype.calculate_KD([example_sequence])
+    # Forms a list of histories (as strings) along each branch.
+    # Note there are two per branch, one for each mutation history
+    # creating each child
+    node_histories = map(
+        lambda match: match.group(1),
+        re.finditer(
+            r"\[&((?:(?:history_\d+|count)=\{[{}0-9ATGC.,]+\},?)+)\]",
+            tree_line
+        )
+    )
+
+    # Replaces each child's history string with a dict mapping
+    # DNA site position to a list of base changes at that site
+    def form_site_dict(node_history):
+
+        # Replaces the string of base changes with a list of tuples
+        d = dict()
+
+        for match in re.finditer(r"history_(\d+)=\{((?:\{[0-9.,ATGC]+\},?)+)\}", node_history):
+
+            site_changes = []
+
+            for match2 in re.finditer(r"(\{[0-9.,ATGC]+\})+", match.group(2)):
+                for site_change in match2.groups():
+                    # TODO: double check that the order is "from,to"
+                    when, from_base, to_base = site_change[1:-1].split(",")
+                    site_changes.append(SiteChange(float(when), from_base, to_base))
+
+            d[int(match.group(1))] = site_changes
+
+        return d
+    
+    return map(
+        form_site_dict,
+        node_histories
+    )
+```
+
+```{python}
+global_name = "tenseqs"
+trees = dict()
+
+with open(f"beast_run/{global_name}.history.trees") as trees_file:
+    for line in trees_file:
+        if not line.startswith("tree"):
+            continue
+
+        info, tree_line = line.split(" = ")
+
+        sample_num = re.search(r"STATE_(\d+)", info).group(1)
+
+        # ete3 can't read
+        tree = Tree(
+            re.sub(r'\[[a-zA-Z0-9=.\-,&{}_"]+\]', "", tree_line)
+        )
+
+        # TODO: is matching the sequences to postorder traversal correct?
+        nodes = tree.traverse("postorder")
+        sequences = map(
+            lambda match: match.group(1),
+            re.finditer(r'\[&states="([ATGC]+)"\]', tree_line),
+        )
+
+        node_histories = extract_node_histories(tree_line)
+
+        try:
+            while True:
+                node = next(nodes)
+                sequence = next(sequences)
+
+                node.add_features(
+                    sequence = sequence,
+                    kd = phenotype.calculate_KD([sequence])[0]
+                )
+
+                if not node.is_root():
+                    node_history = next(node_histories)
+
+                    node.add_features(history = node_history)
+
+        except StopIteration:
+            pass
+
+        trees[int(sample_num)] = tree
 ```
