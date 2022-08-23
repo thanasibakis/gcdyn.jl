@@ -22,6 +22,7 @@ import re
 from collections import namedtuple
 from ete3 import Tree
 from gcdyn.phenotype import DMSPhenotype
+from tqdm import tqdm
 ```
 
 ```{python}
@@ -37,48 +38,33 @@ phenotype = DMSPhenotype(
 ```
 
 ```{python}
-SiteChange = namedtuple("SiteChange", ("when", "from_base", "to_base"))
+SiteChange = namedtuple("SiteChange", ("when", "where", "from_base", "to_base"))
+
+regex1 = r"\[&((?:(?:history_\d+|count)=\{[{}0-9ATGC.,E-]+\},?)+)\]"
+regex2 = r"history_(\d+)=\{((?:\{[0-9.,ATGC]+\},?)+)\}"
+regex3 = r"(\{[0-9.,ATGC]+\})+"
 
 def extract_node_histories(tree_line):
     # `tree_line` contains the raw line from .history.trees
     # representing all the mutations along the entire tree
 
-    # Forms a list of histories (as strings) along each branch.
-    # Note there are two per branch, one for each mutation history
-    # creating each child
-    node_histories = map(
-        lambda match: match.group(1),
-        re.finditer(
-            r"\[&((?:(?:history_\d+|count)=\{[{}0-9ATGC.,]+\},?)+)\]",
-            tree_line
-        )
-    )
+    node_histories = []
 
-    # Replaces each child's history string with a dict mapping
-    # DNA site position to a list of base changes at that site
-    def form_site_dict(node_history):
+    for match1 in re.finditer(regex1, tree_line):
+        site_changes = []
 
-        # Replaces the string of base changes with a list of tuples
-        d = dict()
+        for match2 in re.finditer(regex2, match1.group(1)):
+            where = int(match2.group(1))
 
-        for match in re.finditer(r"history_(\d+)=\{((?:\{[0-9.,ATGC]+\},?)+)\}", node_history):
-
-            site_changes = []
-
-            for match2 in re.finditer(r"(\{[0-9.,ATGC]+\})+", match.group(2)):
-                for site_change in match2.groups():
+            for match3 in re.finditer(regex3, match2.group(2)):
+                for site_change in match3.groups():
                     # TODO: double check that the order is "from,to"
                     when, from_base, to_base = site_change[1:-1].split(",")
-                    site_changes.append(SiteChange(float(when), from_base, to_base))
+                    site_changes.append(SiteChange(float(when), where, from_base, to_base))
 
-            d[int(match.group(1))] = site_changes
+        node_histories.append(site_changes)
 
-        return d
-    
-    return map(
-        form_site_dict,
-        node_histories
-    )
+    return node_histories
 ```
 
 ```{python}
@@ -86,7 +72,7 @@ global_name = "tenseqs"
 trees = dict()
 
 with open(f"beast_run/{global_name}.history.trees") as trees_file:
-    for line in trees_file:
+    for line in tqdm(trees_file):
         if not line.startswith("tree"):
             continue
 
@@ -106,7 +92,7 @@ with open(f"beast_run/{global_name}.history.trees") as trees_file:
             re.finditer(r'\[&states="([ATGC]+)"\]', tree_line),
         )
 
-        node_histories = extract_node_histories(tree_line)
+        node_histories = iter(extract_node_histories(tree_line))
 
         try:
             while True:
@@ -128,3 +114,4 @@ with open(f"beast_run/{global_name}.history.trees") as trees_file:
 
         trees[int(sample_num)] = tree
 ```
+
