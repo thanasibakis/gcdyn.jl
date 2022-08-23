@@ -115,3 +115,48 @@ with open(f"beast_run/{global_name}.history.trees") as trees_file:
         trees[int(sample_num)] = tree
 ```
 
+```{python}
+expanded_trees = dict()
+
+def apply_site_change(sequence, site_change):
+    index = site_change.where - 1
+    assert sequence[index] == site_change.from_base
+
+    return sequence[:index] + site_change.to_base + sequence[index + 1 :]
+
+for i, tree in trees.items():
+    tree2 = tree.copy()
+
+    # Be sure to make a copy (list()) of the node sequence now,
+    # because we are going to add nodes (that don't need traversing)
+    for parent in list(tree2.traverse("levelorder")):
+
+        # Note that node.history contains the mutations that led *to* this node,
+        # not that follow this node
+        # Note we use get_children() which makes a duplicate list of children,
+        # since we'll be editing children in this loop
+        for child in parent.get_children():
+
+            child.detach()
+
+            history = sorted(child.history,
+                key = lambda site_change: site_change.when,
+                reverse = True # remember time 0 is leaves, and time > 0 is distance to leaves
+            )
+
+            intermediate = parent
+            previous_distance = 0
+
+            for site_change in history[:-1]:
+                new_sequence = apply_site_change(intermediate.sequence, site_change)
+                intermediate = intermediate.add_child(dist = site_change.when - previous_distance)
+
+                intermediate.add_features(
+                    sequence = new_sequence,
+                    kd = phenotype.calculate_KD([sequence])[0]
+                )
+
+            intermediate.add_child(child = child)
+    
+    expanded_trees[i] = tree2
+```
