@@ -1,5 +1,25 @@
-# BiocManager::install(c("treeio", "ggtree"))
-suppressPackageStartupMessages(library(ggtree))
+# BEAST .history.trees information extracter.
+# Tested on R 4.2.
+#
+# Needs installed packages:
+#   - install.packages(c("tidyverse", "BiocManager"))
+#   - BiocManager::install("treeio")
+#
+# Usage:
+#   Rscript beast_to_ete3_helper.R myfile.history.trees my_output_directory/
+#
+# Outputs:
+#   - myfile-structures.nexus, which contains valid tree definitions without
+#     extra data for ete3 to read. The other data is separated into CSV files
+#     for scripted insertion later.
+#   - myfile-ancestry.csv, which describes a system of node numbering for
+#     internal nodes
+#   - myfile-history.csv, which describes site changes along the branch leading
+#     to each node (uses the node numbering in ancestry.csv)
+#   - myfile-states.csv, which lists the genetic sequence values at each node
+#     (uses the node numbering in ancestry.csv)
+
+
 suppressPackageStartupMessages(library(treeio))
 suppressPackageStartupMessages(library(tidyverse))
 

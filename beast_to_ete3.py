@@ -1,3 +1,18 @@
+# BEAST .history.trees --> ete3 trees converter.
+# Tested on python 3.9
+#
+# Usage:
+#   python3 beast_to_ete3.py [myfile.history.trees]
+#
+# Outputs:
+#   - myfile-ete3_trees.pickle, containing a dictionary of ete3 trees
+#     indexed by their ID number
+#   - beast_parser_temp/, a directory containing data files with relevant
+#     tree properties inserted into the ete3 objects, as well as a copy of
+#     the .trees file with some unused information removed (to keep file
+#     size small)
+
+
 import pandas as pd
 import pickle
 import re
