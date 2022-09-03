@@ -1,0 +1,3 @@
+Jax optimization loops run slow when using "Run Cell" to IPython interactive window in 
+a qmd, but not when running the code directly in an independent IPython or in a .ipynb in the notebook 
+editor
