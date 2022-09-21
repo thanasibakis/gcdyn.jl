@@ -30,7 +30,7 @@ phenotype = DMSPhenotype(
     1,
     336,
     "https://raw.githubusercontent.com/jbloomlab/Ab-CGGnaive_DMS/main/data/CGGnaive_sites.csv",
-    "gcdyn/notebooks/tdms-linear.model",
+    "tdms-linear.model", # from gcdyn 29-sampling branch
     ["delta_log10_KD", "delta_expression", "delta_psr"],
     -10.43,
 )
