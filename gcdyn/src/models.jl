@@ -1,40 +1,36 @@
 abstract type AbstractTreeModel end
 
 struct NaiveModel <: AbstractTreeModel
-    λ::Real
-    μ::Real
+    λ::Function
+    μ::Function
+    γ::Function
     ρ::Real
     σ::Real
     present_time::Real
 
-    function NaiveModel(λ, μ, ρ, σ, present_time)
-        if λ < 0 || μ < 0 
-            throw(ArgumentError("Rate parameters must be positive"))
-        elseif ρ < 0 || ρ > 1
+    function NaiveModel(λ, μ, γ, ρ, σ, present_time)
+        if ρ < 0 || ρ > 1
             throw(ArgumentError("ρ must be between 0 and 1"))
         elseif present_time < 0
             throw(ArgumentError("Time must be positive"))
-        end
-
-        if σ != 1
+        elseif σ != 1
             throw(ArgumentError("Naive model assumes σ = 1"))
         end
 
-        return new(λ, μ, ρ, σ, present_time)
+        return new(λ, μ, γ, ρ, σ, present_time)
     end
 end
 
 struct StadlerAppxModel <: AbstractTreeModel
-    λ::Real
-    μ::Real
+    λ::Function
+    μ::Function
+    γ::Function
     ρ::Real
     σ::Real
     present_time::Real
 
-    function StadlerAppxModel(λ, μ, ρ, σ, present_time)
-        if λ < 0 || μ < 0 
-            throw(ArgumentError("Rate parameters must be positive"))
-        elseif ρ < 0 || ρ > 1
+    function StadlerAppxModel(λ, μ, γ, ρ, σ, present_time)
+        if ρ < 0 || ρ > 1
             throw(ArgumentError("ρ must be between 0 and 1"))
         elseif σ < 0 || σ > 1
             throw(ArgumentError("σ must be between 0 and 1"))
@@ -42,21 +38,20 @@ struct StadlerAppxModel <: AbstractTreeModel
             throw(ArgumentError("Time must be positive"))
         end
 
-        return new(λ, μ, ρ, σ, present_time)
+        return new(λ, μ, γ, ρ, σ, present_time)
     end
 end
 
 struct StadlerAppxModelOriginal <: AbstractTreeModel
-    λ::Real
-    μ::Real
+    λ::Function
+    μ::Function
+    γ::Function
     ρ::Real
     σ::Real
     present_time::Real
 
-    function StadlerAppxModelOriginal(λ, μ, ρ, σ, present_time)
-        if λ < 0 || μ < 0 
-            throw(ArgumentError("Rate parameters must be positive"))
-        elseif ρ < 0 || ρ > 1
+    function StadlerAppxModelOriginal(λ, μ, γ, ρ, σ, present_time)
+        if ρ < 0 || ρ > 1
             throw(ArgumentError("ρ must be between 0 and 1"))
         elseif σ < 0 || σ > 1
             throw(ArgumentError("σ must be between 0 and 1"))
@@ -64,7 +59,7 @@ struct StadlerAppxModelOriginal <: AbstractTreeModel
             throw(ArgumentError("Time must be positive"))
         end
 
-        return new(λ, μ, ρ, σ, present_time)
+        return new(λ, μ, γ, ρ, σ, present_time)
     end
 end
 
@@ -74,9 +69,11 @@ end
 
 function Distributions.logpdf(model::NaiveModel, tree::TreeNode)
     result = 0
-    λ, μ, ρ = model.λ, model.μ, model.ρ
+    ρ = model.ρ
 
     for node in AbstractTrees.PostOrderDFS(tree.children[1])
+        λ, μ = model.λ(node.up.phenotype), model.μ(node.up.phenotype)
+
         if node.event == :birth
             result += logpdf(Exponential(1 / (λ + μ)), node.t - node.up.t) + log(λ / (λ + μ))
         elseif node.event == :sampled_death
@@ -95,10 +92,12 @@ end
 
 function Distributions.logpdf(model::StadlerAppxModel, tree::TreeNode)
     result = 0
-    λ, μ, ρ, σ, present_time = model.λ, model.μ, model.ρ, model.σ, model.present_time
+    ρ, σ, present_time = model.ρ, model.σ, model.present_time
 
     for node in AbstractTrees.PostOrderDFS(tree.children[1])
-        Λ = λ + μ
+        λ, μ, γ = model.λ(node.up.phenotype), model.μ(node.up.phenotype), model.γ(node.up.phenotype)
+
+        Λ = λ + μ + γ
         c = √(Λ^2 - 4 * μ * (1 - σ) * λ)
         x = (-Λ - c) / 2
         y = (-Λ + c) / 2
@@ -116,6 +115,8 @@ function Distributions.logpdf(model::StadlerAppxModel, tree::TreeNode)
             result += log(λ)
         elseif node.event == :sampled_death
             result += log(σ) + log(μ)
+        elseif node.event == :mutation
+            result += log(γ) # + mutator.logprob(node)
         elseif node.event == :sampled_survival
             result += log(ρ)
         else
@@ -125,7 +126,9 @@ function Distributions.logpdf(model::StadlerAppxModel, tree::TreeNode)
 
     # Condition on tree not getting rejected as a stub
     # Let p be the extinction (or more generally, emptiness) prob
-    Λ = λ + μ
+    λ, μ, γ = model.λ(tree.phenotype), model.μ(tree.phenotype), model.γ(tree.phenotype)
+
+    Λ = λ + μ + γ
     root_time = present_time - 0
     c = √(Λ^2 - 4 * μ * (1 - σ) * λ)
     x = (-Λ - c) / 2
@@ -138,8 +141,6 @@ function Distributions.logpdf(model::StadlerAppxModel, tree::TreeNode)
         / ((y + λ * (1 - ρ)) * exp(-c * root_time) - (x + λ * (1 - ρ)))
     )
 
-    # p = 1 - (λ - μ) / (λ - μ * exp(-(λ - μ) * present_time))
-
     result -= log(1 - p)
 
     return result
@@ -147,10 +148,12 @@ end
 
 function Distributions.logpdf(model::StadlerAppxModelOriginal, tree::TreeNode)
     result = 0
-    λ, μ, ρ, σ, present_time = model.λ, model.μ, model.ρ, model.σ, model.present_time
+    ρ, σ, present_time = model.ρ, model.σ, model.present_time
 
     for node in AbstractTrees.PostOrderDFS(tree.children[1])
-        Λ = λ + μ
+        λ, μ, γ = model.λ(node.up.phenotype), model.μ(node.up.phenotype), model.γ(node.up.phenotype)
+
+        Λ = λ + μ + γ
         c = √(Λ^2 - 4 * μ * (1 - σ) * λ)
         x = (-Λ - c) / 2
         y = (-Λ + c) / 2
@@ -168,6 +171,8 @@ function Distributions.logpdf(model::StadlerAppxModelOriginal, tree::TreeNode)
             result += log(λ)
         elseif node.event == :sampled_death
             result += log(σ) + log(μ)
+        elseif node.event == :mutation
+            result += log(γ) # + mutator.logprob(node)
         elseif node.event == :sampled_survival
             result += log(ρ)
         else
@@ -184,7 +189,7 @@ function rand_tree(model::AbstractTreeModel, n::Int; reject_stubs::Bool=true)
     i = 1
     while i <= n
         trees[i] = TreeNode(:root, 0, 0)
-        evolve!(trees[i], model.present_time, model.λ, model.μ, model.ρ, model.σ)
+        evolve!(trees[i], model.present_time, model.λ, model.μ, model.γ, model.ρ, model.σ)
         prune!(trees[i])
 
         if reject_stubs && length(trees[i].children) == 0

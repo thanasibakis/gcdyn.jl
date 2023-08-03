@@ -1,7 +1,7 @@
 module gcdyn
 
 using Distributions, Random, StatsBase
-import AbstractTrees #, NaNMath
+import AbstractTrees
 
 export
     TreeNode,

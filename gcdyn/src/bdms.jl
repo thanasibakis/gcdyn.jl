@@ -1,5 +1,5 @@
 MAX_CHILDREN = 2
-EVENTS = [:root, :birth, :sampled_death, :unsampled_death, :sampled_survival, :unsampled_survival]
+EVENTS = [:root, :birth, :sampled_death, :unsampled_death, :mutation, :sampled_survival, :unsampled_survival]
 
 mutable struct TreeNode
     event::Symbol
@@ -44,8 +44,9 @@ Base.show(io::IO, tree::TreeNode) = AbstractTrees.print_tree(io, tree)
 function evolve!(
     root::TreeNode,
     time::Real,
-    λ::Real,
-    μ::Real,
+    λ::Function,
+    μ::Function,
+    γ::Function,
     ρ::Real,
     σ::Real
 )
@@ -53,12 +54,14 @@ function evolve!(
 
     while length(needs_children) > 0
         node = pop!(needs_children)
-        child = sample_child!(node, λ, μ, ρ, σ, time)
+        child = sample_child!(node, λ, μ, γ, ρ, σ, time)
 
         if child.event == :birth
             for _ in 1:MAX_CHILDREN
                 push!(needs_children, child)
             end
+        elseif child.event == :mutation
+            push!(needs_children, child)
         end
     end
 
@@ -91,18 +94,20 @@ function prune!(tree::TreeNode)
     end
 end
 
-function sample_child!(parent::TreeNode, λ::Real, μ::Real, ρ::Real, σ::Real, max_time::Real)
+function sample_child!(parent::TreeNode, λ::Function, μ::Function, γ::Function, ρ::Real, σ::Real, max_time::Real)
     if length(parent.children) == MAX_CHILDREN
         throw(ArgumentError("Can only have $MAX_CHILDREN children max"))
     end
 
-    waiting_time = rand(Exponential(1 / (λ + μ)))
+    λₓ, μₓ, γₓ = λ(parent.phenotype), μ(parent.phenotype), γ(parent.phenotype)
+
+    waiting_time = rand(Exponential(1 / (λₓ + μₓ + γₓ)))
 
     if parent.t + waiting_time > max_time
         event = sample([:sampled_survival, :unsampled_survival], Weights([ρ, 1 - ρ]))
         child = TreeNode(event, max_time, parent.phenotype)
     else
-        event = sample([:birth, :unsampled_death], Weights([λ, μ]))
+        event = sample([:birth, :unsampled_death, :mutation], Weights([λₓ, μₓ, γₓ]))
 
         if event == :unsampled_death && rand() < σ
             event = :sampled_death

@@ -1,12 +1,12 @@
 using gcdyn, Turing, StatsPlots
 
-truth = StadlerAppxModel(1.8, 1, 1, 0, 2);
+truth = StadlerAppxModel(_ -> 1.8, _ -> 1, _ -> 0, 1, 0, 2);
 
 @model function CorrectedModel(trees::Vector{TreeNode})
     λ ~ LogNormal(1.5, 1)
     μ ~ LogNormal(0, 0.3)
     Turing.@addlogprob! loglikelihood(
-        StadlerAppxModel(λ, μ, truth.ρ, truth.σ, truth.present_time),
+        StadlerAppxModel(_ -> λ, _ -> μ, _ -> 0, truth.ρ, truth.σ, truth.present_time),
         trees
     )
 end;
@@ -15,7 +15,7 @@ end;
     λ ~ LogNormal(1.5, 1)
     μ ~ LogNormal(0, 0.3)
     Turing.@addlogprob! loglikelihood(
-        StadlerAppxModelOriginal(λ, μ, truth.ρ, truth.σ, truth.present_time),
+        StadlerAppxModelOriginal(_ -> λ, _ -> μ, _ -> 0, truth.ρ, truth.σ, truth.present_time),
         trees
     )
 end;
