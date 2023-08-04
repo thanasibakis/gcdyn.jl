@@ -4,11 +4,12 @@ struct NaiveModel <: AbstractTreeModel
     λ::Function
     μ::Function
     γ::Function
+    mutator::AbstractMutator
     ρ::Real
     σ::Real
     present_time::Real
 
-    function NaiveModel(λ, μ, γ, ρ, σ, present_time)
+    function NaiveModel(λ, μ, γ, mutator, ρ, σ, present_time)
         if ρ < 0 || ρ > 1
             throw(ArgumentError("ρ must be between 0 and 1"))
         elseif present_time < 0
@@ -17,7 +18,7 @@ struct NaiveModel <: AbstractTreeModel
             throw(ArgumentError("Naive model assumes σ = 1"))
         end
 
-        return new(λ, μ, γ, ρ, σ, present_time)
+        return new(λ, μ, γ, mutator, ρ, σ, present_time)
     end
 end
 
@@ -25,11 +26,12 @@ struct StadlerAppxModel <: AbstractTreeModel
     λ::Function
     μ::Function
     γ::Function
+    mutator::AbstractMutator
     ρ::Real
     σ::Real
     present_time::Real
 
-    function StadlerAppxModel(λ, μ, γ, ρ, σ, present_time)
+    function StadlerAppxModel(λ, μ, γ, mutator, ρ, σ, present_time)
         if ρ < 0 || ρ > 1
             throw(ArgumentError("ρ must be between 0 and 1"))
         elseif σ < 0 || σ > 1
@@ -38,7 +40,7 @@ struct StadlerAppxModel <: AbstractTreeModel
             throw(ArgumentError("Time must be positive"))
         end
 
-        return new(λ, μ, γ, ρ, σ, present_time)
+        return new(λ, μ, γ, mutator, ρ, σ, present_time)
     end
 end
 
@@ -46,11 +48,12 @@ struct StadlerAppxModelOriginal <: AbstractTreeModel
     λ::Function
     μ::Function
     γ::Function
+    mutator::AbstractMutator
     ρ::Real
     σ::Real
     present_time::Real
 
-    function StadlerAppxModelOriginal(λ, μ, γ, ρ, σ, present_time)
+    function StadlerAppxModelOriginal(λ, μ, γ, mutator, ρ, σ, present_time)
         if ρ < 0 || ρ > 1
             throw(ArgumentError("ρ must be between 0 and 1"))
         elseif σ < 0 || σ > 1
@@ -59,11 +62,11 @@ struct StadlerAppxModelOriginal <: AbstractTreeModel
             throw(ArgumentError("Time must be positive"))
         end
 
-        return new(λ, μ, γ, ρ, σ, present_time)
+        return new(λ, μ, γ, mutator, ρ, σ, present_time)
     end
 end
 
-function Distributions.loglikelihood(model::AbstractTreeModel, trees::Vector{TreeNode})
+function StatsBase.loglikelihood(model::AbstractTreeModel, trees::Vector{TreeNode})
     return sum(logpdf(model, tree) for tree in trees)
 end
 
@@ -72,18 +75,21 @@ function Distributions.logpdf(model::NaiveModel, tree::TreeNode)
     ρ = model.ρ
 
     for node in AbstractTrees.PostOrderDFS(tree.children[1])
-        λ, μ = model.λ(node.up.phenotype), model.μ(node.up.phenotype)
+        λ, μ, γ = model.λ(node.up.phenotype), model.μ(node.up.phenotype), model.γ(node.up.phenotype)
+        Λ = λ + μ + γ
 
         if node.event == :birth
-            result += logpdf(Exponential(1 / (λ + μ)), node.t - node.up.t) + log(λ / (λ + μ))
+            result += logpdf(Exponential(1 / Λ), node.t - node.up.t) + log(λ / Λ)
         elseif node.event == :sampled_death
-            result += logpdf(Exponential(1 / (λ + μ)), node.t - node.up.t) + log(μ / (λ + μ))
-        elseif node.event == :unsampled_death
-            throw(ArgumentError("Tree contains unsampled death event"))
+            result += logpdf(Exponential(1 / Λ), node.t - node.up.t) + log(μ / Λ)
+        elseif node.event == :mutation
+            result += logpdf(Exponential(1 / Λ), node.t - node.up.t) + log(γ / Λ) + logpdf(model.mutator, node)
         elseif node.event == :sampled_survival
-            result += log(1 - cdf(Exponential(1 / (λ + μ)), node.t - node.up.t)) + log(ρ)
+            result += log(1 - cdf(Exponential(1 / Λ), node.t - node.up.t)) + log(ρ)
         elseif node.event == :unsampled_survival
-            result += log(1 - cdf(Exponential(1 / (λ + μ)), node.t - node.up.t)) + log(1 - ρ)
+            result += log(1 - cdf(Exponential(1 / Λ), node.t - node.up.t)) + log(1 - ρ)
+        else
+            throw(ArgumentError("Tree contains incompatible event $(node.event)"))
         end
     end
 
@@ -116,7 +122,7 @@ function Distributions.logpdf(model::StadlerAppxModel, tree::TreeNode)
         elseif node.event == :sampled_death
             result += log(σ) + log(μ)
         elseif node.event == :mutation
-            result += log(γ) # + mutator.logprob(node)
+            result += log(γ) + logpdf(model.mutator, node)
         elseif node.event == :sampled_survival
             result += log(ρ)
         else
@@ -172,7 +178,7 @@ function Distributions.logpdf(model::StadlerAppxModelOriginal, tree::TreeNode)
         elseif node.event == :sampled_death
             result += log(σ) + log(μ)
         elseif node.event == :mutation
-            result += log(γ) # + mutator.logprob(node)
+            result += log(γ) + logpdf(model.mutator, node)
         elseif node.event == :sampled_survival
             result += log(ρ)
         else
@@ -183,13 +189,13 @@ function Distributions.logpdf(model::StadlerAppxModelOriginal, tree::TreeNode)
     return result
 end
 
-function rand_tree(model::AbstractTreeModel, n::Int; reject_stubs::Bool=true)
+function rand_tree(model::AbstractTreeModel, n::Int, init_phenotype::Any; reject_stubs::Bool=true)
     trees = Vector{TreeNode}(undef, n)
 
     i = 1
     while i <= n
-        trees[i] = TreeNode(:root, 0, 0)
-        evolve!(trees[i], model.present_time, model.λ, model.μ, model.γ, model.ρ, model.σ)
+        trees[i] = TreeNode(:root, 0, init_phenotype)
+        evolve!(trees[i], model.present_time, model.λ, model.μ, model.γ, model.mutator, model.ρ, model.σ)
         prune!(trees[i])
 
         if reject_stubs && length(trees[i].children) == 0

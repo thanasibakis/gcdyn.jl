@@ -30,6 +30,37 @@ function TreeNode(phenotype)
     return TreeNode(:root, 0, phenotype, [], nothing, false)
 end
 
+abstract type AbstractMutator end
+
+struct DiscreteMutator <: AbstractMutator
+    state_space::Vector
+    transition_matrix::Matrix{Real}
+
+    function DiscreteMutator(state_space, transition_matrix)
+        if length(state_space) < 2
+            throw(ArgumentError("The state space must contain at least two states."))
+        elseif length(state_space) != size(transition_matrix, 1)
+            throw(DimensionMismatch("The number of states in the state space must match the number of rows in the transition matrix."))
+        elseif length(state_space) != size(transition_matrix, 2)
+            throw(DimensionMismatch("The number of states in the state space must match the number of columns in the transition matrix."))
+        elseif any(transition_matrix .< 0) || any(transition_matrix .> 1)
+            throw(ArgumentError("The transition matrix must contain only values between 0 and 1."))
+        elseif any(sum(transition_matrix, dims=2) .!= 1)
+            throw(ArgumentError("The transition matrix must contain only rows that sum to 1."))
+        elseif any(!=(0), transition_matrix[i,i] for i in minimum(axes(transition_matrix)))
+            throw(ArgumentError("The transition matrix must contain only zeros on the diagonal."))
+        end
+
+        new(state_space, transition_matrix)
+    end
+end
+
+function DiscreteMutator(state_space::AbstractVector)
+    transition_matrix = (ones(length(state_space), length(state_space)) - I) / (length(state_space) - 1)
+
+    return DiscreteMutator(state_space, transition_matrix)
+end
+
 # Implemented to get access to AbstractTrees API
 AbstractTrees.parent(node::TreeNode) = node.up
 AbstractTrees.children(node::TreeNode) = node.children
@@ -47,6 +78,7 @@ function evolve!(
     λ::Function,
     μ::Function,
     γ::Function,
+    mutator::AbstractMutator,
     ρ::Real,
     σ::Real
 )
@@ -54,7 +86,7 @@ function evolve!(
 
     while length(needs_children) > 0
         node = pop!(needs_children)
-        child = sample_child!(node, λ, μ, γ, ρ, σ, time)
+        child = sample_child!(node, λ, μ, γ, mutator, ρ, σ, time)
 
         if child.event == :birth
             for _ in 1:MAX_CHILDREN
@@ -94,7 +126,7 @@ function prune!(tree::TreeNode)
     end
 end
 
-function sample_child!(parent::TreeNode, λ::Function, μ::Function, γ::Function, ρ::Real, σ::Real, max_time::Real)
+function sample_child!(parent::TreeNode, λ::Function, μ::Function, γ::Function, mutator::AbstractMutator, ρ::Real, σ::Real, max_time::Real)
     if length(parent.children) == MAX_CHILDREN
         throw(ArgumentError("Can only have $MAX_CHILDREN children max"))
     end
@@ -114,10 +146,31 @@ function sample_child!(parent::TreeNode, λ::Function, μ::Function, γ::Functio
         end
 
         child = TreeNode(event, parent.t + waiting_time, parent.phenotype)
+
+        if event == :mutation
+            mutate!(mutator, child)
+        end
     end
 
     push!(parent.children, child)
     child.up = parent
 
     return child
+end
+
+function mutate!(mutator::DiscreteMutator, node::TreeNode)
+    if node.phenotype ∉ mutator.state_space
+        throw(ArgumentError("The phenotype of the node must be in the state space of the mutator."))
+    end
+
+    transition_probs = mutator.transition_matrix[findfirst(mutator.state_space .== node.phenotype), :]
+    node.phenotype = sample(mutator.state_space, Weights(transition_probs))
+end
+
+function Distributions.logpdf(mutator::DiscreteMutator, node::TreeNode)
+    if node.phenotype ∉ mutator.state_space || node.up.phenotype ∉ mutator.state_space
+        throw(ArgumentError("The phenotype of the node must be in the state space of the mutator."))
+    end
+
+    return log(mutator.transition_matrix[findfirst(mutator.state_space .== node.up.phenotype), findfirst(mutator.state_space .== node.phenotype)])
 end

@@ -1,6 +1,6 @@
 module gcdyn
 
-using Distributions, Random, StatsBase
+using Distributions, LinearAlgebra, Random, StatsBase
 import AbstractTrees
 
 export
@@ -8,6 +8,9 @@ export
     AbstractTreeModel,
     NaiveModel,
     StadlerAppxModel,
+    AbstractMutator,
+    DiscreteMutator,
+    GaussianMutator,
 
     rand_tree,
     loglikelihood,
