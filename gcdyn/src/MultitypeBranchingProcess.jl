@@ -51,7 +51,7 @@ function StatsBase.loglikelihood(
     return sum(logpdf(model, tree) for tree in trees)
 end
 
-function Distributions.logpdf(model::MultitypeBranchingProcess, tree::TreeNode)
+function Distributions.logpdf(model::MultitypeBranchingProcess, tree::TreeNode; reltol = 1e-8, abstol = 1e-8)
     λ = model.λ
     μ = model.μ
     γ = model.γ
@@ -100,7 +100,9 @@ function Distributions.logpdf(model::MultitypeBranchingProcess, tree::TreeNode)
                 (0, present_time - leaf.t)
             ),
             Tsit5();
-            save_everystep = false
+            save_everystep = false,
+            reltol = reltol,
+            abstol = abstol
         )
 
         p_end[leaf] = p.u[end][:]
@@ -143,7 +145,9 @@ function Distributions.logpdf(model::MultitypeBranchingProcess, tree::TreeNode)
                 event.up.phenotype
             ),
             Tsit5();
-            save_everystep = false
+            save_everystep = false,
+            reltol = reltol,
+            abstol = abstol
         )
 
         p_start[event] = pq.u[end][1:end-1]
@@ -161,7 +165,9 @@ function Distributions.logpdf(model::MultitypeBranchingProcess, tree::TreeNode)
             (0, present_time)
         ),
         Tsit5();
-        save_everystep = false
+        save_everystep = false,
+        reltol = reltol,
+        abstol = abstol
     )
 
     p_i = p.u[end][findfirst(state_space .== tree.phenotype)]
