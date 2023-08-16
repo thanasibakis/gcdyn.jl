@@ -1,23 +1,23 @@
-using gcdyn, Turing, StatsPlots
+using gcdyn, Turing, StatsPlots;
 
-truth = StadlerAppxModel(_ -> 1.8, _ -> 1, _ -> 0, 1, 0, 2);
+truth = MultitypeBranchingProcess(1.8, 1, 0, 1:2, 1, 0, 2);
 
 @model function CorrectedModel(trees::Vector{TreeNode})
     λ ~ LogNormal(1.5, 1)
     μ ~ LogNormal(0, 0.3)
-    Turing.@addlogprob! loglikelihood(
-        StadlerAppxModel(_ -> λ, _ -> μ, _ -> 0, truth.ρ, truth.σ, truth.present_time),
-        trees
-    )
+
+    sampled_model = MultitypeBranchingProcess(λ, μ, truth.γ, truth.state_space, truth.ρ, truth.σ, truth.present_time)
+
+    Turing.@addlogprob! sum(gcdyn.stadler_appx_loglikelhood(sampled_model, tree) for tree in trees)
 end;
 
 @model function OriginalModel(trees::Vector{TreeNode})
     λ ~ LogNormal(1.5, 1)
     μ ~ LogNormal(0, 0.3)
-    Turing.@addlogprob! loglikelihood(
-        StadlerAppxModelOriginal(_ -> λ, _ -> μ, _ -> 0, truth.ρ, truth.σ, truth.present_time),
-        trees
-    )
+
+    sampled_model = MultitypeBranchingProcess(λ, μ, truth.γ, truth.state_space, truth.ρ, truth.σ, truth.present_time)
+
+    Turing.@addlogprob! sum(gcdyn.stadler_appx_unconditioned_loglikelhood(sampled_model, tree) for tree in trees)
 end;
 
 NUM_TREESETS = 400;
@@ -45,15 +45,20 @@ chns = Dict(
 sample_model(model) = sample(
     model,
     MH(
-        :λ => x -> LogNormal(log(x), 0.1),
-        :μ => x -> LogNormal(log(x), 0.1)
+        :λ => x -> LogNormal(log(x), 0.2),
+        :μ => x -> LogNormal(log(x), 0.3)
     ),
     2000
 );
 
 for (num_trees, chns_dict) in chns
     Threads.@threads for i in 1:NUM_TREESETS
-        trees = rand_tree(truth, num_trees)
+        trees = rand_tree(truth, num_trees, truth.state_space[1])
+
+        if num_trees == 1
+            trees = [trees]
+        end
+
         chns_dict[:corrected][i] = sample_model(CorrectedModel(trees))
         chns_dict[:original][i] = sample_model(OriginalModel(trees))
     end

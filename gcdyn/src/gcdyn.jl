@@ -9,9 +9,7 @@ export
 
     rand_tree,
     loglikelihood,
-    logpdf,
-    stadler_appx_loglikelhood,
-    naive_loglikelihood
+    logpdf
 
 include("TreeNode.jl")
 include("MultitypeBranchingProcess.jl")

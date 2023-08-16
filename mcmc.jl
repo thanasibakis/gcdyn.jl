@@ -1,4 +1,4 @@
-using gcdyn, DataFrames, Turing, StatsPlots
+using gcdyn, DataFrames, Turing, StatsPlots;
 
 truth = MultitypeBranchingProcess(2, 1, 0, 1:3, 1, 0, 2);
 
@@ -22,7 +22,7 @@ end;
         λ, μ, truth.γ, truth.state_space, truth.transition_matrix, truth.ρ, truth.σ, truth.present_time
     )
 
-    Turing.@addlogprob! sum(stadler_appx_loglikelhood(sampled_model, tree) for tree in trees)
+    Turing.@addlogprob! sum(gcdyn.stadler_appx_loglikelhood(sampled_model, tree) for tree in trees)
 end;
 
 trees = rand_tree(truth, 50, truth.state_space[1]);

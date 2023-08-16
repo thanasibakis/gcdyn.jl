@@ -90,11 +90,11 @@ end
 
 function stadler_appx_unconditioned_loglikelhood(model::MultitypeBranchingProcess, tree::TreeNode)
     result = 0
-    ρ, σ, present_time = model.parameters.ρ, model.parameters.σ, model.parameters.present_time
+    ρ, σ, present_time = model.ρ, model.σ, model.present_time
     state_space, transition_matrix = model.state_space, model.transition_matrix
 
     for node in AbstractTrees.PostOrderDFS(tree.children[1])
-        λ, μ, γ = model.parameters.λ(node.up.phenotype), model.parameters.μ(node.up.phenotype), model.parameters.γ(node.up.phenotype)
+        λ, μ, γ = model.λ(node.up.phenotype), model.μ(node.up.phenotype), model.γ(node.up.phenotype)
 
         Λ = λ + μ + γ
         c = √(Λ^2 - 4 * μ * (1 - σ) * λ)
