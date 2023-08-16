@@ -1,78 +1,9 @@
-abstract type AbstractTreeModel end
+# Implements various alternative densities for a MultitypeBranchingProcess
 
-struct NaiveModel <: AbstractTreeModel
-    λ::Function
-    μ::Function
-    γ::Function
-    mutator::AbstractMutator
-    ρ::Real
-    σ::Real
-    present_time::Real
-
-    function NaiveModel(λ, μ, γ, mutator, ρ, σ, present_time)
-        if ρ < 0 || ρ > 1
-            throw(ArgumentError("ρ must be between 0 and 1"))
-        elseif present_time < 0
-            throw(ArgumentError("Time must be positive"))
-        elseif σ != 1
-            throw(ArgumentError("Naive model assumes σ = 1"))
-        end
-
-        return new(λ, μ, γ, mutator, ρ, σ, present_time)
-    end
-end
-
-struct StadlerAppxModel <: AbstractTreeModel
-    λ::Function
-    μ::Function
-    γ::Function
-    mutator::AbstractMutator
-    ρ::Real
-    σ::Real
-    present_time::Real
-
-    function StadlerAppxModel(λ, μ, γ, mutator, ρ, σ, present_time)
-        if ρ < 0 || ρ > 1
-            throw(ArgumentError("ρ must be between 0 and 1"))
-        elseif σ < 0 || σ > 1
-            throw(ArgumentError("σ must be between 0 and 1"))
-        elseif present_time < 0
-            throw(ArgumentError("Time must be positive"))
-        end
-
-        return new(λ, μ, γ, mutator, ρ, σ, present_time)
-    end
-end
-
-struct StadlerAppxModelOriginal <: AbstractTreeModel
-    λ::Function
-    μ::Function
-    γ::Function
-    mutator::AbstractMutator
-    ρ::Real
-    σ::Real
-    present_time::Real
-
-    function StadlerAppxModelOriginal(λ, μ, γ, mutator, ρ, σ, present_time)
-        if ρ < 0 || ρ > 1
-            throw(ArgumentError("ρ must be between 0 and 1"))
-        elseif σ < 0 || σ > 1
-            throw(ArgumentError("σ must be between 0 and 1"))
-        elseif present_time < 0
-            throw(ArgumentError("Time must be positive"))
-        end
-
-        return new(λ, μ, γ, mutator, ρ, σ, present_time)
-    end
-end
-
-function StatsBase.loglikelihood(model::AbstractTreeModel, trees::Vector{TreeNode})
-    return sum(logpdf(model, tree) for tree in trees)
-end
-
-function Distributions.logpdf(model::NaiveModel, tree::TreeNode)
+function naive_loglikelihood(model::MultitypeBranchingProcess, tree::TreeNode)
     result = 0
     ρ = model.ρ
+    state_space, transition_matrix = model.state_space, model.transition_matrix
 
     for node in AbstractTrees.PostOrderDFS(tree.children[1])
         λ, μ, γ = model.λ(node.up.phenotype), model.μ(node.up.phenotype), model.γ(node.up.phenotype)
@@ -83,7 +14,9 @@ function Distributions.logpdf(model::NaiveModel, tree::TreeNode)
         elseif node.event == :sampled_death
             result += logpdf(Exponential(1 / Λ), node.t - node.up.t) + log(μ / Λ)
         elseif node.event == :mutation
-            result += logpdf(Exponential(1 / Λ), node.t - node.up.t) + log(γ / Λ) + logpdf(model.mutator, node)
+            mutation_prob = transition_matrix[findfirst(state_space .== node.up.phenotype), findfirst(state_space .== node.phenotype)]
+
+            result += logpdf(Exponential(1 / Λ), node.t - node.up.t) + log(γ / Λ) + log(mutation_prob)
         elseif node.event == :sampled_survival
             result += log(1 - cdf(Exponential(1 / Λ), node.t - node.up.t)) + log(ρ)
         elseif node.event == :unsampled_survival
@@ -96,9 +29,10 @@ function Distributions.logpdf(model::NaiveModel, tree::TreeNode)
     return result
 end
 
-function Distributions.logpdf(model::StadlerAppxModel, tree::TreeNode)
+function stadler_appx_loglikelhood(model::MultitypeBranchingProcess, tree::TreeNode)
     result = 0
     ρ, σ, present_time = model.ρ, model.σ, model.present_time
+    state_space, transition_matrix = model.state_space, model.transition_matrix
 
     for node in AbstractTrees.PostOrderDFS(tree.children[1])
         λ, μ, γ = model.λ(node.up.phenotype), model.μ(node.up.phenotype), model.γ(node.up.phenotype)
@@ -122,7 +56,9 @@ function Distributions.logpdf(model::StadlerAppxModel, tree::TreeNode)
         elseif node.event == :sampled_death
             result += log(σ) + log(μ)
         elseif node.event == :mutation
-            result += log(γ) + logpdf(model.mutator, node)
+            mutation_prob = transition_matrix[findfirst(state_space .== node.up.phenotype), findfirst(state_space .== node.phenotype)]
+
+            result += log(γ) + log(mutation_prob)
         elseif node.event == :sampled_survival
             result += log(ρ)
         else
@@ -152,12 +88,13 @@ function Distributions.logpdf(model::StadlerAppxModel, tree::TreeNode)
     return result
 end
 
-function Distributions.logpdf(model::StadlerAppxModelOriginal, tree::TreeNode)
+function stadler_appx_unconditioned_loglikelhood(model::MultitypeBranchingProcess, tree::TreeNode)
     result = 0
-    ρ, σ, present_time = model.ρ, model.σ, model.present_time
+    ρ, σ, present_time = model.parameters.ρ, model.parameters.σ, model.parameters.present_time
+    state_space, transition_matrix = model.state_space, model.transition_matrix
 
     for node in AbstractTrees.PostOrderDFS(tree.children[1])
-        λ, μ, γ = model.λ(node.up.phenotype), model.μ(node.up.phenotype), model.γ(node.up.phenotype)
+        λ, μ, γ = model.parameters.λ(node.up.phenotype), model.parameters.μ(node.up.phenotype), model.parameters.γ(node.up.phenotype)
 
         Λ = λ + μ + γ
         c = √(Λ^2 - 4 * μ * (1 - σ) * λ)
@@ -178,7 +115,9 @@ function Distributions.logpdf(model::StadlerAppxModelOriginal, tree::TreeNode)
         elseif node.event == :sampled_death
             result += log(σ) + log(μ)
         elseif node.event == :mutation
-            result += log(γ) + logpdf(model.mutator, node)
+            mutation_prob = transition_matrix[findfirst(state_space .== node.up.phenotype), findfirst(state_space .== node.phenotype)]
+
+            result += log(γ) + log(mutation_prob)
         elseif node.event == :sampled_survival
             result += log(ρ)
         else
@@ -187,23 +126,4 @@ function Distributions.logpdf(model::StadlerAppxModelOriginal, tree::TreeNode)
     end
 
     return result
-end
-
-function rand_tree(model::AbstractTreeModel, n::Int, init_phenotype::Any; reject_stubs::Bool=true)
-    trees = Vector{TreeNode}(undef, n)
-
-    i = 1
-    while i <= n
-        trees[i] = TreeNode(:root, 0, init_phenotype)
-        evolve!(trees[i], model.present_time, model.λ, model.μ, model.γ, model.mutator, model.ρ, model.σ)
-        prune!(trees[i])
-
-        if reject_stubs && length(trees[i].children) == 0
-            continue
-        end
-
-        i += 1
-    end
-
-    return trees
 end
