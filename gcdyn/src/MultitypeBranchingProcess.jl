@@ -51,7 +51,7 @@ function StatsBase.loglikelihood(
     return sum(logpdf(model, tree) for tree in trees)
 end
 
-function Distributions.logpdf(model::MultitypeBranchingProcess, tree::TreeNode; reltol = 1e-8, abstol = 1e-8)
+function Distributions.logpdf(model::MultitypeBranchingProcess, tree::TreeNode; reltol = 1e-6, abstol = 1e-6)
     λ = model.λ
     μ = model.μ
     γ = model.γ
@@ -69,9 +69,9 @@ function Distributions.logpdf(model::MultitypeBranchingProcess, tree::TreeNode; 
                 + μ.(state_space)
             )
             .* p
-            + μ.(state_space) .* (1 - σ)
+            + μ.(state_space) * (1 - σ)
             + λ.(state_space) .* p.^2
-            + γ.(state_space) .* sum(transition_matrix * p; dims=2)
+            + γ.(state_space) .* (transition_matrix * p)
         )
     end
 
@@ -85,7 +85,8 @@ function Distributions.logpdf(model::MultitypeBranchingProcess, tree::TreeNode; 
             + μ(parent_phenotype)
         ) * q_i + 2 * λ(parent_phenotype) * q_i * p[findfirst(state_space .== parent_phenotype)]
 
-        dp_dt!(dpq[1:end-1], p, nothing, t)
+        # Need to pass a view instead of a slice, to pass by reference instead of value
+        dp_dt!(view(dpq, 1:lastindex(dpq)-1), p, nothing, t)
         dpq[end] = dq_i
     end
 
@@ -243,7 +244,7 @@ function rand_tree(
 
     # If we're rejecting stubs and have one, try again
     if reject_stubs && length(root.children) == 0
-        return rand_tree(model, init_phenotype)
+        return rand_tree(model, init_phenotype; reject_stubs = true)
     end
 
     return root

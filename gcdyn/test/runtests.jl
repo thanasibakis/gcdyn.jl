@@ -28,8 +28,18 @@ function test_fully_observed_likelihoods(n::Int, λ, μ, γ, state_space::Abstra
     @test naive_ll ≈ appx_ll atol=1e-1
 end
 
+function test_stadler_likelihoods(n::Int, λ, μ, present_time::Real)
+    model = MultitypeBranchingProcess(λ, μ, 0, 1:2, 1, 0, present_time)
+    trees = rand_tree(model, n, 1)
+
+    appx_ll = sum(stadler_appx_loglikelhood(model, tree) for tree in trees)
+
+    @test loglikelihood(model, trees) ≈ appx_ll atol=1e-1
+end
+
 @testset "gcdyn" begin
     test_rand_tree(10000, 2.5, 1.1, 2)
     test_fully_observed_likelihoods(1000, 2.5, 1.1, 0, 1:3, 1)
     test_fully_observed_likelihoods(1000, x -> x, 1.1, 2, 1:3, 1)
+    test_stadler_likelihoods(1000, 2.5, 1.1, 1)
 end
