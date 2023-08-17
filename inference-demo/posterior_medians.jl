@@ -16,7 +16,7 @@ expit(x) = 1 / (1 + exp(-x))
 sigmoid(x, xscale, xshift, yscale, yshift) = yscale * expit(xscale * (x - xshift)) + yshift
 
 const λ_truth = x -> sigmoid(x, true_params[:xscale], true_params[:xshift], true_params[:yscale], true_params[:yshift])
-const truth = MultitypeBranchingProcess(λ_truth, true_params[:mu], 2, [2, 4, 6, 8], 1, 0, 2)
+const truth = MultitypeBranchingProcess(λ_truth, true_params[:μ], 2, [2, 4, 6, 8], 1, 0, 2)
 
 @model function FullModel(trees::Vector{TreeNode})
     xscale ~ Gamma(2, 1)
