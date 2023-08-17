@@ -21,8 +21,8 @@ function test_fully_observed_likelihoods(n::Int, λ, μ, γ, state_space::Abstra
     model = MultitypeBranchingProcess(λ, μ, γ, state_space, 1, 1, present_time)
     trees = rand_tree(model, n, state_space[1])
 
-    naive_ll = sum(naive_loglikelihood(model, tree) for tree in trees)
-    appx_ll = sum(stadler_appx_loglikelhood(model, tree) for tree in trees)
+    naive_ll = sum(gcdyn.naive_loglikelihood(model, tree) for tree in trees)
+    appx_ll = sum(gcdyn.stadler_appx_loglikelhood(model, tree) for tree in trees)
 
     @test loglikelihood(model, trees) ≈ naive_ll atol=1e-1
     @test naive_ll ≈ appx_ll atol=1e-1
@@ -32,7 +32,7 @@ function test_stadler_likelihoods(n::Int, λ, μ, present_time::Real)
     model = MultitypeBranchingProcess(λ, μ, 0, 1:2, 1, 0, present_time)
     trees = rand_tree(model, n, 1)
 
-    appx_ll = sum(stadler_appx_loglikelhood(model, tree) for tree in trees)
+    appx_ll = sum(gcdyn.stadler_appx_loglikelhood(model, tree) for tree in trees)
 
     @test loglikelihood(model, trees) ≈ appx_ll atol=1e-1
 end

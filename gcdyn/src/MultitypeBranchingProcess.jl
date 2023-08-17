@@ -10,7 +10,7 @@ struct MultitypeBranchingProcess
     σ::Real
     present_time::Real
 
-    function MultitypeBranchingProcess(λ, μ, γ, state_space, transition_matrix, ρ, σ, present_time)
+    function MultitypeBranchingProcess(λ::Union{Real, Function}, μ::Union{Real, Function}, γ::Union{Real, Function}, state_space, transition_matrix, ρ, σ, present_time)
         if ρ < 0 || ρ > 1
             throw(ArgumentError("ρ must be between 0 and 1"))
         elseif σ < 0 || σ > 1
@@ -29,11 +29,17 @@ struct MultitypeBranchingProcess
             throw(ArgumentError("The transition matrix must contain only zeros on the diagonal."))
         end
 
+        # Convert scalars to constant functions
         λ⁺::Function = isa(λ, Function) ? λ : _ -> λ
         μ⁺::Function = isa(μ, Function) ? μ : _ -> μ
         γ⁺::Function = isa(γ, Function) ? γ : _ -> γ
 
-        return new(λ⁺, μ⁺, γ⁺, state_space, transition_matrix, ρ, σ, present_time)
+        # Ensure functions return floating point numbers
+        λ⁺⁺ = x -> convert(AbstractFloat, λ⁺(x))
+        μ⁺⁺ = x -> convert(AbstractFloat, μ⁺(x))
+        γ⁺⁺ = x -> convert(AbstractFloat, γ⁺(x))
+
+        return new(λ⁺⁺, μ⁺⁺, γ⁺⁺, state_space, transition_matrix, ρ, σ, present_time)
     end
 end
 

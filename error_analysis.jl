@@ -55,10 +55,6 @@ for (num_trees, chns_dict) in chns
     Threads.@threads for i in 1:NUM_TREESETS
         trees = rand_tree(truth, num_trees, truth.state_space[1])
 
-        if num_trees == 1
-            trees = [trees]
-        end
-
         chns_dict[:corrected][i] = sample_model(CorrectedModel(trees))
         chns_dict[:original][i] = sample_model(OriginalModel(trees))
     end
