@@ -1,5 +1,4 @@
-using gcdyn, StatsBase, Test
-import AbstractTrees
+using gcdyn, AbstractTrees, StatsBase, Test
 
 function test_rand_tree(n::Int, λ::Real, μ::Real, present_time::Real)
     # Assumes ρ = 1. σ should not matter
@@ -9,7 +8,7 @@ function test_rand_tree(n::Int, λ::Real, μ::Real, present_time::Real)
     
     # Expected number of survivors should check out
     observed = map(trees) do tree
-        sum([1 for node in AbstractTrees.Leaves(tree) if node.event == :sampled_survival])
+        sum([1 for node in Leaves(tree) if node.event == :sampled_survival])
     end
 
     theoretical = exp(present_time * (λ - μ))

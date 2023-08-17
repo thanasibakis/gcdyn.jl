@@ -1,12 +1,19 @@
-# Implements various alternative densities for a MultitypeBranchingProcess
+# Alternate likelihoods for multitype branching processes, with various assumptions.
 
+"""
+```julia
+naive_loglikelihood(model, tree)
+```
+
+Compute the log-likelihood of the given model under the assumption that the given tree is fully observed (ie. all nodes are sampled, dead or not).
+"""
 function naive_loglikelihood(model::MultitypeBranchingProcess, tree::TreeNode)
     result = 0
     ρ = model.ρ
     state_space, transition_matrix = model.state_space, model.transition_matrix
 
-    for node in AbstractTrees.PostOrderDFS(tree.children[1])
-        λ, μ, γ = model.λ(node.up.phenotype), model.μ(node.up.phenotype), model.γ(node.up.phenotype)
+    for node in PostOrderDFS(tree.children[1])
+        λ, μ, γ = model.λ(node.up.state), model.μ(node.up.state), model.γ(node.up.state)
         Λ = λ + μ + γ
 
         if node.event == :birth
@@ -14,7 +21,7 @@ function naive_loglikelihood(model::MultitypeBranchingProcess, tree::TreeNode)
         elseif node.event == :sampled_death
             result += logpdf(Exponential(1 / Λ), node.t - node.up.t) + log(μ / Λ)
         elseif node.event == :mutation
-            mutation_prob = transition_matrix[findfirst(state_space .== node.up.phenotype), findfirst(state_space .== node.phenotype)]
+            mutation_prob = transition_matrix[findfirst(state_space .== node.up.state), findfirst(state_space .== node.state)]
 
             result += logpdf(Exponential(1 / Λ), node.t - node.up.t) + log(γ / Λ) + log(mutation_prob)
         elseif node.event == :sampled_survival
@@ -29,13 +36,22 @@ function naive_loglikelihood(model::MultitypeBranchingProcess, tree::TreeNode)
     return result
 end
 
+"""
+```julia
+stadler_appx_loglikelhood(model, tree)
+```
+
+Compute the log-likelihood of the given model under the assumption that all mutation nodes have at least one sampled descendant.
+
+Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
+"""
 function stadler_appx_loglikelhood(model::MultitypeBranchingProcess, tree::TreeNode)
     result = 0
     ρ, σ, present_time = model.ρ, model.σ, model.present_time
     state_space, transition_matrix = model.state_space, model.transition_matrix
 
-    for node in AbstractTrees.PostOrderDFS(tree.children[1])
-        λ, μ, γ = model.λ(node.up.phenotype), model.μ(node.up.phenotype), model.γ(node.up.phenotype)
+    for node in PostOrderDFS(tree.children[1])
+        λ, μ, γ = model.λ(node.up.state), model.μ(node.up.state), model.γ(node.up.state)
 
         Λ = λ + μ + γ
         c = √(Λ^2 - 4 * μ * (1 - σ) * λ)
@@ -56,7 +72,7 @@ function stadler_appx_loglikelhood(model::MultitypeBranchingProcess, tree::TreeN
         elseif node.event == :sampled_death
             result += log(σ) + log(μ)
         elseif node.event == :mutation
-            mutation_prob = transition_matrix[findfirst(state_space .== node.up.phenotype), findfirst(state_space .== node.phenotype)]
+            mutation_prob = transition_matrix[findfirst(state_space .== node.up.state), findfirst(state_space .== node.state)]
 
             result += log(γ) + log(mutation_prob)
         elseif node.event == :sampled_survival
@@ -68,7 +84,7 @@ function stadler_appx_loglikelhood(model::MultitypeBranchingProcess, tree::TreeN
 
     # Condition on tree not getting rejected as a stub
     # Let p be the extinction (or more generally, emptiness) prob
-    λ, μ, γ = model.λ(tree.phenotype), model.μ(tree.phenotype), model.γ(tree.phenotype)
+    λ, μ, γ = model.λ(tree.state), model.μ(tree.state), model.γ(tree.state)
 
     Λ = λ + μ + γ
     root_time = present_time - 0
@@ -88,13 +104,24 @@ function stadler_appx_loglikelhood(model::MultitypeBranchingProcess, tree::TreeN
     return result
 end
 
+"""
+```julia
+stadler_appx_unconditioned_loglikelhood(model, tree)
+```
+
+Compute the log-likelihood of the given model under the assumption that all mutation nodes have at least one sampled descendant.
+
+Does not condition on at trees having at least one sampled descendant (ie. [`rand_tree`](@ref) has keyword argument `reject_stubs=False`).
+
+Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
+"""
 function stadler_appx_unconditioned_loglikelhood(model::MultitypeBranchingProcess, tree::TreeNode)
     result = 0
     ρ, σ, present_time = model.ρ, model.σ, model.present_time
     state_space, transition_matrix = model.state_space, model.transition_matrix
 
-    for node in AbstractTrees.PostOrderDFS(tree.children[1])
-        λ, μ, γ = model.λ(node.up.phenotype), model.μ(node.up.phenotype), model.γ(node.up.phenotype)
+    for node in PostOrderDFS(tree.children[1])
+        λ, μ, γ = model.λ(node.up.state), model.μ(node.up.state), model.γ(node.up.state)
 
         Λ = λ + μ + γ
         c = √(Λ^2 - 4 * μ * (1 - σ) * λ)
@@ -115,7 +142,7 @@ function stadler_appx_unconditioned_loglikelhood(model::MultitypeBranchingProces
         elseif node.event == :sampled_death
             result += log(σ) + log(μ)
         elseif node.event == :mutation
-            mutation_prob = transition_matrix[findfirst(state_space .== node.up.phenotype), findfirst(state_space .== node.phenotype)]
+            mutation_prob = transition_matrix[findfirst(state_space .== node.up.state), findfirst(state_space .== node.state)]
 
             result += log(γ) + log(mutation_prob)
         elseif node.event == :sampled_survival

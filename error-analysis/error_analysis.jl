@@ -1,6 +1,6 @@
-using gcdyn, Turing, StatsPlots;
+using gcdyn, Turing, StatsPlots
 
-truth = MultitypeBranchingProcess(1.8, 1, 0, 1:2, 1, 0, 2);
+truth = MultitypeBranchingProcess(1.8, 1, 0, 1:2, 1, 0, 2)
 
 @model function CorrectedModel(trees::Vector{TreeNode})
     λ ~ LogNormal(1.5, 1)
@@ -9,7 +9,7 @@ truth = MultitypeBranchingProcess(1.8, 1, 0, 1:2, 1, 0, 2);
     sampled_model = MultitypeBranchingProcess(λ, μ, truth.γ, truth.state_space, truth.ρ, truth.σ, truth.present_time)
 
     Turing.@addlogprob! sum(gcdyn.stadler_appx_loglikelhood(sampled_model, tree) for tree in trees)
-end;
+end
 
 @model function OriginalModel(trees::Vector{TreeNode})
     λ ~ LogNormal(1.5, 1)
@@ -18,9 +18,9 @@ end;
     sampled_model = MultitypeBranchingProcess(λ, μ, truth.γ, truth.state_space, truth.ρ, truth.σ, truth.present_time)
 
     Turing.@addlogprob! sum(gcdyn.stadler_appx_unconditioned_loglikelhood(sampled_model, tree) for tree in trees)
-end;
+end
 
-NUM_TREESETS = 400;
+NUM_TREESETS = 400
 
 # num_trees => Dict(:corrected => [Chains], :original => [Chains])
 chns = Dict(
@@ -40,7 +40,7 @@ chns = Dict(
         :corrected => Vector{Chains}(undef, NUM_TREESETS),
         :original => Vector{Chains}(undef, NUM_TREESETS)
     )
-);
+)
 
 sample_model(model) = sample(
     model,
@@ -49,7 +49,7 @@ sample_model(model) = sample(
         :μ => x -> LogNormal(log(x), 0.3)
     ),
     2000
-);
+)
 
 for (num_trees, chns_dict) in chns
     Threads.@threads for i in 1:NUM_TREESETS
@@ -58,7 +58,7 @@ for (num_trees, chns_dict) in chns
         chns_dict[:corrected][i] = sample_model(CorrectedModel(trees))
         chns_dict[:original][i] = sample_model(OriginalModel(trees))
     end
-end;
+end
 
 λ_plts = []
 μ_plts = []
@@ -93,7 +93,7 @@ for (n, chns_dict) in chns
     title!("$n trees")
 
     push!(μ_plts, plt)
-end;
+end
 
 plot(λ_plts...; layout=(2, 2), plot_title = "Birth rate sampling distributions", thickness_scaling=0.75, dpi=300)
 xlabel!("Posterior median")

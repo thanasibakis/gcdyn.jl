@@ -1,18 +1,23 @@
 module gcdyn
 
-using Distributions, LinearAlgebra, Random, StatsBase, DifferentialEquations
-import AbstractTrees
+using
+    AbstractTrees,
+    DifferentialEquations,
+    Distributions,
+    LinearAlgebra,
+    StatsAPI,
+    StatsBase
 
 export
-    TreeNode,
     MultitypeBranchingProcess,
+    TreeNode,
 
-    rand_tree,
     loglikelihood,
-    logpdf
+    rand_tree
 
-include("TreeNode.jl")
-include("MultitypeBranchingProcess.jl")
+include("types.jl")
+include("treenode.jl")
+include("multitype_branching_process.jl")
 include("extra_likelihoods.jl")
 
 end

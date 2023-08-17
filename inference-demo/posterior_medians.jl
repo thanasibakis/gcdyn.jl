@@ -1,4 +1,8 @@
-using gcdyn, CSV, DataFrames, Turing, StatsPlots;
+println("Loading packages...")
+
+using gcdyn, CSV, DataFrames, Turing, StatsPlots
+
+println("Setting up model...")
 
 const true_params = Dict(
     :xscale => 1,
@@ -12,7 +16,7 @@ expit(x) = 1 / (1 + exp(-x))
 sigmoid(x, xscale, xshift, yscale, yshift) = yscale * expit(xscale * (x - xshift)) + yshift
 
 const λ_truth = x -> sigmoid(x, true_params[:xscale], true_params[:xshift], true_params[:yscale], true_params[:yshift])
-const truth = MultitypeBranchingProcess(λ_truth, true_params[:mu], 2, [2, 4, 6, 8], 1, 0, 2);
+const truth = MultitypeBranchingProcess(λ_truth, true_params[:mu], 2, [2, 4, 6, 8], 1, 0, 2)
 
 @model function Model(trees::Vector{TreeNode})
     xscale ~ Gamma(2, 1)
@@ -30,9 +34,11 @@ const truth = MultitypeBranchingProcess(λ_truth, true_params[:mu], 2, [2, 4, 6,
     )
 
     Turing.@addlogprob! loglikelihood(sampled_model, trees)
-end;
+end
 
-NUM_TREESETS = 100;
+println("Sampling...")
+
+NUM_TREESETS = 100
 
 chns = Vector{Chains}(undef, NUM_TREESETS)
 
@@ -52,6 +58,8 @@ Threads.@threads for i in 1:NUM_TREESETS
     )
 end
 
+println("Exporting samples...")
+
 dfs = map(enumerate(chns)) do (i, chn)
     df = DataFrame(chn)
     df.run .= i
@@ -70,6 +78,8 @@ medians = combine(
     :μ => median => :μ
 )
 
+println("Visualizing...")
+
 hists = map((:xscale, :xshift, :yscale, :yshift, :μ)) do param
     histogram(medians[!, param]; normalize=:pdf, label="Medians")
     vline!([true_params[param]]; label="Truth", linewidth=4)
@@ -78,3 +88,5 @@ end
 
 plot(hists...; layout=(3, 2), thickness_scaling=0.75, dpi=300, size=(600, 600), plot_title="Posterior median sampling distribution")
 png("posterior_medians.png")
+
+println("Done!")
