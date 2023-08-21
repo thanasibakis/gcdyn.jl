@@ -1,13 +1,53 @@
 # Methods involving `TreeNode` objects.
 
-# Implemented to get access to AbstractTrees API
-AbstractTrees.parent(node::TreeNode) = node.up
+# Implement AbstractTrees API
+
+AbstractTrees.ChildIndexing(::Type{<:TreeNode}) = IndexedChildren()
 AbstractTrees.children(node::TreeNode) = node.children
+AbstractTrees.childrentype(::Type{<:TreeNode}) = Vector{TreeNode}
+
+AbstractTrees.ParentLinks(::Type{<:TreeNode}) = StoredParents()
+AbstractTrees.parent(node::TreeNode) = node.up
+
+AbstractTrees.NodeType(::Type{<:TreeNode}) = HasNodeType()
+AbstractTrees.nodetype(::Type{<:TreeNode}) = TreeNode
+
 AbstractTrees.nodevalue(node::TreeNode) = node.state
-AbstractTrees.childtype(::TreeNode) = TreeNode
-AbstractTrees.ChildIndexing(::TreeNode) = AbstractTrees.IndexedChildren()
-AbstractTrees.NodeType(::TreeNode) = AbstractTrees.HasNodeType()
-AbstractTrees.nodetype(::TreeNode) = TreeNode
+
+Base.IteratorEltype(::Type{<:TreeIterator{TreeNode}}) = Base.HasEltype()
+Base.eltype(::Type{<:TreeIterator{TreeNode}}) = TreeNode
+
+# AbstractTrees doesn't seem type stable, so let's do this instead
+
+struct PostOrder
+    root::TreeNode
+end
+
+function Base.iterate(it::PostOrder)
+    if isnothing(it.root)
+        return nothing
+    end
+
+    function collect_nodes!(nodes, tree)
+        for child in tree.children
+            collect_nodes!(nodes, child)
+        end
+        push!(nodes, tree)
+    end
+
+    to_visit = Vector{TreeNode}()
+    collect_nodes!(to_visit, it.root)
+
+    return popfirst!(to_visit), to_visit
+end
+
+function Base.iterate(::PostOrder, to_visit)
+    if isempty(to_visit)
+        return nothing
+    end
+
+    return popfirst!(to_visit), to_visit
+end
 
 Base.show(io::IO, tree::TreeNode) = AbstractTrees.print_tree(io, tree)
 

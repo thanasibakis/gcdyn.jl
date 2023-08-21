@@ -4,6 +4,7 @@ using gcdyn, CSV, DataFrames, Turing, StatsPlots
 
 println("Setting up model...")
 
+# https://docs.julialang.org/en/v1/manual/performance-tips/index.html#Avoid-untyped-global-variables
 const true_params = Dict(
     :xscale => 1,
     :xshift => 5,
@@ -28,12 +29,13 @@ const truth = MultitypeBranchingProcess(λ_truth, true_params[:μ], 2, [2, 4, 6,
     # γ ~ LogNormal(1.5, 1)
 
     λ = x -> sigmoid(x, xscale, xshift, yscale, yshift)
+    #λ ~ LogNormal(1.5, 1)
 
     sampled_model = MultitypeBranchingProcess(
         λ, μ, truth.γ, truth.state_space, truth.transition_matrix, truth.ρ, truth.σ, truth.present_time
     )
 
-    Turing.@addlogprob! loglikelihood(sampled_model, trees)
+    Turing.@addlogprob! loglikelihood(sampled_model, trees; reltol=1e-3, abstol=1e-3)
 end
 
 @model function AppxModel(trees::Vector{TreeNode})
@@ -51,30 +53,35 @@ end
         λ, μ, truth.γ, truth.state_space, truth.transition_matrix, truth.ρ, truth.σ, truth.present_time
     )
 
-    Turing.@addlogprob! sum(stadler_appx_loglikelhood(sampled_model, tree) for tree in trees)
+    Turing.@addlogprob! sum(gcdyn.stadler_appx_loglikelhood(sampled_model, tree) for tree in trees)
 end
 
 println("Sampling...")
 
-NUM_TREESETS = 100
+# https://docs.julialang.org/en/v1/manual/style-guide/#Write-functions,-not-just-scripts
+function run_simulations(num_treesets, num_trees, num_samples)
+    chns = Vector{Chains}(undef, num_treesets)
 
-chns = Vector{Chains}(undef, NUM_TREESETS)
+    Threads.@threads for i in 1:num_treesets
+        trees = rand_tree(truth, num_trees, truth.state_space[1]);
 
-Threads.@threads for i in 1:NUM_TREESETS
-    trees = rand_tree(truth, 30, truth.state_space[1]);
+        chns[i] = sample(
+            FullModel(trees),
+            MH(
+                :xscale => x -> LogNormal(log(x), 1),
+                :xshift => x -> Normal(x, 1),
+                :yscale => x -> LogNormal(log(x), 1),
+                :yshift => x -> LogNormal(log(x), 1),
+                :μ => x -> LogNormal(log(x), 0.3)
+            ),
+            num_samples
+        )
+    end
 
-    chns[i] = sample(
-        AppxModel(trees),
-        MH(
-            :xscale => x -> LogNormal(log(x), 1),
-            :xshift => x -> Normal(x, 1),
-            :yscale => x -> LogNormal(log(x), 1),
-            :yshift => x -> LogNormal(log(x), 1),
-            :μ => x -> LogNormal(log(x), 0.3)
-        ),
-        1000
-    )
+    chns
 end
+
+chns = run_simulations(100, 30, 1000)
 
 println("Exporting samples...")
 

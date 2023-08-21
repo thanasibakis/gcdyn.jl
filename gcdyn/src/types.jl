@@ -3,7 +3,6 @@
 "The possible events that can occur at a node in a [`TreeNode`](@ref)."
 const EVENTS = (:root, :birth, :sampled_death, :unsampled_death, :mutation, :sampled_survival, :unsampled_survival)
 
-# TODO: make this immutable and adjust `mutate!`
 """
 ```julia
 TreeNode(state)
@@ -18,11 +17,18 @@ Requires an initial state value.
 See also [`rand_tree`](@ref), [`EVENTS`](@ref).
 """
 mutable struct TreeNode
-    event::Symbol
-    t::Real
-    state::Real
-    children::Vector{TreeNode}
+    const event::Symbol
+    const t::Float64
+    state::Int
+    const children::Vector{TreeNode}
     up::Union{TreeNode, Nothing}
+
+    # A place to write temporary values pertaining to this node
+    # (for calculations for the likelihood)
+    p_start::Vector{Float64}
+    p_end::Vector{Float64}
+    q_start::Float64
+    q_end::Float64
 
     function TreeNode(event, t, state)
         if event ∉ EVENTS
@@ -31,7 +37,7 @@ mutable struct TreeNode
             throw(ArgumentError("Time must be positive"))
         end
 
-        return new(event, t, state, [], nothing)
+        return new(event, t, state, [], nothing, [], [], 0, 0)
     end
 end
 
@@ -54,11 +60,11 @@ struct MultitypeBranchingProcess
     λ::Function
     μ::Function
     γ::Function
-    state_space::AbstractVector
-    transition_matrix::AbstractMatrix
-    ρ::Real
-    σ::Real
-    present_time::Real
+    state_space::Vector{Int}
+    transition_matrix::Matrix{Float64}
+    ρ::Float64
+    σ::Float64
+    present_time::Float64
 
     function MultitypeBranchingProcess(λ::Union{Real, Function}, μ::Union{Real, Function}, γ::Union{Real, Function}, state_space, transition_matrix, ρ, σ, present_time)
         if ρ < 0 || ρ > 1
@@ -85,9 +91,9 @@ struct MultitypeBranchingProcess
         γ⁺::Function = isa(γ, Function) ? γ : _ -> γ
 
         # Ensure functions return floating point numbers
-        λ⁺⁺ = x -> convert(AbstractFloat, λ⁺(x))
-        μ⁺⁺ = x -> convert(AbstractFloat, μ⁺(x))
-        γ⁺⁺ = x -> convert(AbstractFloat, γ⁺(x))
+        λ⁺⁺ = x -> convert(Float64, λ⁺(x))
+        μ⁺⁺ = x -> convert(Float64, μ⁺(x))
+        γ⁺⁺ = x -> convert(Float64, γ⁺(x))
 
         return new(λ⁺⁺, μ⁺⁺, γ⁺⁺, state_space, transition_matrix, ρ, σ, present_time)
     end
@@ -99,8 +105,9 @@ MultitypeBranchingProcess(λ, μ, γ, state_space, ρ, σ, present_time)
 ```
 Specifies uniform transition probabilities to all states.
 """
-function MultitypeBranchingProcess(λ::Union{Real, Function}, μ::Union{Real, Function}, γ::Union{Real, Function}, state_space::AbstractVector, ρ::Real, σ::Real, present_time::Real)
-    transition_matrix = (ones(length(state_space), length(state_space)) - I) / (length(state_space) - 1)
+function MultitypeBranchingProcess(λ::Union{Real, Function}, μ::Union{Real, Function}, γ::Union{Real, Function}, state_space, ρ, σ, present_time)
+    n = length(state_space)
+    transition_matrix = (ones(n, n) - I) / (n - 1)
 
     return MultitypeBranchingProcess(λ, μ, γ, state_space, transition_matrix, ρ, σ, present_time)
 end

@@ -16,62 +16,28 @@ function StatsAPI.loglikelihood(
     reltol = 1e-6,
     abstol = 1e-6
 )
-    return sum(loglikelihood(model, tree) for tree in trees)
+    return sum(loglikelihood(model, tree; reltol=reltol, abstol=abstol) for tree in trees)
 end
 
+# TODO: make this type stable (ensure λ, μ, γ are known to be Float64)
 function StatsAPI.loglikelihood(
     model::MultitypeBranchingProcess,
     tree::TreeNode;
     reltol = 1e-6,
     abstol = 1e-6
 )
-    λ = model.λ
-    μ = model.μ
-    γ = model.γ
+    λ, μ, γ, ρ, σ = model.λ, model.μ, model.γ, model.ρ, model.σ
     state_space = model.state_space
     transition_matrix = model.transition_matrix
-    ρ = model.ρ
-    σ = model.σ
     present_time = model.present_time
-
-    function dp_dt!(dp, p, _, t)
-        dp[:] = (
-            -(
-                γ.(state_space)
-                + λ.(state_space)
-                + μ.(state_space)
-            )
-            .* p
-            + μ.(state_space) * (1 - σ)
-            + λ.(state_space) .* p.^2
-            + γ.(state_space) .* (transition_matrix * p)
-        )
-    end
-
-    function dpq_dt!(dpq, pq, args, t)
-        p, q_i = pq[1:end-1], pq[end]
-        parent_state = args
-
-        dq_i = -(
-            γ(parent_state)
-            + λ(parent_state)
-            + μ(parent_state)
-        ) * q_i + 2 * λ(parent_state) * q_i * p[findfirst(state_space .== parent_state)]
-
-        # Need to pass a view instead of a slice, to pass by reference instead of value
-        dp_dt!(view(dpq, 1:lastindex(dpq)-1), p, nothing, t)
-        dpq[end] = dq_i
-    end
-
-    p_start, p_end = Dict{TreeNode, Vector{AbstractFloat}}(), Dict{TreeNode, Vector{AbstractFloat}}()
-    q_start, q_end = Dict{TreeNode, AbstractFloat}(), Dict{TreeNode, AbstractFloat}()
 
     for leaf in Leaves(tree)
         p = solve(
             ODEProblem(
                 dp_dt!,
-                ones(AbstractFloat, axes(state_space)) .- ρ,
-                (0, present_time - leaf.t)
+                ones(Float64, axes(state_space)) .- ρ,
+                (0, present_time - leaf.t),
+                (model, state_space)
             ),
             Tsit5();
             save_everystep = false,
@@ -79,32 +45,32 @@ function StatsAPI.loglikelihood(
             abstol = abstol
         )
 
-        p_end[leaf] = p.u[end][:]
+        leaf.p_end = p.u[end][:]
     end
 
-    for event in PostOrderDFS(tree.children[1])
+    for event in PostOrder(tree.children[1])
         t_start = present_time - event.up.t
         t_end = present_time - event.t
 
         if event.event == :sampled_survival
             # event already has p_end
-            q_end[event] = ρ
+            event.q_end = ρ
         elseif event.event == :sampled_death
             # event already has p_end
-            q_end[event] = μ(event.up.state) * σ
+            event.q_end = μ(event.up.state) * σ
         elseif event.event == :birth
-            p_end[event] = p_start[event.children[1]]
-            q_end[event] = (
-                λ(event.up.state) * q_start[event.children[1]] * q_start[event.children[2]]
+            event.p_end = event.children[1].p_start
+            event.q_end = (
+                λ(event.up.state) * event.children[1].q_start * event.children[2].q_start
             )
         elseif event.event == :mutation
             mutation_prob = transition_matrix[findfirst(state_space .== event.up.state), findfirst(state_space .== event.state)]
 
-            p_end[event] = p_start[event.children[1]]
-            q_end[event] = (
+            event.p_end = event.children[1].p_start
+            event.q_end = (
                 γ(event.up.state)
                 * mutation_prob
-                * q_start[event.children[1]]
+                * event.children[1].q_start
             )
         else
             throw(ArgumentError("Unknown event type $(event.event)"))
@@ -113,10 +79,10 @@ function StatsAPI.loglikelihood(
         pq = solve(
             ODEProblem(
                 dpq_dt!,
-                # TODO: this must convert to Float64, not even AbstractFloat. Why?
-                convert(Vector{Float64}, [p_end[event]; q_end[event]]),
+                # TODO: I can probably drop the convert now?
+                convert(Vector{Float64}, [event.p_end; event.q_end]),
                 (t_end, t_start),
-                event.up.state
+                (model, state_space, event.up.state)
             ),
             Tsit5();
             save_everystep = false,
@@ -124,19 +90,20 @@ function StatsAPI.loglikelihood(
             abstol = abstol
         )
 
-        p_start[event] = pq.u[end][1:end-1]
-        q_start[event] = pq.u[end][end]
+        event.p_start = pq.u[end][1:end-1]
+        event.q_start = pq.u[end][end]
     end
 
-    result = log(q_start[tree.children[1]])
+    result = log(tree.children[1].q_start)
 
     # Non-extinction probability
 
     p = solve(
         ODEProblem(
             dp_dt!,
-            ones(AbstractFloat, axes(state_space)) .- ρ,
-            (0, present_time)
+            ones(Float64, axes(state_space)) .- ρ,
+            (0, present_time),
+            (model, state_space)
         ),
         Tsit5();
         save_everystep = false,
@@ -144,10 +111,44 @@ function StatsAPI.loglikelihood(
         abstol = abstol
     )
 
-    p_i = p.u[end][findfirst(state_space .== tree.state)]
+    p_i::Float64 = p.u[end][findfirst(state_space .== tree.state)]
     result -= log(1 - p_i)
 
     return result
+end
+
+# TODO: annotate but don't export
+function dp_dt!(dp, p, args, t)
+    model, state_space = args
+
+    λ::Vector{Float64} = model.λ.(state_space)
+    μ::Vector{Float64} = model.μ.(state_space)
+    γ::Vector{Float64} = model.γ.(state_space)
+    σ = model.σ
+    transition_matrix = model.transition_matrix
+
+    dp[:] = (
+        -(γ + λ + μ) .* p
+        + μ * (1 - σ)
+        + λ .* p.^2
+        + γ .* (transition_matrix * p)
+    )
+end
+
+# TODO: annotate but don't export
+function dpq_dt!(dpq, pq, args, t)
+    p, q_i = pq[1:end-1], pq[end]
+    model, state_space, parent_state = args
+
+    λ::Float64 = model.λ(parent_state)
+    μ::Float64 = model.μ(parent_state)
+    γ::Float64 = model.γ(parent_state)
+
+    dq_i = -(γ + λ + μ) * q_i + 2 * λ * q_i * p[findfirst(state_space .== parent_state)]
+
+    # Need to pass a view instead of a slice, to pass by reference instead of value
+    dp_dt!(view(dpq, 1:lastindex(dpq)-1), p, (model, state_space), t)
+    dpq[end] = dq_i
 end
 
 """
