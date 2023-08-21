@@ -12,27 +12,27 @@ naive_loglikelihood(model, tree)
 
 Compute the log-likelihood of the given model under the assumption that the given tree is fully observed (ie. all nodes are sampled, dead or not).
 """
-function naive_loglikelihood(model::MultitypeBranchingProcess, tree::TreeNode)
+function naive_loglikelihood(model::AbstractBranchingProcess, tree::TreeNode)
     result::Float64 = 0.0
     ρ = model.ρ
     state_space, transition_matrix = model.state_space, model.transition_matrix
 
     for node in PostOrder(tree.children[1])
-        λ::Float64, μ::Float64, γ::Float64 = model.λ(node.up.state), model.μ(node.up.state), model.γ(node.up.state)
-        Λ = λ + μ + γ
+        λₓ::Float64, μₓ::Float64, γₓ::Float64 = λ(model, node.up.state), μ(model, node.up.state), γ(model, node.up.state)
+        Λₓ = λₓ + μₓ + γₓ
 
         if node.event == :birth
-            result += logpdf(Exponential(1 / Λ), node.t - node.up.t) + log(λ / Λ)
+            result += logpdf(Exponential(1 / Λₓ), node.t - node.up.t) + log(λₓ / Λₓ)
         elseif node.event == :sampled_death
-            result += logpdf(Exponential(1 / Λ), node.t - node.up.t) + log(μ / Λ)
+            result += logpdf(Exponential(1 / Λₓ), node.t - node.up.t) + log(μₓ / Λₓ)
         elseif node.event == :mutation
             mutation_prob = transition_matrix[findfirst(state_space .== node.up.state), findfirst(state_space .== node.state)]
 
-            result += logpdf(Exponential(1 / Λ), node.t - node.up.t) + log(γ / Λ) + log(mutation_prob)
+            result += logpdf(Exponential(1 / Λₓ), node.t - node.up.t) + log(γₓ / Λₓ) + log(mutation_prob)
         elseif node.event == :sampled_survival
-            result += log(1 - cdf(Exponential(1 / Λ), node.t - node.up.t)) + log(ρ)
+            result += log(1 - cdf(Exponential(1 / Λₓ), node.t - node.up.t)) + log(ρ)
         elseif node.event == :unsampled_survival
-            result += log(1 - cdf(Exponential(1 / Λ), node.t - node.up.t)) + log(1 - ρ)
+            result += log(1 - cdf(Exponential(1 / Λₓ), node.t - node.up.t)) + log(1 - ρ)
         else
             throw(ArgumentError("Tree contains incompatible event $(node.event)"))
         end
@@ -50,20 +50,19 @@ Compute the log-likelihood of the given model under the assumption that all muta
 
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
-function stadler_appx_loglikelhood(model::MultitypeBranchingProcess, tree::TreeNode)
+function stadler_appx_loglikelhood(model::AbstractBranchingProcess, tree::TreeNode)
     result::Float64 = 0
     ρ, σ, present_time = model.ρ, model.σ, model.present_time
     state_space, transition_matrix = model.state_space, model.transition_matrix
 
     for node in PostOrder(tree.children[1])
-        λ::Float64, μ::Float64, γ::Float64 = model.λ(node.up.state), model.μ(node.up.state), model.γ(node.up.state)
+        λₓ::Float64, μₓ::Float64, γₓ::Float64 = λ(model, node.up.state), μ(model, node.up.state), γ(model, node.up.state)
+        Λₓ = λₓ + μₓ + γₓ
+        c = √(Λₓ^2 - 4 * μₓ * (1 - σ) * λₓ)
+        x = (-Λₓ - c) / 2
+        y = (-Λₓ + c) / 2
 
-        Λ = λ + μ + γ
-        c = √(Λ^2 - 4 * μ * (1 - σ) * λ)
-        x = (-Λ - c) / 2
-        y = (-Λ + c) / 2
-
-        helper(t) = (y + λ * (1 - ρ)) * exp(-c * t) - x - λ * (1 - ρ)
+        helper(t) = (y + λₓ * (1 - ρ)) * exp(-c * t) - x - λₓ * (1 - ρ)
 
         t_s = present_time - node.up.t
         t_e = present_time - node.t
@@ -73,13 +72,13 @@ function stadler_appx_loglikelhood(model::MultitypeBranchingProcess, tree::TreeN
         result += log_f_N
 
         if node.event == :birth
-            result += log(λ)
+            result += log(λₓ)
         elseif node.event == :sampled_death
-            result += log(σ) + log(μ)
+            result += log(σ) + log(μₓ)
         elseif node.event == :mutation
             mutation_prob = transition_matrix[findfirst(state_space .== node.up.state), findfirst(state_space .== node.state)]
 
-            result += log(γ) + log(mutation_prob)
+            result += log(γₓ) + log(mutation_prob)
         elseif node.event == :sampled_survival
             result += log(ρ)
         else
@@ -91,19 +90,19 @@ function stadler_appx_loglikelhood(model::MultitypeBranchingProcess, tree::TreeN
     # Let p be the extinction (or more generally, emptiness) prob
     
     p = let
-        λ::Float64, μ::Float64, γ::Float64 = model.λ(tree.state), model.μ(tree.state), model.γ(tree.state)
+        λₓ::Float64, μₓ::Float64, γₓ::Float64 = λ(model, tree.state), μ(model, tree.state), γ(model, tree.state)
 
-        Λ = λ + μ + γ
+        Λₓ = λₓ + μₓ + γₓ
         root_time = present_time - 0
-        c = √(Λ^2 - 4 * μ * (1 - σ) * λ)
-        x = (-Λ - c) / 2
-        y = (-Λ + c) / 2
+        c = √(Λₓ^2 - 4 * μₓ * (1 - σ) * λₓ)
+        x = (-Λₓ - c) / 2
+        y = (-Λₓ + c) / 2
 
         (
             -1
-            / λ
-            * ((y + λ * (1 - ρ)) * x * exp(-c * root_time) - y * (x + λ * (1 - ρ)))
-            / ((y + λ * (1 - ρ)) * exp(-c * root_time) - (x + λ * (1 - ρ)))
+            / λₓ
+            * ((y + λₓ * (1 - ρ)) * x * exp(-c * root_time) - y * (x + λₓ * (1 - ρ)))
+            / ((y + λₓ * (1 - ρ)) * exp(-c * root_time) - (x + λₓ * (1 - ρ)))
         )
     end
 
@@ -123,20 +122,20 @@ Does not condition on at trees having at least one sampled descendant (ie. [`ran
 
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
-function stadler_appx_unconditioned_loglikelhood(model::MultitypeBranchingProcess, tree::TreeNode)
+function stadler_appx_unconditioned_loglikelhood(model::AbstractBranchingProcess, tree::TreeNode)
     result::Float64 = 0
     ρ, σ, present_time = model.ρ, model.σ, model.present_time
     state_space, transition_matrix = model.state_space, model.transition_matrix
 
     for node in PostOrder(tree.children[1])
-        λ::Float64, μ::Float64, γ::Float64 = model.λ(node.up.state), model.μ(node.up.state), model.γ(node.up.state)
+        λₓ::Float64, μₓ::Float64, γₓ::Float64 = λ(model, node.up.state), μ(model, node.up.state), γ(model, node.up.state)
 
-        Λ = λ + μ + γ
-        c = √(Λ^2 - 4 * μ * (1 - σ) * λ)
-        x = (-Λ - c) / 2
-        y = (-Λ + c) / 2
+        Λₓ = λₓ + μₓ + γₓ
+        c = √(Λₓ^2 - 4 * μ * (1 - σ) * λ)
+        x = (-Λₓ - c) / 2
+        y = (-Λₓ + c) / 2
 
-        helper(t) = (y + λ * (1 - ρ)) * exp(-c * t) - x - λ * (1 - ρ)
+        helper(t) = (y + λₓ * (1 - ρ)) * exp(-c * t) - x - λₓ * (1 - ρ)
 
         t_s = present_time - node.up.t
         t_e = present_time - node.t
@@ -146,13 +145,13 @@ function stadler_appx_unconditioned_loglikelhood(model::MultitypeBranchingProces
         result += log_f_N
 
         if node.event == :birth
-            result += log(λ)
+            result += log(λₓ)
         elseif node.event == :sampled_death
-            result += log(σ) + log(μ)
+            result += log(σ) + log(μₓ)
         elseif node.event == :mutation
             mutation_prob = transition_matrix[findfirst(state_space .== node.up.state), findfirst(state_space .== node.state)]
 
-            result += log(γ) + log(mutation_prob)
+            result += log(γₓ) + log(mutation_prob)
         elseif node.event == :sampled_survival
             result += log(ρ)
         else

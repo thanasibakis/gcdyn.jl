@@ -1,9 +1,34 @@
-# Methods involving `MultitypeBranchingProcess` objects.
+# Methods involving `AbstractBranchingProcess` objects.
+
+expit(x) = 1 / (1 + exp(-x))
+sigmoid(x, xscale, xshift, yscale, yshift) = yscale * expit(xscale * (x - xshift)) + yshift
+
+# TODO: document
+function λ(model::ConstantRateBranchingProcess, state)
+    return model.λ
+end
+
+function λ(model::SigmoidalBirthRateBranchingProcess, state)
+    return sigmoid(state, model.xscale, model.xshift, model.yscale, model.yshift)
+end
+
+function μ(model::AbstractBranchingProcess, state)
+    return model.μ
+end
+
+function γ(model::AbstractBranchingProcess, state)
+    return model.γ
+end
+
+# To allow us to broadcast the rate parameter functions
+Base.length(::AbstractBranchingProcess) = 1
+Base.iterate(model::AbstractBranchingProcess) = (model, nothing)
+Base.iterate(::AbstractBranchingProcess, state) = nothing
 
 """
 ```julia
-loglikelihood(model::MultitypeBranchingProcess, tree::TreeNode; kw...)
-loglikelihood(model::MultitypeBranchingProcess, trees::AbstractVector{TreeNode}; kw...)
+loglikelihood(model::AbstractBranchingProcess, tree::TreeNode; kw...)
+loglikelihood(model::AbstractBranchingProcess, trees::AbstractVector{TreeNode}; kw...)
 ```
 
 A slight deviation from StatsAPI, as observations are not stored in the model object, so they must be passed as an argument.
@@ -11,7 +36,7 @@ A slight deviation from StatsAPI, as observations are not stored in the model ob
 Keyword arguments `reltol` and `abstol` are passed to the ODE solver.
 """
 function StatsAPI.loglikelihood(
-    model::MultitypeBranchingProcess,
+    model::AbstractBranchingProcess,
     trees::AbstractVector{TreeNode};
     reltol = 1e-6,
     abstol = 1e-6
@@ -19,14 +44,13 @@ function StatsAPI.loglikelihood(
     return sum(loglikelihood(model, tree; reltol=reltol, abstol=abstol) for tree in trees)
 end
 
-# TODO: make this type stable (ensure λ, μ, γ are known to be Float64)
 function StatsAPI.loglikelihood(
-    model::MultitypeBranchingProcess,
+    model::AbstractBranchingProcess,
     tree::TreeNode;
     reltol = 1e-6,
     abstol = 1e-6
 )
-    λ, μ, γ, ρ, σ = model.λ, model.μ, model.γ, model.ρ, model.σ
+    ρ, σ = model.ρ, model.σ
     state_space = model.state_space
     transition_matrix = model.transition_matrix
     present_time = model.present_time
@@ -57,18 +81,18 @@ function StatsAPI.loglikelihood(
             event.q_end = ρ
         elseif event.event == :sampled_death
             # event already has p_end
-            event.q_end = μ(event.up.state) * σ
+            event.q_end = μ(model, event.up.state) * σ
         elseif event.event == :birth
             event.p_end = event.children[1].p_start
             event.q_end = (
-                λ(event.up.state) * event.children[1].q_start * event.children[2].q_start
+                λ(model, event.up.state) * event.children[1].q_start * event.children[2].q_start
             )
         elseif event.event == :mutation
             mutation_prob = transition_matrix[findfirst(state_space .== event.up.state), findfirst(state_space .== event.state)]
 
             event.p_end = event.children[1].p_start
             event.q_end = (
-                γ(event.up.state)
+                γ(model, event.up.state)
                 * mutation_prob
                 * event.children[1].q_start
             )
@@ -121,17 +145,17 @@ end
 function dp_dt!(dp, p, args, t)
     model, state_space = args
 
-    λ::Vector{Float64} = model.λ.(state_space)
-    μ::Vector{Float64} = model.μ.(state_space)
-    γ::Vector{Float64} = model.γ.(state_space)
+    λₓ::Vector{Float64} = λ.(model, state_space)
+    μₓ::Vector{Float64} = μ.(model, state_space)
+    γₓ::Vector{Float64} = γ.(model, state_space)
     σ = model.σ
     transition_matrix = model.transition_matrix
 
     dp[:] = (
-        -(γ + λ + μ) .* p
-        + μ * (1 - σ)
-        + λ .* p.^2
-        + γ .* (transition_matrix * p)
+        -(γₓ + λₓ + μₓ) .* p
+        + μₓ * (1 - σ)
+        + λₓ .* p.^2
+        + γₓ .* (transition_matrix * p)
     )
 end
 
@@ -140,11 +164,11 @@ function dpq_dt!(dpq, pq, args, t)
     p, q_i = pq[1:end-1], pq[end]
     model, state_space, parent_state = args
 
-    λ::Float64 = model.λ(parent_state)
-    μ::Float64 = model.μ(parent_state)
-    γ::Float64 = model.γ(parent_state)
+    λₓ::Float64 = λ(model, parent_state)
+    μₓ::Float64 = μ(model, parent_state)
+    γₓ::Float64 = γ(model, parent_state)
 
-    dq_i = -(γ + λ + μ) * q_i + 2 * λ * q_i * p[findfirst(state_space .== parent_state)]
+    dq_i = -(γₓ + λₓ + μₓ) * q_i + 2 * λₓ * q_i * p[findfirst(state_space .== parent_state)]
 
     # Need to pass a view instead of a slice, to pass by reference instead of value
     dp_dt!(view(dpq, 1:lastindex(dpq)-1), p, (model, state_space), t)
@@ -164,7 +188,7 @@ Can optionally choose not to `reject_stubs`, equivalent to not conditioning on t
 See also [`TreeNode`](@ref).
 """
 function rand_tree(
-    model::MultitypeBranchingProcess,
+    model::AbstractBranchingProcess,
     n::Int,
     init_state::Real;
     reject_stubs::Bool=true
@@ -179,7 +203,7 @@ function rand_tree(
 end
 
 function rand_tree(
-    model::MultitypeBranchingProcess,
+    model::AbstractBranchingProcess,
     init_state::Real;
     reject_stubs::Bool=true
 )

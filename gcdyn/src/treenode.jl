@@ -58,7 +58,7 @@ mutate!(node, model)
 
 Change the state of the given node according to the transition probabilities in the given model.
 """
-function mutate!(node::TreeNode, model::MultitypeBranchingProcess)
+function mutate!(node::TreeNode, model::AbstractBranchingProcess)
     if node.state ∉ model.state_space
         throw(ArgumentError("The state of the node must be in the state space of the mutator."))
     end
@@ -74,12 +74,12 @@ sample_child!(parent, model)
 
 Append a new child event to the given parent node, selecting between events from [`EVENTS`](@ref) according to the given model's rate parameters.
 """
-function sample_child!(parent::TreeNode, model::MultitypeBranchingProcess)
+function sample_child!(parent::TreeNode, model::AbstractBranchingProcess)
     if length(parent.children) == 2
         throw(ArgumentError("Can only have 2 children max"))
     end
 
-    λₓ, μₓ, γₓ = model.λ(parent.state), model.μ(parent.state), model.γ(parent.state)
+    λₓ, μₓ, γₓ = λ(model, parent.state), μ(model, parent.state), γ(model, parent.state)
 
     waiting_time = rand(Exponential(1 / (λₓ + μₓ + γₓ)))
 

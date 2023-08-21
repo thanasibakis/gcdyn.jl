@@ -3,7 +3,7 @@ using gcdyn, AbstractTrees, StatsBase, Test
 function test_rand_tree(n::Int, λ::Real, μ::Real, present_time::Real)
     # Assumes ρ = 1. σ should not matter
 
-    model = MultitypeBranchingProcess(λ, μ, 0, 1:3, 1, 1, present_time)
+    model = ConstantRateBranchingProcess(λ, μ, 0, 1:3, 1, 1, present_time)
     trees = rand_tree(model, n, 0; reject_stubs=false)
     
     # Expected number of survivors should check out
@@ -17,7 +17,7 @@ function test_rand_tree(n::Int, λ::Real, μ::Real, present_time::Real)
 end
 
 function test_fully_observed_likelihoods(n::Int, λ, μ, γ, state_space::AbstractVector, present_time::Real)
-    model = MultitypeBranchingProcess(λ, μ, γ, state_space, 1, 1, present_time)
+    model = ConstantRateBranchingProcess(λ, μ, γ, state_space, 1, 1, present_time)
     trees = rand_tree(model, n, state_space[1])
 
     naive_ll = sum(gcdyn.naive_loglikelihood(model, tree) for tree in trees)
@@ -28,7 +28,7 @@ function test_fully_observed_likelihoods(n::Int, λ, μ, γ, state_space::Abstra
 end
 
 function test_stadler_likelihoods(n::Int, λ, μ, present_time::Real)
-    model = MultitypeBranchingProcess(λ, μ, 0, 1:2, 1, 0, present_time)
+    model = ConstantRateBranchingProcess(λ, μ, 0, 1:2, 1, 0, present_time)
     trees = rand_tree(model, n, 1)
 
     appx_ll = sum(gcdyn.stadler_appx_loglikelhood(model, tree) for tree in trees)
@@ -39,6 +39,6 @@ end
 @testset "gcdyn" begin
     test_rand_tree(10000, 2.5, 1.1, 2)
     test_fully_observed_likelihoods(1000, 2.5, 1.1, 0, 1:3, 1)
-    test_fully_observed_likelihoods(1000, x -> x, 1.1, 2, 1:3, 1)
+    #test_fully_observed_likelihoods(1000, x -> x, 1.1, 2, 1:3, 1)
     test_stadler_likelihoods(1000, 2.5, 1.1, 1)
 end

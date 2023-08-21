@@ -9,7 +9,9 @@ using
     StatsBase
 
 export
-    MultitypeBranchingProcess,
+    AbstractBranchingProcess,
+    ConstantRateBranchingProcess,
+    SigmoidalBirthRateBranchingProcess,
     TreeNode,
 
     loglikelihood,
