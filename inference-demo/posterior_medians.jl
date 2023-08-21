@@ -5,34 +5,20 @@ using gcdyn, CSV, DataFrames, Turing, StatsPlots
 println("Setting up model...")
 
 # https://docs.julialang.org/en/v1/manual/performance-tips/index.html#Avoid-untyped-global-variables
-const true_params = Dict(
-    :xscale => 1,
-    :xshift => 5,
-    :yscale => 1.5,
-    :yshift => 1,
-    :μ => 1.3
-)
-
-expit(x) = 1 / (1 + exp(-x))
-sigmoid(x, xscale, xshift, yscale, yshift) = yscale * expit(xscale * (x - xshift)) + yshift
-
-const λ_truth = x -> sigmoid(x, true_params[:xscale], true_params[:xshift], true_params[:yscale], true_params[:yshift])
-const truth = MultitypeBranchingProcess(λ_truth, true_params[:μ], 2, [2, 4, 6, 8], 1, 0, 2)
+const truth = SigmoidalBirthRateBranchingProcess(1, 5, 1.5, 1, 1.3, 2, [2, 4, 6, 8], 1, 0, 2)
 
 @model function FullModel(trees::Vector{TreeNode})
     xscale ~ Gamma(2, 1)
     xshift ~ Normal(5, 1)
     yscale ~ Gamma(2, 1)
     yshift ~ Gamma(1, 1)
+    # λ ~ LogNormal(1.5, 1)
 
     μ ~ LogNormal(0, 0.3)
     # γ ~ LogNormal(1.5, 1)
 
-    λ = x -> sigmoid(x, xscale, xshift, yscale, yshift)
-    #λ ~ LogNormal(1.5, 1)
-
-    sampled_model = MultitypeBranchingProcess(
-        λ, μ, truth.γ, truth.state_space, truth.transition_matrix, truth.ρ, truth.σ, truth.present_time
+    sampled_model = SigmoidalBirthRateBranchingProcess(
+        xscale, xshift, yscale, yshift, μ, truth.γ, truth.state_space, truth.transition_matrix, truth.ρ, truth.σ, truth.present_time
     )
 
     Turing.@addlogprob! loglikelihood(sampled_model, trees; reltol=1e-3, abstol=1e-3)
@@ -49,7 +35,7 @@ end
 
     λ = x -> sigmoid(x, xscale, xshift, yscale, yshift)
 
-    sampled_model = MultitypeBranchingProcess(
+    sampled_model = SigmoidalBirthRateBranchingProcess(
         λ, μ, truth.γ, truth.state_space, truth.transition_matrix, truth.ρ, truth.σ, truth.present_time
     )
 
@@ -68,10 +54,10 @@ function run_simulations(num_treesets, num_trees, num_samples)
         chns[i] = sample(
             FullModel(trees),
             MH(
-                :xscale => x -> LogNormal(log(x), 1),
+                :xscale => x -> LogNormal(log(x), 0.3),
                 :xshift => x -> Normal(x, 1),
-                :yscale => x -> LogNormal(log(x), 1),
-                :yshift => x -> LogNormal(log(x), 1),
+                :yscale => x -> LogNormal(log(x), 0.3),
+                :yshift => x -> LogNormal(log(x), 0.3),
                 :μ => x -> LogNormal(log(x), 0.3)
             ),
             num_samples
@@ -81,7 +67,7 @@ function run_simulations(num_treesets, num_trees, num_samples)
     chns
 end
 
-chns = run_simulations(100, 30, 1000)
+chns = run_simulations(1, 20, 1000)
 
 println("Exporting samples...")
 
