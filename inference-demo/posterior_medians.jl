@@ -29,14 +29,13 @@ end
     xshift ~ Normal(5, 1)
     yscale ~ Gamma(2, 1)
     yshift ~ Gamma(1, 1)
+    # λ ~ LogNormal(1.5, 1)
 
     μ ~ LogNormal(0, 0.3)
     # γ ~ LogNormal(1.5, 1)
 
-    λ = x -> sigmoid(x, xscale, xshift, yscale, yshift)
-
     sampled_model = SigmoidalBirthRateBranchingProcess(
-        λ, μ, truth.γ, truth.state_space, truth.transition_matrix, truth.ρ, truth.σ, truth.present_time
+        xscale, xshift, yscale, yshift, μ, truth.γ, truth.state_space, truth.transition_matrix, truth.ρ, truth.σ, truth.present_time
     )
 
     Turing.@addlogprob! sum(gcdyn.stadler_appx_loglikelhood(sampled_model, tree) for tree in trees)
@@ -67,7 +66,7 @@ function run_simulations(num_treesets, num_trees, num_samples)
     chns
 end
 
-chns = run_simulations(1, 20, 1000)
+chns = run_simulations(100, 20, 1000)
 
 println("Exporting samples...")
 
@@ -93,7 +92,7 @@ println("Visualizing...")
 
 hists = map((:xscale, :xshift, :yscale, :yshift, :μ)) do param
     histogram(medians[!, param]; normalize=:pdf, label="Medians")
-    vline!([true_params[param]]; label="Truth", linewidth=4)
+    vline!([getfield(truth, param)]; label="Truth", linewidth=4)
     title!(string(param))
 end
 
