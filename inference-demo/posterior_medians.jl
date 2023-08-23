@@ -4,19 +4,29 @@ using gcdyn, CSV, DataFrames, Turing, StatsPlots
 
 println("Setting up model...")
 
+priors = Dict(
+    :xscale => Gamma(2, 1),
+    :xshift => Normal(5, 1),
+    :yscale => Gamma(2, 1),
+    :yshift => Gamma(1, 1),
+    :μ => LogNormal(0, 0.3),
+    :γ => LogNormal(0, .5),
+    :p => Uniform(0, 1)
+)
+
 # https://docs.julialang.org/en/v1/manual/performance-tips/index.html#Avoid-untyped-global-variables
 const transition_p = 0.3
 const truth = SigmoidalBirthRateBranchingProcess(1, 5, 1.5, 1, 1.3, 2, [2, 4, 6, 8], RandomWalkTransitionMatrix([2, 4, 6, 8], transition_p), 1, 0, 2)
 
-@model function FullModel(trees::Vector{TreeNode})
-    xscale ~ Gamma(2, 1)
-    xshift ~ Normal(5, 1)
-    yscale ~ Gamma(2, 1)
-    yshift ~ Gamma(1, 1)
+@model function Model(trees::Vector{TreeNode})
+    xscale ~ priors[:xscale]
+    xshift ~ priors[:xshift]
+    yscale ~ priors[:yscale]
+    yshift ~ priors[:yshift]
     # λ ~ LogNormal(1.5, 1)
 
-    μ ~ LogNormal(0, 0.3)
-    γ ~ LogNormal(1.5, 1)
+    μ ~ priors[:μ]
+    γ ~ priors[:γ]
     logit_p ~ Normal(0, 1.8)
     p = gcdyn.expit(logit_p)
 
@@ -25,25 +35,7 @@ const truth = SigmoidalBirthRateBranchingProcess(1, 5, 1.5, 1, 1.3, 2, [2, 4, 6,
     )
 
     Turing.@addlogprob! loglikelihood(sampled_model, trees; reltol=1e-3, abstol=1e-3)
-end
-
-@model function AppxModel(trees::Vector{TreeNode})
-    xscale ~ Gamma(2, 1)
-    xshift ~ Normal(5, 1)
-    yscale ~ Gamma(2, 1)
-    yshift ~ Gamma(1, 1)
-    # λ ~ LogNormal(1.5, 1)
-
-    μ ~ LogNormal(0, 0.3)
-    γ ~ LogNormal(1.5, 1)
-    logit_p ~ Normal(0, 1.8)
-    p = gcdyn.expit(logit_p)
-
-    sampled_model = SigmoidalBirthRateBranchingProcess(
-        xscale, xshift, yscale, yshift, μ, γ, truth.state_space, RandomWalkTransitionMatrix(truth.state_space, p), truth.ρ, truth.σ, truth.present_time
-    )
-
-    Turing.@addlogprob! sum(gcdyn.stadler_appx_loglikelhood(sampled_model, tree) for tree in trees)
+    # Turing.@addlogprob! sum(gcdyn.stadler_appx_loglikelhood(sampled_model, tree) for tree in trees)
 end
 
 println("Sampling...")
@@ -56,7 +48,7 @@ function run_simulations(num_treesets, num_trees, num_samples)
         trees = rand_tree(truth, num_trees, truth.state_space[1]);
 
         chns[i] = sample(
-            FullModel(trees),
+            Model(trees),
             MH(
                 :xscale => x -> LogNormal(log(x), 0.3),
                 :xshift => x -> Normal(x, 1),
@@ -106,6 +98,8 @@ hists = map((:xscale, :xshift, :yscale, :yshift, :μ, :γ, :p)) do param
 
     true_value = param == :p ? transition_p : getfield(truth, param)
     vline!([true_value]; label="Truth", linewidth=4)
+
+    plot!(priors[param]; label="Prior", fill = (0, 0.5))
 
     title!(string(param))
 end
