@@ -167,8 +167,35 @@ SigmoidalBirthRateBranchingProcess(xscale, xshift, yscale, yshift, μ, γ, state
 Specifies uniform transition probabilities to all states.
 """
 function SigmoidalBirthRateBranchingProcess(xscale, xshift, yscale, yshift, μ, γ, state_space, ρ, σ, present_time)
-    n = length(state_space)
-    transition_matrix = (ones(n, n) - I) / (n - 1)
+    transition_matrix = UniformTransitionMatrix(state_space)
 
     return SigmoidalBirthRateBranchingProcess(xscale, xshift, yscale, yshift, μ, γ, state_space, transition_matrix, ρ, σ, present_time)
+end
+
+function UniformTransitionMatrix(state_space)
+    n = length(state_space)
+
+    return (ones(n, n) - I) / (n - 1)
+end
+
+function RandomWalkTransitionMatrix(state_space, p)
+    if p <= 0 || p >= 1
+        throw(ArgumentError("p must be between 0 and 1"))
+    end
+
+    n = length(state_space)
+    transition_matrix = zeros(n, n)
+
+    for i in 1:n
+        if i == 1
+            transition_matrix[i, i+1] = 1
+        elseif i == n
+            transition_matrix[i, i-1] = 1
+        else
+            transition_matrix[i, i+1] = p
+            transition_matrix[i, i-1] = 1 - p
+        end
+    end
+
+    return transition_matrix
 end

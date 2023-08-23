@@ -5,7 +5,8 @@ using gcdyn, CSV, DataFrames, Turing, StatsPlots
 println("Setting up model...")
 
 # https://docs.julialang.org/en/v1/manual/performance-tips/index.html#Avoid-untyped-global-variables
-const truth = SigmoidalBirthRateBranchingProcess(1, 5, 1.5, 1, 1.3, 2, [2, 4, 6, 8], 1, 0, 2)
+const transition_p = 0.3
+const truth = SigmoidalBirthRateBranchingProcess(1, 5, 1.5, 1, 1.3, 2, [2, 4, 6, 8], RandomWalkTransitionMatrix([2, 4, 6, 8], transition_p), 1, 0, 2)
 
 @model function FullModel(trees::Vector{TreeNode})
     xscale ~ Gamma(2, 1)
@@ -15,10 +16,12 @@ const truth = SigmoidalBirthRateBranchingProcess(1, 5, 1.5, 1, 1.3, 2, [2, 4, 6,
     # λ ~ LogNormal(1.5, 1)
 
     μ ~ LogNormal(0, 0.3)
-    # γ ~ LogNormal(1.5, 1)
+    γ ~ LogNormal(1.5, 1)
+    logit_p ~ Normal(0, 1.8)
+    p = gcdyn.expit(logit_p)
 
     sampled_model = SigmoidalBirthRateBranchingProcess(
-        xscale, xshift, yscale, yshift, μ, truth.γ, truth.state_space, truth.transition_matrix, truth.ρ, truth.σ, truth.present_time
+        xscale, xshift, yscale, yshift, μ, truth.γ, truth.state_space, RandomWalkTransitionMatrix(truth.state_space, p), truth.ρ, truth.σ, truth.present_time
     )
 
     Turing.@addlogprob! loglikelihood(sampled_model, trees; reltol=1e-3, abstol=1e-3)
@@ -32,7 +35,9 @@ end
     # λ ~ LogNormal(1.5, 1)
 
     μ ~ LogNormal(0, 0.3)
-    # γ ~ LogNormal(1.5, 1)
+    γ ~ LogNormal(1.5, 1)
+    logit_p ~ Normal(0, 1.8)
+    p = gcdyn.expit(logit_p)
 
     sampled_model = SigmoidalBirthRateBranchingProcess(
         xscale, xshift, yscale, yshift, μ, truth.γ, truth.state_space, truth.transition_matrix, truth.ρ, truth.σ, truth.present_time
@@ -57,7 +62,9 @@ function run_simulations(num_treesets, num_trees, num_samples)
                 :xshift => x -> Normal(x, 1),
                 :yscale => x -> LogNormal(log(x), 0.3),
                 :yshift => x -> LogNormal(log(x), 0.3),
-                :μ => x -> LogNormal(log(x), 0.3)
+                :μ => x -> LogNormal(log(x), 0.3),
+                :γ => x -> LogNormal(log(x), 0.3),
+                :logit_p => x -> Normal(x, 0.5)
             ),
             num_samples
         )
@@ -66,7 +73,7 @@ function run_simulations(num_treesets, num_trees, num_samples)
     chns
 end
 
-chns = run_simulations(100, 20, 1000)
+chns = run_simulations(100, 15, 5000)
 
 println("Exporting samples...")
 
@@ -85,18 +92,31 @@ medians = combine(
     :xshift => median => :xshift,
     :yscale => median => :yscale,
     :yshift => median => :yshift,
-    :μ => median => :μ
+    :μ => median => :μ,
+    :γ => median => :γ,
+    :logit_p => median => :logit_p
 )
+
+medians.p = gcdyn.expit.(medians.logit_p)
 
 println("Visualizing...")
 
-hists = map((:xscale, :xshift, :yscale, :yshift, :μ)) do param
+hists = map((:xscale, :xshift, :yscale, :yshift, :μ, :γ, :p)) do param
     histogram(medians[!, param]; normalize=:pdf, label="Medians")
-    vline!([getfield(truth, param)]; label="Truth", linewidth=4)
+
+    true_value = param == :p ? transition_p : getfield(truth, param)
+    vline!([true_value]; label="Truth", linewidth=4)
+
     title!(string(param))
 end
 
-plot(hists...; layout=(3, 2), thickness_scaling=0.75, dpi=300, size=(600, 600), plot_title="Posterior median sampling distribution")
+plot(hists...;
+    layout=(3, 2),
+    thickness_scaling=0.75,
+    dpi=300,
+    size=(600, 600),
+    plot_title="Posterior median sampling distribution"
+)
 png("posterior_medians.png")
 
 println("Done!")
