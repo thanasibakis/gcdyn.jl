@@ -16,7 +16,7 @@ priors = Dict(
 
 # https://docs.julialang.org/en/v1/manual/performance-tips/index.html#Avoid-untyped-global-variables
 const transition_p = 0.3
-const truth = SigmoidalBirthRateBranchingProcess(1, 5, 1.5, 1, 1.3, 2, [2, 4, 6, 8], RandomWalkTransitionMatrix([2, 4, 6, 8], transition_p), 1, 0, 2)
+const truth = SigmoidalBirthRateBranchingProcess(1, 5, 1.5, 1, 1.3, 1.3, [2, 4, 6, 8], RandomWalkTransitionMatrix([2, 4, 6, 8], transition_p), 1, 0, 2)
 
 @model function Model(trees::Vector{TreeNode})
     xscale ~ priors[:xscale]
