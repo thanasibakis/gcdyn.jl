@@ -40,7 +40,7 @@ end
     p = gcdyn.expit(logit_p)
 
     sampled_model = SigmoidalBirthRateBranchingProcess(
-        xscale, xshift, yscale, yshift, μ, truth.γ, truth.state_space, truth.transition_matrix, truth.ρ, truth.σ, truth.present_time
+        xscale, xshift, yscale, yshift, μ, γ, truth.state_space, RandomWalkTransitionMatrix(truth.state_space, p), truth.ρ, truth.σ, truth.present_time
     )
 
     Turing.@addlogprob! sum(gcdyn.stadler_appx_loglikelhood(sampled_model, tree) for tree in trees)
