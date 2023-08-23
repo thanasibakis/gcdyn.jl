@@ -111,10 +111,10 @@ hists = map((:xscale, :xshift, :yscale, :yshift, :μ, :γ, :p)) do param
 end
 
 plot(hists...;
-    layout=(3, 2),
+    layout=(4, 2),
     thickness_scaling=0.75,
     dpi=300,
-    size=(600, 600),
+    size=(800, 600),
     plot_title="Posterior median sampling distribution"
 )
 png("posterior_medians.png")
