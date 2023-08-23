@@ -21,7 +21,7 @@ const truth = SigmoidalBirthRateBranchingProcess(1, 5, 1.5, 1, 1.3, 2, [2, 4, 6,
     p = gcdyn.expit(logit_p)
 
     sampled_model = SigmoidalBirthRateBranchingProcess(
-        xscale, xshift, yscale, yshift, μ, truth.γ, truth.state_space, RandomWalkTransitionMatrix(truth.state_space, p), truth.ρ, truth.σ, truth.present_time
+        xscale, xshift, yscale, yshift, μ, γ, truth.state_space, RandomWalkTransitionMatrix(truth.state_space, p), truth.ρ, truth.σ, truth.present_time
     )
 
     Turing.@addlogprob! loglikelihood(sampled_model, trees; reltol=1e-3, abstol=1e-3)
