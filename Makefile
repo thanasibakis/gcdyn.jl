@@ -1,3 +1,5 @@
+.PHONY: inference-demo clean
+
 inference-demo:
 	cd inference-demo && sbatch run.sub
 
