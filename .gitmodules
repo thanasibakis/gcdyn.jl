@@ -1,0 +1,3 @@
+[submodule "gcdyn"]
+	path = gcdyn
+	url = https://github.com/matsengrp/gcdyn/

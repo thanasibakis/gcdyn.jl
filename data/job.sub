@@ -1,0 +1,13 @@
+#!/bin/bash
+
+#SBATCH --job-name=beast_run ## Name of the job.
+#SBATCH -A VMININ_LAB        ## account to charge 
+#SBATCH -p standard          ## partition/queue name
+#SBATCH --nodes=1            ## (-N) number of nodes to use
+#SBATCH --ntasks=1           ## (-n) number of tasks to launch
+#SBATCH --cpus-per-task=1    ## number of cores the job needs
+#SBATCH --error=slurm-%J.err ## error log file
+
+# Run command hostname and save output to the file out.txt
+module load beast
+beast tenseqs.xml

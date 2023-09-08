@@ -1,0 +1,1129 @@
+
+        BEAST v1.10.4 Prerelease #bc6cbd9, 2002-2018
+       Bayesian Evolutionary Analysis Sampling Trees
+                 Designed and developed by
+   Alexei J. Drummond, Andrew Rambaut and Marc A. Suchard
+                              
+               Department of Computer Science
+                   University of Auckland
+                  alexei@cs.auckland.ac.nz
+                              
+             Institute of Evolutionary Biology
+                  University of Edinburgh
+                     a.rambaut@ed.ac.uk
+                              
+              David Geffen School of Medicine
+           University of California, Los Angeles
+                     msuchard@ucla.edu
+                              
+                Downloads, Help & Resources:
+                  	http://beast.community
+                              
+Source code distributed under the GNU Lesser General Public License:
+          	http://github.com/beast-dev/beast-mcmc
+                              
+                     BEAST developers:
+	Alex Alekseyenko, Guy Baele, Trevor Bedford, Filip Bielejec, Erik Bloomquist, Matthew Hall,
+	Joseph Heled, Sebastian Hoehna, Denise Kuehnert, Philippe Lemey, Wai Lok Sibon Li,
+	Gerton Lunter, Sidney Markowitz, Vladimir Minin, Michael Defoin Platel,
+          	Oliver Pybus, Chieh-Hsi Wu, Walter Xie
+                              
+                         Thanks to:
+    	Roald Forsberg, Beth Shapiro and Korbinian Strimmer
+
+Using BEAGLE library v4.0.0 (PRE-RELEASE) for accelerated, parallel likelihood evaluation
+2009-, BEAGLE Working Group - https://beagle-dev.github.io/
+Citation: Ayres et al (2019) Systematic Biology 68: 1052-1061 | doi:10.1093/sysbio/syz020
+
+
+Random number seed: 1660083386017
+
+
+Loading additional development parsers from development_parsers.properties, which is additional set of parsers only available for development version ...
+Parsing XML file: tenseqs.xml
+  File encoding: UTF8
+Looking for plugins in /data/homezvol1/abakis/beast_run/plugins
+
+Read alignment: alignment
+  Sequences = 10
+      Sites = 657
+   Datatype = nucleotide
+Site patterns 'patterns' created from positions 1-657 of alignment 'alignment'
+  pattern count = 657
+Creating Jukes-Cantor distance matrix
+
+Creating the tree model, 'treeModel'
+  taxon count = 10
+  tree height = 36.0
+
+Using strict molecular clock model.
+
+Creating state frequencies model 'frequencies': Initial frequencies = {0.25, 0.25, 0.25, 0.25}
+
+Creating HKY substitution model. Initial kappa = 2.0
+
+Creating site rate model: 
+  4 category discrete gamma with initial shape = 0.5
+
+Using BEAGLE TreeLikelihood
+  Branch rate model used: strictClockBranchRates
+  Using BEAGLE resource 0: CPU (x86_64)
+    with instance flags:  PRECISION_DOUBLE COMPUTATION_SYNCH EIGEN_REAL SCALING_MANUAL SCALERS_RAW VECTOR_SSE THREADING_CPP PROCESSOR_CPU FRAMEWORK_CPU
+  Ignoring ambiguities in tree likelihood.
+  With 657 unique site patterns.
+  Using rescaling scheme : dynamic (rescaling every 100 evaluations, delay rescaling until first overflow)
+Optimization Schedule: default
+Creating CTMC Scale Reference Prior model.
+Acting on subtree of size 10
+
+Likelihood computation is using an auto sizing thread pool.
+
+Creating the MCMC chain:
+  chain length = 1000000
+  operator adaption = true
+  adaptation delayed for 10000 steps
+
+Citations for this analysis: 
+
+FRAMEWORK
+BEAST primary citation:
+	Suchard MA, Lemey P, Baele G, Ayres DL, Drummond AJ, Rambaut A (2018) Bayesian phylogenetic and phylodynamic data integration using BEAST 1.10. Virus Evolution. vey016. DOI:10.1093/ve/vey016
+Using BEAGLE likelihood calculation library (first citation) with MarkovJumps inference techniques (second citation):
+	Ayres et al  (2012) BEAGLE: a common application programming inferface and high-performance computing library for statistical phylogenetics. Syst Biol. 61, 170-173. DOI:10.1093/sysbio/syr100
+	Minin VN, Suchard MA (2008) Counting labeled transitions in continuous-time Markov models of evolution. Journal of Mathematical Biology. 56, 391-412
+
+SUBSTITUTION MODELS
+HKY nucleotide substitution model:
+	Hasegawa M, Kishino H, Yano T (1985) Dating the human-ape splitting by a molecular clock of mitochondrial DNA. J. Mol. Evol.. 22, 160-174
+Discrete gamma-distributed rate heterogeneity model:
+	Yang Z (1994) Maximum likelihood phylogenetic estimation from DNA sequences with variable rates over sites: approximate methods. J. Mol. Evol.. 39, 306-314
+
+PRIOR MODELS
+CTMC Scale Reference Prior model:
+	Ferreira MAR, Suchard MA (2008) Bayesian analysis of elapsed times in continuous-time Markov chains. Canadian Journal of Statistics. 36, 355-368
+
+
+# BEAST v1.10.4 Prerelease #bc6cbd9
+# Generated Tue Aug 09 15:16:27 PDT 2022 [seed=1660083386017]
+# tenseqs.xml
+state	Joint       	Prior       	Likelihood  	age(root)   	clock.rate  
+0	-6818.2507  	-1018.8994  	-5799.3512  	-36.0000    	1.00000     	-
+1000	-1479.1382  	-10.8950    	-1468.2432  	-1.32083    	0.37481     	-
+2000	-1264.2600  	-12.6729    	-1251.5871  	-0.90208    	1.64836E-2  	-
+3000	-1272.3696  	-16.0866    	-1256.2830  	-1.93274    	9.97993E-3  	-
+4000	-1264.3048  	-16.4724    	-1247.8323  	-1.17430    	9.63024E-3  	-
+5000	-1268.8319  	-20.3487    	-1248.4833  	-1.93344    	5.66781E-3  	-
+6000	-1264.9748  	-17.0353    	-1247.9395  	-1.43462    	9.05275E-3  	-
+7000	-1273.6635  	-22.1241    	-1251.5394  	-2.36569    	3.79618E-3  	-
+8000	-1270.4682  	-18.1093    	-1252.3590  	-1.42806    	6.39979E-3  	-
+9000	-1266.1583  	-18.0029    	-1248.1553  	-1.78416    	8.82914E-3  	-
+10000	-1264.8762  	-16.8056    	-1248.0706  	-1.81032    	7.10555E-3  	-
+11000	-1265.8650  	-18.7227    	-1247.1423  	-2.20253    	7.42894E-3  	1.46 hours/million states
+12000	-1270.5739  	-16.2136    	-1254.3604  	-1.72648    	6.60307E-3  	1.46 hours/million states
+13000	-1265.9610  	-16.7218    	-1249.2392  	-1.46810    	8.37181E-3  	1.46 hours/million states
+14000	-1269.1552  	-18.9750    	-1250.1802  	-1.86087    	6.30169E-3  	1.46 hours/million states
+15000	-1271.8953  	-21.8025    	-1250.0928  	-2.13774    	4.46973E-3  	1.46 hours/million states
+16000	-1271.8152  	-21.7280    	-1250.0872  	-2.28611    	5.27415E-3  	1.46 hours/million states
+17000	-1274.1163  	-19.0256    	-1255.0906  	-1.76590    	5.60002E-3  	1.45 hours/million states
+18000	-1277.1202  	-20.0539    	-1257.0662  	-2.58930    	5.30151E-3  	1.44 hours/million states
+19000	-1273.7625  	-20.5518    	-1253.2107  	-1.66943    	7.83421E-3  	1.43 hours/million states
+20000	-1264.0881  	-16.0159    	-1248.0722  	-1.15302    	7.41214E-3  	1.42 hours/million states
+21000	-1262.6143  	-14.2142    	-1248.4001  	-1.70220    	9.14367E-3  	1.42 hours/million states
+22000	-1268.2815  	-20.5156    	-1247.7658  	-2.87804    	5.37295E-3  	1.41 hours/million states
+23000	-1272.8903  	-20.8666    	-1252.0237  	-3.37307    	4.14899E-3  	1.41 hours/million states
+24000	-1281.4934  	-24.4821    	-1257.0112  	-3.44991    	2.79288E-3  	1.41 hours/million states
+25000	-1274.3156  	-21.6425    	-1252.6730  	-2.11708    	5.57342E-3  	1.41 hours/million states
+26000	-1269.7882  	-20.5872    	-1249.2010  	-2.20039    	3.73623E-3  	1.4 hours/million states
+27000	-1270.9051  	-18.6883    	-1252.2169  	-2.08974    	3.34023E-3  	1.4 hours/million states
+28000	-1268.6760  	-18.9561    	-1249.7199  	-1.96146    	5.61666E-3  	1.4 hours/million states
+29000	-1268.6931  	-20.3018    	-1248.3913  	-2.66446    	4.71276E-3  	1.4 hours/million states
+30000	-1269.4389  	-20.6347    	-1248.8042  	-2.29051    	4.68308E-3  	1.4 hours/million states
+31000	-1266.3602  	-20.6702    	-1245.6900  	-3.04770    	3.6305E-3   	1.4 hours/million states
+32000	-1276.3455  	-26.1366    	-1250.2089  	-5.25548    	2.55963E-3  	1.4 hours/million states
+33000	-1277.1754  	-24.1992    	-1252.9762  	-4.07695    	2.37136E-3  	1.4 hours/million states
+34000	-1277.0530  	-23.4592    	-1253.5937  	-4.81363    	2.54406E-3  	1.39 hours/million states
+35000	-1269.0696  	-23.8174    	-1245.2522  	-4.74558    	3.10615E-3  	1.39 hours/million states
+36000	-1272.6410  	-24.1625    	-1248.4785  	-5.00409    	2.27871E-3  	1.39 hours/million states
+37000	-1278.9708  	-25.8644    	-1253.1064  	-4.51429    	2.80373E-3  	1.38 hours/million states
+38000	-1277.3770  	-26.0248    	-1251.3522  	-3.48206    	3.28472E-3  	1.38 hours/million states
+39000	-1277.4201  	-28.8160    	-1248.6041  	-3.73054    	2.70101E-3  	1.37 hours/million states
+40000	-1273.3344  	-25.2866    	-1248.0478  	-4.07216    	2.47919E-3  	1.37 hours/million states
+41000	-1276.6663  	-26.2336    	-1250.4327  	-5.09165    	2.26808E-3  	1.37 hours/million states
+42000	-1280.8164  	-30.4229    	-1250.3934  	-8.17248    	1.01473E-3  	1.37 hours/million states
+43000	-1284.9986  	-34.4593    	-1250.5393  	-9.95706    	1.00434E-3  	1.36 hours/million states
+44000	-1290.7238  	-36.1318    	-1254.5921  	-11.4852    	1.15171E-3  	1.36 hours/million states
+45000	-1283.9030  	-33.4380    	-1250.4650  	-10.1707    	7.51198E-4  	1.36 hours/million states
+46000	-1282.9591  	-34.7268    	-1248.2323  	-11.9063    	8.06333E-4  	1.36 hours/million states
+47000	-1284.6422  	-33.2896    	-1251.3526  	-12.2125    	8.99271E-4  	1.36 hours/million states
+48000	-1285.0999  	-33.6653    	-1251.4346  	-12.2310    	8.32691E-4  	1.35 hours/million states
+49000	-1288.1180  	-37.2270    	-1250.8910  	-10.2103    	8.14512E-4  	1.35 hours/million states
+50000	-1284.9284  	-36.1946    	-1248.7338  	-13.6615    	8.44449E-4  	1.35 hours/million states
+51000	-1284.3708  	-35.0430    	-1249.3278  	-11.1620    	7.30851E-4  	1.35 hours/million states
+52000	-1281.5633  	-34.0477    	-1247.5156  	-10.2882    	1.03659E-3  	1.35 hours/million states
+53000	-1286.4147  	-35.6603    	-1250.7544  	-11.6167    	9.4205E-4   	1.35 hours/million states
+54000	-1288.6930  	-34.5147    	-1254.1783  	-11.7373    	8.01869E-4  	1.34 hours/million states
+55000	-1291.5728  	-39.7745    	-1251.7983  	-13.0396    	8.71523E-4  	1.34 hours/million states
+56000	-1284.5810  	-34.0042    	-1250.5768  	-12.2043    	6.90083E-4  	1.34 hours/million states
+57000	-1288.2823  	-37.4079    	-1250.8744  	-12.8113    	1.02114E-3  	1.34 hours/million states
+58000	-1291.6008  	-37.1329    	-1254.4679  	-11.3435    	9.0218E-4   	1.34 hours/million states
+59000	-1287.4339  	-39.1871    	-1248.2468  	-12.5292    	7.70376E-4  	1.34 hours/million states
+60000	-1285.6910  	-37.1408    	-1248.5502  	-13.3588    	7.08759E-4  	1.34 hours/million states
+61000	-1287.9119  	-34.4912    	-1253.4206  	-13.5904    	5.47284E-4  	1.34 hours/million states
+62000	-1289.5001  	-37.5064    	-1251.9937  	-13.7547    	6.45034E-4  	1.34 hours/million states
+63000	-1288.7316  	-35.3439    	-1253.3876  	-14.5355    	7.57216E-4  	1.34 hours/million states
+64000	-1292.8676  	-40.0557    	-1252.8119  	-12.6074    	5.16571E-4  	1.34 hours/million states
+65000	-1290.6261  	-40.4619    	-1250.1642  	-13.6068    	9.853E-4    	1.34 hours/million states
+66000	-1285.5361  	-36.3473    	-1249.1888  	-10.8666    	9.69507E-4  	1.34 hours/million states
+67000	-1284.9773  	-32.1490    	-1252.8283  	-10.9691    	1.00152E-3  	1.34 hours/million states
+68000	-1292.8439  	-36.3995    	-1256.4444  	-11.3944    	6.64793E-4  	1.34 hours/million states
+69000	-1289.6480  	-32.1746    	-1257.4733  	-10.5788    	7.52644E-4  	1.34 hours/million states
+70000	-1286.6938  	-35.7818    	-1250.9121  	-10.1328    	6.30825E-4  	1.34 hours/million states
+71000	-1286.0197  	-39.1119    	-1246.9079  	-10.4697    	7.71936E-4  	1.33 hours/million states
+72000	-1286.6939  	-34.1837    	-1252.5101  	-8.85911    	1.10234E-3  	1.33 hours/million states
+73000	-1281.9233  	-27.6939    	-1254.2294  	-7.40054    	1.35109E-3  	1.33 hours/million states
+74000	-1285.4858  	-35.1551    	-1250.3307  	-7.68011    	1.3559E-3   	1.33 hours/million states
+75000	-1281.4301  	-28.2853    	-1253.1449  	-5.85973    	1.6652E-3   	1.33 hours/million states
+76000	-1277.3097  	-30.1572    	-1247.1525  	-5.94114    	1.83375E-3  	1.33 hours/million states
+77000	-1277.6556  	-27.4515    	-1250.2040  	-7.28451    	1.34189E-3  	1.33 hours/million states
+78000	-1279.9251  	-32.1887    	-1247.7364  	-6.71572    	1.95156E-3  	1.33 hours/million states
+79000	-1280.6343  	-29.4725    	-1251.1618  	-7.89718    	1.43347E-3  	1.33 hours/million states
+80000	-1283.3439  	-32.3765    	-1250.9673  	-6.93045    	1.63131E-3  	1.33 hours/million states
+81000	-1278.1378  	-26.6707    	-1251.4671  	-5.72349    	1.68323E-3  	1.33 hours/million states
+82000	-1277.8192  	-29.0064    	-1248.8127  	-5.82196    	1.55094E-3  	1.33 hours/million states
+83000	-1280.9375  	-30.7445    	-1250.1930  	-4.63352    	1.74137E-3  	1.33 hours/million states
+84000	-1276.5875  	-28.6594    	-1247.9280  	-5.06940    	1.7897E-3   	1.33 hours/million states
+85000	-1280.2879  	-24.7841    	-1255.5038  	-4.89278    	1.83911E-3  	1.33 hours/million states
+86000	-1288.2531  	-32.5223    	-1255.7308  	-5.34913    	1.92013E-3  	1.34 hours/million states
+87000	-1284.0847  	-34.3170    	-1249.7677  	-5.82644    	1.81685E-3  	1.34 hours/million states
+88000	-1279.9222  	-28.2584    	-1251.6638  	-5.21349    	1.56399E-3  	1.34 hours/million states
+89000	-1284.2621  	-29.8870    	-1254.3751  	-5.93741    	1.75835E-3  	1.34 hours/million states
+90000	-1287.2203  	-33.9545    	-1253.2658  	-6.23131    	1.71289E-3  	1.34 hours/million states
+91000	-1290.0043  	-38.5513    	-1251.4531  	-5.95664    	1.25289E-3  	1.34 hours/million states
+92000	-1278.0478  	-26.5631    	-1251.4847  	-5.95870    	1.32986E-3  	1.34 hours/million states
+93000	-1281.2944  	-31.7263    	-1249.5680  	-5.53119    	1.98767E-3  	1.34 hours/million states
+94000	-1281.1223  	-30.9002    	-1250.2221  	-5.65506    	2.08954E-3  	1.34 hours/million states
+95000	-1279.4994  	-28.8216    	-1250.6778  	-5.53879    	1.95931E-3  	1.34 hours/million states
+96000	-1284.2196  	-33.3904    	-1250.8292  	-6.39204    	1.66081E-3  	1.35 hours/million states
+97000	-1286.3154  	-32.0798    	-1254.2357  	-6.87081    	1.28195E-3  	1.35 hours/million states
+98000	-1288.9542  	-29.2745    	-1259.6797  	-6.25659    	1.34901E-3  	1.35 hours/million states
+99000	-1282.5282  	-31.9879    	-1250.5403  	-6.29363    	1.37808E-3  	1.35 hours/million states
+100000	-1282.4049  	-30.8773    	-1251.5276  	-5.99892    	1.89829E-3  	1.35 hours/million states
+101000	-1283.0397  	-32.2045    	-1250.8352  	-7.24016    	1.17242E-3  	1.35 hours/million states
+102000	-1283.4432  	-28.6789    	-1254.7643  	-5.90943    	1.55512E-3  	1.35 hours/million states
+103000	-1281.5900  	-30.7238    	-1250.8663  	-4.66620    	2.01914E-3  	1.35 hours/million states
+104000	-1271.8416  	-23.9062    	-1247.9354  	-3.90962    	2.59399E-3  	1.35 hours/million states
+105000	-1277.9164  	-26.0687    	-1251.8477  	-4.61194    	2.06052E-3  	1.35 hours/million states
+106000	-1279.4350  	-28.8200    	-1250.6150  	-6.33735    	1.88316E-3  	1.35 hours/million states
+107000	-1275.9132  	-29.6525    	-1246.2607  	-3.72727    	2.41317E-3  	1.35 hours/million states
+108000	-1276.3481  	-28.8378    	-1247.5104  	-5.67035    	2.04682E-3  	1.35 hours/million states
+109000	-1280.7081  	-30.1824    	-1250.5257  	-4.76649    	2.57627E-3  	1.35 hours/million states
+110000	-1279.8105  	-27.8599    	-1251.9506  	-5.02308    	2.16329E-3  	1.35 hours/million states
+111000	-1277.9920  	-30.7060    	-1247.2861  	-8.05349    	1.24306E-3  	1.36 hours/million states
+112000	-1276.1992  	-29.7205    	-1246.4787  	-7.05840    	1.30872E-3  	1.36 hours/million states
+113000	-1274.4561  	-26.1880    	-1248.2681  	-6.10558    	1.94695E-3  	1.36 hours/million states
+114000	-1274.1857  	-26.2242    	-1247.9615  	-5.33856    	2.15777E-3  	1.36 hours/million states
+115000	-1274.5468  	-23.1752    	-1251.3716  	-4.31950    	1.96423E-3  	1.36 hours/million states
+116000	-1275.1227  	-24.5691    	-1250.5536  	-4.55388    	2.79437E-3  	1.36 hours/million states
+117000	-1273.7275  	-25.1483    	-1248.5791  	-4.76658    	1.78842E-3  	1.36 hours/million states
+118000	-1280.4889  	-25.9873    	-1254.5016  	-3.97994    	2.22127E-3  	1.36 hours/million states
+119000	-1275.2479  	-25.5007    	-1249.7471  	-3.41251    	3.67521E-3  	1.36 hours/million states
+120000	-1273.9607  	-25.0876    	-1248.8731  	-4.08236    	3.22296E-3  	1.36 hours/million states
+121000	-1272.6265  	-25.2141    	-1247.4124  	-5.97212    	2.49398E-3  	1.36 hours/million states
+122000	-1272.5445  	-25.0723    	-1247.4722  	-5.89937    	2.72671E-3  	1.36 hours/million states
+123000	-1281.8077  	-27.7662    	-1254.0415  	-6.26321    	2.11344E-3  	1.36 hours/million states
+124000	-1279.9623  	-30.7154    	-1249.2469  	-9.01400    	1.5061E-3   	1.36 hours/million states
+125000	-1282.8963  	-29.9865    	-1252.9099  	-8.47297    	1.23926E-3  	1.36 hours/million states
+126000	-1278.8073  	-32.4416    	-1246.3657  	-12.5562    	1.01833E-3  	1.36 hours/million states
+127000	-1287.1264  	-28.3722    	-1258.7542  	-7.52480    	1.31769E-3  	1.36 hours/million states
+128000	-1273.7589  	-28.8562    	-1244.9027  	-7.55792    	1.67785E-3  	1.36 hours/million states
+129000	-1273.9438  	-29.1510    	-1244.7929  	-9.85218    	1.19272E-3  	1.36 hours/million states
+130000	-1282.7843  	-32.4771    	-1250.3072  	-12.0457    	1.10455E-3  	1.36 hours/million states
+131000	-1281.2208  	-34.5343    	-1246.6865  	-12.3139    	1.00173E-3  	1.36 hours/million states
+132000	-1282.1567  	-34.1282    	-1248.0286  	-15.7979    	7.39415E-4  	1.36 hours/million states
+133000	-1283.3521  	-34.2062    	-1249.1459  	-10.1751    	1.1767E-3   	1.36 hours/million states
+134000	-1277.4247  	-31.5373    	-1245.8874  	-8.40910    	1.32063E-3  	1.36 hours/million states
+135000	-1276.4267  	-30.2678    	-1246.1589  	-9.40933    	1.23565E-3  	1.36 hours/million states
+136000	-1277.5353  	-31.9927    	-1245.5426  	-9.86069    	1.31902E-3  	1.36 hours/million states
+137000	-1280.4907  	-29.5304    	-1250.9602  	-10.7084    	8.97796E-4  	1.36 hours/million states
+138000	-1284.6848  	-35.3579    	-1249.3269  	-12.8755    	1.04268E-3  	1.36 hours/million states
+139000	-1284.4994  	-37.4952    	-1247.0042  	-19.8772    	7.76941E-4  	1.36 hours/million states
+140000	-1283.5962  	-34.5679    	-1249.0283  	-13.7958    	9.39505E-4  	1.36 hours/million states
+141000	-1283.9277  	-34.7283    	-1249.1994  	-11.1883    	9.79681E-4  	1.36 hours/million states
+142000	-1294.0543  	-32.2336    	-1261.8207  	-12.3144    	6.08615E-4  	1.36 hours/million states
+143000	-1278.6740  	-29.3589    	-1249.3150  	-9.60058    	1.14169E-3  	1.36 hours/million states
+144000	-1281.4557  	-29.1563    	-1252.2994  	-8.68106    	1.53181E-3  	1.36 hours/million states
+145000	-1282.7543  	-29.5955    	-1253.1588  	-7.51686    	1.88341E-3  	1.36 hours/million states
+146000	-1280.2869  	-27.8985    	-1252.3883  	-8.19019    	1.1917E-3   	1.36 hours/million states
+147000	-1283.7362  	-32.5784    	-1251.1578  	-8.57158    	1.72554E-3  	1.36 hours/million states
+148000	-1280.4269  	-29.8420    	-1250.5849  	-7.17270    	2.06799E-3  	1.36 hours/million states
+149000	-1277.4791  	-28.4069    	-1249.0722  	-7.04566    	1.7511E-3   	1.35 hours/million states
+150000	-1283.6883  	-28.0303    	-1255.6580  	-5.40924    	2.09023E-3  	1.35 hours/million states
+151000	-1290.7373  	-32.2108    	-1258.5265  	-10.2302    	8.66632E-4  	1.35 hours/million states
+152000	-1284.6988  	-35.4108    	-1249.2879  	-10.2457    	1.25073E-3  	1.35 hours/million states
+153000	-1280.5624  	-31.9799    	-1248.5825  	-10.5669    	9.51151E-4  	1.35 hours/million states
+154000	-1285.3021  	-34.9093    	-1250.3928  	-13.4732    	9.85596E-4  	1.35 hours/million states
+155000	-1283.4699  	-31.4969    	-1251.9730  	-11.1500    	1.08104E-3  	1.35 hours/million states
+156000	-1287.0157  	-39.5689    	-1247.4468  	-13.6023    	1.10808E-3  	1.35 hours/million states
+157000	-1279.3389  	-32.0612    	-1247.2777  	-10.2071    	1.42674E-3  	1.35 hours/million states
+158000	-1286.4677  	-35.3966    	-1251.0712  	-12.9912    	9.94211E-4  	1.35 hours/million states
+159000	-1286.4168  	-37.9386    	-1248.4782  	-13.8100    	8.93085E-4  	1.35 hours/million states
+160000	-1288.0472  	-40.7497    	-1247.2975  	-21.3738    	5.18742E-4  	1.35 hours/million states
+161000	-1291.7358  	-39.6154    	-1252.1204  	-23.6530    	4.22981E-4  	1.35 hours/million states
+162000	-1287.1613  	-35.9499    	-1251.2114  	-22.2266    	4.14904E-4  	1.35 hours/million states
+163000	-1290.1191  	-39.0791    	-1251.0400  	-25.7711    	4.78222E-4  	1.35 hours/million states
+164000	-1301.3206  	-41.4647    	-1259.8558  	-30.6605    	3.39965E-4  	1.35 hours/million states
+165000	-1291.8112  	-40.8443    	-1250.9669  	-38.1751    	2.7203E-4   	1.35 hours/million states
+166000	-1300.4535  	-43.6602    	-1256.7933  	-40.7626    	1.94124E-4  	1.34 hours/million states
+167000	-1297.0304  	-46.0916    	-1250.9389  	-38.2096    	2.54108E-4  	1.34 hours/million states
+168000	-1298.4398  	-43.1758    	-1255.2640  	-42.3228    	2.51431E-4  	1.34 hours/million states
+169000	-1299.8762  	-45.5103    	-1254.3659  	-53.0225    	2.83976E-4  	1.34 hours/million states
+170000	-1294.5698  	-46.7676    	-1247.8022  	-51.7011    	2.34069E-4  	1.34 hours/million states
+171000	-1299.2639  	-45.2435    	-1254.0204  	-58.9166    	2.53977E-4  	1.34 hours/million states
+172000	-1302.0252  	-47.5804    	-1254.4448  	-57.0482    	1.98452E-4  	1.34 hours/million states
+173000	-1291.9423  	-44.7103    	-1247.2321  	-46.9936    	2.69324E-4  	1.34 hours/million states
+174000	-1297.7291  	-49.9818    	-1247.7473  	-60.7972    	2.04869E-4  	1.34 hours/million states
+175000	-1298.0495  	-49.0193    	-1249.0302  	-70.0619    	1.93343E-4  	1.34 hours/million states
+176000	-1304.0879  	-55.0184    	-1249.0695  	-95.0946    	1.30591E-4  	1.34 hours/million states
+177000	-1304.5555  	-53.7497    	-1250.8058  	-79.0630    	1.27628E-4  	1.34 hours/million states
+178000	-1302.1066  	-57.0435    	-1245.0631  	-83.7147    	1.54339E-4  	1.34 hours/million states
+179000	-1302.3785  	-55.0464    	-1247.3321  	-84.0705    	1.4926E-4   	1.34 hours/million states
+180000	-1305.7886  	-51.8151    	-1253.9734  	-107.889    	8.50324E-5  	1.34 hours/million states
+181000	-1304.5043  	-52.3278    	-1252.1765  	-121.417    	1.03136E-4  	1.34 hours/million states
+182000	-1306.2229  	-52.4977    	-1253.7252  	-144.529    	9.35711E-5  	1.34 hours/million states
+183000	-1303.2880  	-54.0710    	-1249.2170  	-160.301    	9.29199E-5  	1.34 hours/million states
+184000	-1307.8869  	-56.3908    	-1251.4961  	-170.033    	7.75798E-5  	1.34 hours/million states
+185000	-1308.6785  	-55.3604    	-1253.3181  	-153.241    	8.25834E-5  	1.34 hours/million states
+186000	-1312.2572  	-58.3928    	-1253.8644  	-185.566    	4.8957E-5   	1.34 hours/million states
+187000	-1305.0727  	-49.7066    	-1255.3661  	-89.9084    	1.50932E-4  	1.34 hours/million states
+188000	-1308.7951  	-54.3158    	-1254.4793  	-128.945    	9.08408E-5  	1.34 hours/million states
+189000	-1314.7529  	-56.6318    	-1258.1211  	-205.328    	5.77121E-5  	1.34 hours/million states
+190000	-1311.4978  	-60.9975    	-1250.5003  	-267.931    	4.4443E-5   	1.33 hours/million states
+191000	-1308.3946  	-59.3395    	-1249.0552  	-216.819    	6.18292E-5  	1.33 hours/million states
+192000	-1311.2817  	-57.7604    	-1253.5212  	-160.442    	6.27316E-5  	1.33 hours/million states
+193000	-1307.1828  	-58.5136    	-1248.6692  	-231.144    	5.18918E-5  	1.33 hours/million states
+194000	-1311.3049  	-62.7052    	-1248.5996  	-360.546    	3.02178E-5  	1.33 hours/million states
+195000	-1309.9145  	-63.4850    	-1246.4295  	-347.342    	2.76854E-5  	1.33 hours/million states
+196000	-1309.9859  	-59.6444    	-1250.3415  	-229.601    	4.4486E-5   	1.33 hours/million states
+197000	-1306.0689  	-60.2937    	-1245.7752  	-247.632    	4.35167E-5  	1.33 hours/million states
+198000	-1314.4923  	-60.2362    	-1254.2561  	-198.278    	6.42902E-5  	1.33 hours/million states
+199000	-1300.3234  	-51.2328    	-1249.0907  	-106.276    	1.11272E-4  	1.33 hours/million states
+200000	-1302.1166  	-52.7014    	-1249.4151  	-128.746    	9.70498E-5  	1.33 hours/million states
+201000	-1296.8821  	-49.6365    	-1247.2456  	-76.1139    	1.33969E-4  	1.33 hours/million states
+202000	-1298.8740  	-49.5599    	-1249.3141  	-75.9131    	1.51644E-4  	1.33 hours/million states
+203000	-1299.9693  	-48.4940    	-1251.4754  	-69.0769    	1.4974E-4   	1.33 hours/million states
+204000	-1302.3426  	-49.5697    	-1252.7729  	-87.2130    	1.76154E-4  	1.33 hours/million states
+205000	-1297.4010  	-47.3379    	-1250.0631  	-53.9594    	2.21385E-4  	1.33 hours/million states
+206000	-1298.1260  	-48.5689    	-1249.5571  	-66.0542    	1.26665E-4  	1.33 hours/million states
+207000	-1295.1617  	-45.3245    	-1249.8372  	-56.9745    	1.99928E-4  	1.33 hours/million states
+208000	-1297.1793  	-46.1147    	-1251.0647  	-61.0145    	1.72822E-4  	1.33 hours/million states
+209000	-1297.3144  	-47.5248    	-1249.7896  	-67.1884    	1.69173E-4  	1.33 hours/million states
+210000	-1292.7779  	-42.7729    	-1250.0049  	-42.2537    	2.78967E-4  	1.33 hours/million states
+211000	-1292.0952  	-42.8247    	-1249.2704  	-36.6498    	2.29939E-4  	1.33 hours/million states
+212000	-1300.8084  	-48.8597    	-1251.9487  	-51.6749    	1.61212E-4  	1.33 hours/million states
+213000	-1298.9228  	-48.8051    	-1250.1177  	-65.3730    	2.03297E-4  	1.33 hours/million states
+214000	-1294.2644  	-45.4468    	-1248.8176  	-52.3000    	1.85971E-4  	1.33 hours/million states
+215000	-1294.5682  	-44.2153    	-1250.3529  	-53.9873    	2.10867E-4  	1.33 hours/million states
+216000	-1294.8411  	-46.0601    	-1248.7811  	-50.9485    	1.45755E-4  	1.33 hours/million states
+217000	-1293.6999  	-45.3523    	-1248.3476  	-60.7253    	1.61158E-4  	1.33 hours/million states
+218000	-1294.8439  	-47.0866    	-1247.7573  	-55.6838    	1.883E-4    	1.33 hours/million states
+219000	-1295.7910  	-47.3636    	-1248.4274  	-50.2217    	1.88207E-4  	1.33 hours/million states
+220000	-1300.4449  	-46.2787    	-1254.1662  	-56.5451    	1.78251E-4  	1.33 hours/million states
+221000	-1293.2530  	-44.7632    	-1248.4898  	-49.7717    	1.68518E-4  	1.33 hours/million states
+222000	-1294.8920  	-44.8876    	-1250.0044  	-48.7509    	1.81804E-4  	1.33 hours/million states
+223000	-1297.4627  	-43.7255    	-1253.7372  	-46.1343    	2.05202E-4  	1.33 hours/million states
+224000	-1295.9657  	-43.3869    	-1252.5788  	-43.5811    	1.96932E-4  	1.33 hours/million states
+225000	-1293.3459  	-46.3962    	-1246.9498  	-50.9567    	2.19132E-4  	1.33 hours/million states
+226000	-1295.1463  	-47.0351    	-1248.1112  	-53.2100    	2.21528E-4  	1.33 hours/million states
+227000	-1295.9837  	-46.5798    	-1249.4039  	-51.5524    	2.10749E-4  	1.33 hours/million states
+228000	-1296.1544  	-48.9190    	-1247.2354  	-48.4369    	2.76243E-4  	1.33 hours/million states
+229000	-1298.5377  	-43.0653    	-1255.4724  	-33.6878    	2.90209E-4  	1.33 hours/million states
+230000	-1295.0323  	-46.2103    	-1248.8220  	-35.3510    	3.68174E-4  	1.33 hours/million states
+231000	-1294.9163  	-45.3711    	-1249.5451  	-34.7114    	2.40175E-4  	1.33 hours/million states
+232000	-1294.0232  	-44.4679    	-1249.5553  	-45.1662    	2.62739E-4  	1.33 hours/million states
+233000	-1297.5338  	-50.4196    	-1247.1142  	-55.7294    	1.70565E-4  	1.33 hours/million states
+234000	-1295.8955  	-47.6655    	-1248.2300  	-63.3066    	1.09218E-4  	1.33 hours/million states
+235000	-1297.8425  	-49.9061    	-1247.9364  	-65.9913    	1.3227E-4   	1.33 hours/million states
+236000	-1296.2225  	-48.6928    	-1247.5297  	-66.0989    	1.68453E-4  	1.33 hours/million states
+237000	-1293.1506  	-40.3717    	-1252.7789  	-34.2683    	2.11409E-4  	1.33 hours/million states
+238000	-1294.7963  	-45.0926    	-1249.7036  	-27.5152    	5.40105E-4  	1.33 hours/million states
+239000	-1290.4500  	-42.8388    	-1247.6112  	-23.5700    	4.34908E-4  	1.33 hours/million states
+240000	-1286.8270  	-36.4299    	-1250.3971  	-22.8875    	4.34267E-4  	1.33 hours/million states
+241000	-1291.2954  	-37.7334    	-1253.5620  	-19.3725    	6.05092E-4  	1.33 hours/million states
+242000	-1291.0990  	-42.1601    	-1248.9389  	-18.5699    	5.84776E-4  	1.33 hours/million states
+243000	-1291.9997  	-36.6729    	-1255.3268  	-21.4997    	5.7229E-4   	1.33 hours/million states
+244000	-1291.0252  	-36.2483    	-1254.7769  	-17.5642    	4.12217E-4  	1.33 hours/million states
+245000	-1290.2928  	-38.3821    	-1251.9108  	-18.8608    	5.60833E-4  	1.33 hours/million states
+246000	-1291.1739  	-41.5091    	-1249.6648  	-27.4504    	4.28743E-4  	1.33 hours/million states
+247000	-1293.5004  	-43.3928    	-1250.1076  	-30.1802    	2.52568E-4  	1.33 hours/million states
+248000	-1293.4089  	-43.9415    	-1249.4674  	-27.8449    	3.96915E-4  	1.33 hours/million states
+249000	-1296.4774  	-41.5659    	-1254.9115  	-26.2130    	4.81436E-4  	1.33 hours/million states
+250000	-1296.6936  	-41.3508    	-1255.3427  	-28.2918    	4.935E-4    	1.33 hours/million states
+251000	-1289.2893  	-40.6513    	-1248.6380  	-24.6431    	3.99242E-4  	1.33 hours/million states
+252000	-1290.9709  	-40.7542    	-1250.2168  	-25.6362    	3.18876E-4  	1.33 hours/million states
+253000	-1292.2551  	-43.2296    	-1249.0255  	-21.9761    	4.01968E-4  	1.32 hours/million states
+254000	-1291.9081  	-41.5666    	-1250.3415  	-24.4254    	5.37372E-4  	1.32 hours/million states
+255000	-1289.1778  	-38.8851    	-1250.2927  	-22.4029    	4.44887E-4  	1.32 hours/million states
+256000	-1289.2826  	-38.2769    	-1251.0057  	-19.7619    	4.25186E-4  	1.32 hours/million states
+257000	-1294.7198  	-41.4576    	-1253.2621  	-19.3983    	5.70955E-4  	1.32 hours/million states
+258000	-1291.4589  	-41.7405    	-1249.7184  	-21.1213    	4.00277E-4  	1.32 hours/million states
+259000	-1284.6151  	-35.6880    	-1248.9271  	-20.9635    	4.41468E-4  	1.32 hours/million states
+260000	-1288.7374  	-37.4732    	-1251.2642  	-19.4893    	6.61441E-4  	1.32 hours/million states
+261000	-1287.3054  	-36.2692    	-1251.0363  	-19.0155    	5.2301E-4   	1.32 hours/million states
+262000	-1289.2437  	-36.1868    	-1253.0569  	-17.9500    	5.08643E-4  	1.32 hours/million states
+263000	-1297.2058  	-42.0523    	-1255.1535  	-23.6416    	4.56918E-4  	1.32 hours/million states
+264000	-1296.6770  	-41.2585    	-1255.4185  	-21.1746    	5.26776E-4  	1.32 hours/million states
+265000	-1291.0823  	-39.6163    	-1251.4660  	-23.4109    	4.58041E-4  	1.32 hours/million states
+266000	-1296.5800  	-43.2357    	-1253.3443  	-25.8673    	3.12312E-4  	1.32 hours/million states
+267000	-1293.3545  	-39.6926    	-1253.6619  	-24.9922    	4.44433E-4  	1.32 hours/million states
+268000	-1301.7975  	-38.6738    	-1263.1238  	-17.9402    	4.38076E-4  	1.32 hours/million states
+269000	-1294.5747  	-38.5907    	-1255.9840  	-17.4992    	7.71754E-4  	1.32 hours/million states
+270000	-1288.2748  	-39.4117    	-1248.8631  	-18.1000    	5.88072E-4  	1.32 hours/million states
+271000	-1296.2169  	-40.8564    	-1255.3605  	-20.8079    	6.49434E-4  	1.32 hours/million states
+272000	-1288.2469  	-37.0871    	-1251.1598  	-15.8554    	8.73805E-4  	1.32 hours/million states
+273000	-1283.5254  	-34.4715    	-1249.0539  	-9.22705    	1.1879E-3   	1.32 hours/million states
+274000	-1282.7042  	-34.1150    	-1248.5891  	-11.8369    	7.27539E-4  	1.32 hours/million states
+275000	-1278.4583  	-32.9317    	-1245.5267  	-10.7120    	1.35386E-3  	1.32 hours/million states
+276000	-1279.5777  	-28.2562    	-1251.3215  	-6.48761    	1.41348E-3  	1.32 hours/million states
+277000	-1281.1846  	-27.8656    	-1253.3190  	-6.76480    	2.17551E-3  	1.32 hours/million states
+278000	-1277.2755  	-27.7996    	-1249.4759  	-5.20459    	2.29396E-3  	1.32 hours/million states
+279000	-1278.9933  	-27.6001    	-1251.3933  	-5.61757    	1.36481E-3  	1.32 hours/million states
+280000	-1280.0357  	-26.5388    	-1253.4969  	-6.39457    	1.74139E-3  	1.32 hours/million states
+281000	-1279.9842  	-26.0366    	-1253.9476  	-6.95685    	1.69829E-3  	1.32 hours/million states
+282000	-1275.8730  	-29.0962    	-1246.7768  	-7.32930    	1.52517E-3  	1.32 hours/million states
+283000	-1285.7379  	-32.9374    	-1252.8005  	-7.90665    	1.72217E-3  	1.32 hours/million states
+284000	-1286.6085  	-30.0548    	-1256.5537  	-7.46484    	1.55544E-3  	1.32 hours/million states
+285000	-1282.0772  	-30.6479    	-1251.4293  	-7.61738    	1.79711E-3  	1.32 hours/million states
+286000	-1278.8744  	-29.5698    	-1249.3046  	-7.34907    	1.01091E-3  	1.32 hours/million states
+287000	-1282.3272  	-28.0320    	-1254.2952  	-5.63490    	2.18738E-3  	1.32 hours/million states
+288000	-1282.6961  	-28.0579    	-1254.6382  	-6.96413    	1.19242E-3  	1.32 hours/million states
+289000	-1280.7679  	-29.5215    	-1251.2464  	-4.47959    	2.72083E-3  	1.32 hours/million states
+290000	-1273.6441  	-25.3648    	-1248.2793  	-4.80783    	2.89879E-3  	1.32 hours/million states
+291000	-1275.4971  	-25.6750    	-1249.8221  	-4.62240    	2.96716E-3  	1.32 hours/million states
+292000	-1276.8804  	-29.0243    	-1247.8561  	-4.76379    	2.79892E-3  	1.31 hours/million states
+293000	-1281.0835  	-28.4791    	-1252.6044  	-6.39603    	1.72743E-3  	1.31 hours/million states
+294000	-1275.8067  	-27.8588    	-1247.9479  	-5.82023    	1.67946E-3  	1.31 hours/million states
+295000	-1274.2448  	-24.9958    	-1249.2490  	-5.04099    	1.8788E-3   	1.31 hours/million states
+296000	-1270.8152  	-25.0176    	-1245.7976  	-4.34533    	1.99159E-3  	1.31 hours/million states
+297000	-1272.6055  	-23.6867    	-1248.9188  	-3.82219    	3.43721E-3  	1.31 hours/million states
+298000	-1275.4190  	-27.0708    	-1248.3482  	-5.13294    	2.33729E-3  	1.31 hours/million states
+299000	-1274.0543  	-27.6679    	-1246.3864  	-5.86612    	1.70266E-3  	1.31 hours/million states
+300000	-1273.3736  	-23.5533    	-1249.8203  	-4.36611    	2.18168E-3  	1.31 hours/million states
+301000	-1275.2610  	-24.1185    	-1251.1425  	-4.72601    	2.94074E-3  	1.31 hours/million states
+302000	-1273.0091  	-23.1901    	-1249.8190  	-3.92419    	2.57232E-3  	1.31 hours/million states
+303000	-1272.0940  	-24.1726    	-1247.9214  	-3.54591    	3.91966E-3  	1.31 hours/million states
+304000	-1277.2997  	-25.2071    	-1252.0926  	-3.37863    	2.59499E-3  	1.31 hours/million states
+305000	-1273.6416  	-22.9161    	-1250.7255  	-3.48015    	3.58301E-3  	1.31 hours/million states
+306000	-1275.0885  	-23.5817    	-1251.5069  	-3.47928    	4.18884E-3  	1.31 hours/million states
+307000	-1273.4028  	-22.3320    	-1251.0708  	-3.51599    	3.24658E-3  	1.31 hours/million states
+308000	-1276.6455  	-27.3979    	-1249.2476  	-4.42655    	1.99198E-3  	1.31 hours/million states
+309000	-1273.6306  	-24.7929    	-1248.8377  	-3.86109    	2.71564E-3  	1.31 hours/million states
+310000	-1272.1026  	-23.8967    	-1248.2059  	-3.64555    	2.96361E-3  	1.31 hours/million states
+311000	-1278.1637  	-29.7066    	-1248.4571  	-4.50621    	2.43283E-3  	1.31 hours/million states
+312000	-1280.9124  	-26.9720    	-1253.9404  	-4.11943    	2.2962E-3   	1.31 hours/million states
+313000	-1275.5291  	-23.8265    	-1251.7026  	-4.56700    	2.7288E-3   	1.31 hours/million states
+314000	-1285.2815  	-28.2013    	-1257.0802  	-4.26691    	3.36993E-3  	1.31 hours/million states
+315000	-1294.7447  	-38.3839    	-1256.3608  	-6.28495    	2.29608E-3  	1.31 hours/million states
+316000	-1282.0994  	-29.2417    	-1252.8577  	-7.20339    	1.47812E-3  	1.31 hours/million states
+317000	-1280.9920  	-33.7304    	-1247.2616  	-6.93265    	1.50505E-3  	1.31 hours/million states
+318000	-1284.8044  	-36.1165    	-1248.6879  	-9.00744    	9.88281E-4  	1.31 hours/million states
+319000	-1286.5384  	-31.6244    	-1254.9140  	-9.48286    	7.4751E-4   	1.31 hours/million states
+320000	-1287.4837  	-31.7172    	-1255.7665  	-9.27890    	9.45436E-4  	1.3 hours/million states
+321000	-1289.4950  	-36.2795    	-1253.2156  	-9.17912    	9.21929E-4  	1.3 hours/million states
+322000	-1285.5626  	-34.9915    	-1250.5711  	-9.85005    	8.20011E-4  	1.3 hours/million states
+323000	-1285.3258  	-37.1678    	-1248.1580  	-10.0558    	1.04278E-3  	1.3 hours/million states
+324000	-1288.0675  	-36.4291    	-1251.6384  	-8.20951    	1.03839E-3  	1.3 hours/million states
+325000	-1291.2548  	-39.9024    	-1251.3523  	-8.73769    	1.15974E-3  	1.3 hours/million states
+326000	-1285.0148  	-31.1777    	-1253.8371  	-7.42276    	9.31425E-4  	1.3 hours/million states
+327000	-1290.8051  	-35.8830    	-1254.9221  	-8.54363    	1.05874E-3  	1.3 hours/million states
+328000	-1290.3385  	-31.0851    	-1259.2534  	-7.62660    	8.24462E-4  	1.3 hours/million states
+329000	-1289.8523  	-31.6416    	-1258.2107  	-7.22935    	1.52135E-3  	1.3 hours/million states
+330000	-1287.5039  	-28.0316    	-1259.4723  	-6.97902    	1.23522E-3  	1.3 hours/million states
+331000	-1287.4966  	-34.7300    	-1252.7666  	-7.43072    	1.42825E-3  	1.3 hours/million states
+332000	-1290.6796  	-37.5629    	-1253.1167  	-7.38563    	1.2573E-3   	1.3 hours/million states
+333000	-1281.7448  	-33.9136    	-1247.8311  	-6.87635    	1.54992E-3  	1.3 hours/million states
+334000	-1283.5539  	-32.9696    	-1250.5843  	-7.54439    	1.25175E-3  	1.3 hours/million states
+335000	-1280.0587  	-29.3615    	-1250.6972  	-6.43799    	1.51146E-3  	1.3 hours/million states
+336000	-1278.8812  	-28.4021    	-1250.4791  	-6.10617    	1.55507E-3  	1.3 hours/million states
+337000	-1277.6916  	-26.7404    	-1250.9512  	-4.65410    	2.3692E-3   	1.3 hours/million states
+338000	-1273.4243  	-25.2374    	-1248.1869  	-4.73531    	1.54557E-3  	1.3 hours/million states
+339000	-1267.7114  	-21.7130    	-1245.9984  	-3.42259    	3.24783E-3  	1.3 hours/million states
+340000	-1273.7539  	-27.1099    	-1246.6440  	-4.79503    	2.65584E-3  	1.3 hours/million states
+341000	-1281.4356  	-29.2286    	-1252.2070  	-6.80374    	1.96934E-3  	1.3 hours/million states
+342000	-1280.4633  	-29.0868    	-1251.3765  	-8.08098    	1.52018E-3  	1.3 hours/million states
+343000	-1276.9572  	-26.6515    	-1250.3057  	-5.88386    	1.97517E-3  	1.3 hours/million states
+344000	-1273.2322  	-22.3216    	-1250.9106  	-3.58404    	2.79789E-3  	1.3 hours/million states
+345000	-1279.9956  	-28.0155    	-1251.9800  	-4.97025    	2.42949E-3  	1.3 hours/million states
+346000	-1277.7902  	-26.5283    	-1251.2618  	-4.15630    	2.1557E-3   	1.3 hours/million states
+347000	-1273.1547  	-24.5695    	-1248.5853  	-4.20263    	2.26624E-3  	1.3 hours/million states
+348000	-1274.4416  	-27.3148    	-1247.1268  	-5.30536    	2.09076E-3  	1.3 hours/million states
+349000	-1278.9142  	-27.9415    	-1250.9727  	-4.84294    	2.71077E-3  	1.3 hours/million states
+350000	-1279.9664  	-25.2305    	-1254.7359  	-5.15997    	1.38982E-3  	1.3 hours/million states
+351000	-1274.8569  	-28.2801    	-1246.5768  	-5.11849    	1.89876E-3  	1.3 hours/million states
+352000	-1277.8477  	-26.2360    	-1251.6118  	-5.45434    	1.39724E-3  	1.3 hours/million states
+353000	-1274.1794  	-27.2498    	-1246.9296  	-5.45408    	2.02328E-3  	1.3 hours/million states
+354000	-1281.4753  	-30.2100    	-1251.2654  	-6.21324    	1.86775E-3  	1.3 hours/million states
+355000	-1279.3839  	-29.4631    	-1249.9208  	-4.34011    	2.02802E-3  	1.3 hours/million states
+356000	-1274.2969  	-26.0522    	-1248.2446  	-4.21114    	2.22084E-3  	1.3 hours/million states
+357000	-1273.2353  	-26.5958    	-1246.6395  	-3.61530    	3.19191E-3  	1.3 hours/million states
+358000	-1271.5945  	-22.6782    	-1248.9164  	-3.47672    	2.29499E-3  	1.3 hours/million states
+359000	-1275.3265  	-26.0361    	-1249.2905  	-4.70484    	2.45757E-3  	1.3 hours/million states
+360000	-1278.3448  	-21.0401    	-1257.3047  	-2.99830    	2.69875E-3  	1.3 hours/million states
+361000	-1278.0681  	-29.4779    	-1248.5902  	-3.60159    	1.98826E-3  	1.3 hours/million states
+362000	-1279.2331  	-24.3506    	-1254.8824  	-3.47100    	2.84647E-3  	1.3 hours/million states
+363000	-1269.9368  	-21.8117    	-1248.1251  	-2.04961    	4.82158E-3  	1.3 hours/million states
+364000	-1271.7776  	-18.9795    	-1252.7982  	-1.70411    	6.58452E-3  	1.3 hours/million states
+365000	-1270.8195  	-19.3923    	-1251.4272  	-2.12261    	5.43529E-3  	1.3 hours/million states
+366000	-1268.9831  	-22.2153    	-1246.7677  	-2.42076    	4.2654E-3   	1.3 hours/million states
+367000	-1270.9297  	-23.2505    	-1247.6792  	-2.71606    	3.86469E-3  	1.31 hours/million states
+368000	-1270.7110  	-23.2045    	-1247.5065  	-2.77021    	4.19276E-3  	1.31 hours/million states
+369000	-1272.2002  	-19.8082    	-1252.3921  	-1.81228    	6.45927E-3  	1.31 hours/million states
+370000	-1272.2466  	-17.8490    	-1254.3976  	-1.49722    	8.1834E-3   	1.31 hours/million states
+371000	-1269.7528  	-18.9088    	-1250.8440  	-1.95246    	6.91847E-3  	1.31 hours/million states
+372000	-1272.2238  	-22.8778    	-1249.3460  	-2.07306    	5.94636E-3  	1.31 hours/million states
+373000	-1266.7732  	-16.2426    	-1250.5306  	-1.81256    	5.76238E-3  	1.31 hours/million states
+374000	-1267.6613  	-18.1527    	-1249.5086  	-1.63469    	7.08496E-3  	1.31 hours/million states
+375000	-1268.9443  	-18.9950    	-1249.9493  	-2.03299    	4.9025E-3   	1.3 hours/million states
+376000	-1270.0783  	-17.6654    	-1252.4130  	-2.07017    	5.48951E-3  	1.3 hours/million states
+377000	-1266.1987  	-18.5878    	-1247.6109  	-1.84850    	5.4252E-3   	1.3 hours/million states
+378000	-1266.2430  	-18.3142    	-1247.9288  	-1.89309    	7.6809E-3   	1.3 hours/million states
+379000	-1273.9525  	-21.0887    	-1252.8637  	-3.10909    	3.23335E-3  	1.3 hours/million states
+380000	-1267.0961  	-17.4960    	-1249.6002  	-1.72500    	8.25383E-3  	1.3 hours/million states
+381000	-1264.6601  	-13.9249    	-1250.7352  	-1.20476    	8.75169E-3  	1.3 hours/million states
+382000	-1263.7564  	-12.8571    	-1250.8992  	-0.99573    	1.03161E-2  	1.3 hours/million states
+383000	-1268.1219  	-19.0475    	-1249.0744  	-2.10676    	4.88551E-3  	1.3 hours/million states
+384000	-1261.3780  	-12.3489    	-1249.0291  	-0.75105    	1.89233E-2  	1.3 hours/million states
+385000	-1271.0391  	-17.4371    	-1253.6020  	-1.37788    	8.93332E-3  	1.3 hours/million states
+386000	-1269.3517  	-21.4153    	-1247.9364  	-3.02801    	3.17197E-3  	1.3 hours/million states
+387000	-1271.5637  	-21.3470    	-1250.2167  	-2.52845    	5.53658E-3  	1.3 hours/million states
+388000	-1276.8444  	-24.0429    	-1252.8016  	-3.37012    	4.54007E-3  	1.3 hours/million states
+389000	-1269.7547  	-19.7925    	-1249.9622  	-2.63496    	6.23245E-3  	1.3 hours/million states
+390000	-1268.1116  	-18.4414    	-1249.6703  	-2.50660    	3.82544E-3  	1.3 hours/million states
+391000	-1265.5289  	-17.6248    	-1247.9041  	-1.50440    	1.0738E-2   	1.3 hours/million states
+392000	-1266.7357  	-19.1401    	-1247.5956  	-1.88883    	7.17201E-3  	1.3 hours/million states
+393000	-1274.5978  	-22.5795    	-1252.0183  	-3.45917    	4.01324E-3  	1.3 hours/million states
+394000	-1273.1713  	-22.1341    	-1251.0372  	-3.20258    	4.01846E-3  	1.3 hours/million states
+395000	-1275.5818  	-23.5447    	-1252.0371  	-3.65841    	3.73369E-3  	1.31 hours/million states
+396000	-1271.1506  	-20.8550    	-1250.2956  	-3.61313    	4.90282E-3  	1.31 hours/million states
+397000	-1276.6973  	-21.3691    	-1255.3282  	-3.21417    	4.34365E-3  	1.31 hours/million states
+398000	-1271.2365  	-24.3869    	-1246.8496  	-4.82375    	2.29135E-3  	1.31 hours/million states
+399000	-1284.9769  	-29.5144    	-1255.4625  	-8.89007    	2.05645E-3  	1.31 hours/million states
+400000	-1286.9940  	-30.3936    	-1256.6004  	-10.6047    	1.23451E-3  	1.31 hours/million states
+401000	-1280.5920  	-31.2505    	-1249.3414  	-10.5140    	1.37598E-3  	1.31 hours/million states
+402000	-1284.0028  	-31.7278    	-1252.2750  	-9.71829    	1.21302E-3  	1.31 hours/million states
+403000	-1280.3592  	-29.0748    	-1251.2844  	-8.33024    	8.85348E-4  	1.31 hours/million states
+404000	-1282.1830  	-33.2482    	-1248.9348  	-10.6034    	9.79227E-4  	1.31 hours/million states
+405000	-1277.7759  	-28.6255    	-1249.1503  	-9.67979    	1.21786E-3  	1.31 hours/million states
+406000	-1280.2724  	-27.2156    	-1253.0568  	-6.51471    	2.09304E-3  	1.31 hours/million states
+407000	-1278.8626  	-26.1873    	-1252.6753  	-5.74030    	1.87514E-3  	1.31 hours/million states
+408000	-1270.6929  	-20.2909    	-1250.4021  	-2.97375    	3.48866E-3  	1.31 hours/million states
+409000	-1275.2400  	-25.6866    	-1249.5534  	-3.74308    	3.01948E-3  	1.31 hours/million states
+410000	-1273.0483  	-22.7025    	-1250.3459  	-3.91118    	2.33409E-3  	1.31 hours/million states
+411000	-1272.2145  	-22.2090    	-1250.0055  	-3.56878    	3.14969E-3  	1.31 hours/million states
+412000	-1277.8993  	-25.5116    	-1252.3877  	-3.87367    	3.78896E-3  	1.31 hours/million states
+413000	-1275.2306  	-24.8300    	-1250.4006  	-2.55642    	3.83652E-3  	1.31 hours/million states
+414000	-1271.8692  	-22.5166    	-1249.3526  	-3.90312    	3.13184E-3  	1.31 hours/million states
+415000	-1280.4005  	-26.6755    	-1253.7250  	-5.94541    	2.82203E-3  	1.31 hours/million states
+416000	-1275.8589  	-25.5187    	-1250.3402  	-6.02788    	2.57386E-3  	1.31 hours/million states
+417000	-1284.8527  	-29.4573    	-1255.3954  	-6.14882    	2.25452E-3  	1.31 hours/million states
+418000	-1276.7193  	-27.9343    	-1248.7849  	-7.25424    	1.46133E-3  	1.31 hours/million states
+419000	-1273.2282  	-23.9193    	-1249.3089  	-4.47318    	2.87493E-3  	1.31 hours/million states
+420000	-1273.1337  	-25.4781    	-1247.6557  	-3.45144    	3.21874E-3  	1.31 hours/million states
+421000	-1275.0090  	-25.6011    	-1249.4078  	-3.82379    	3.30526E-3  	1.31 hours/million states
+422000	-1269.5136  	-20.5033    	-1249.0104  	-2.84589    	3.29574E-3  	1.31 hours/million states
+423000	-1272.2074  	-21.9669    	-1250.2404  	-3.32956    	3.26382E-3  	1.31 hours/million states
+424000	-1269.9003  	-20.9570    	-1248.9433  	-2.72386    	5.55649E-3  	1.31 hours/million states
+425000	-1267.5115  	-14.0683    	-1253.4431  	-0.86120    	1.10048E-2  	1.31 hours/million states
+426000	-1264.4592  	-15.0028    	-1249.4565  	-0.99874    	9.38918E-3  	1.31 hours/million states
+427000	-1264.1885  	-17.0709    	-1247.1176  	-2.01779    	6.24475E-3  	1.31 hours/million states
+428000	-1263.7752  	-16.2866    	-1247.4885  	-1.09634    	9.2994E-3   	1.31 hours/million states
+429000	-1261.1190  	-13.2745    	-1247.8445  	-0.81401    	1.28861E-2  	1.31 hours/million states
+430000	-1271.3031  	-20.5321    	-1250.7709  	-2.86888    	3.7551E-3   	1.31 hours/million states
+431000	-1264.5721  	-16.7810    	-1247.7911  	-1.84950    	8.07937E-3  	1.31 hours/million states
+432000	-1269.6014  	-21.1199    	-1248.4815  	-2.48278    	4.03853E-3  	1.31 hours/million states
+433000	-1267.9606  	-22.0669    	-1245.8937  	-3.19046    	3.92636E-3  	1.31 hours/million states
+434000	-1272.0680  	-26.3665    	-1245.7015  	-4.72743    	2.74277E-3  	1.31 hours/million states
+435000	-1274.9982  	-27.5927    	-1247.4054  	-2.90417    	3.35508E-3  	1.31 hours/million states
+436000	-1278.0987  	-30.8973    	-1247.2014  	-7.47381    	1.75335E-3  	1.31 hours/million states
+437000	-1276.0995  	-28.4437    	-1247.6557  	-6.67822    	1.67821E-3  	1.31 hours/million states
+438000	-1283.4542  	-30.7329    	-1252.7213  	-4.93650    	2.02199E-3  	1.31 hours/million states
+439000	-1273.6802  	-23.0788    	-1250.6013  	-3.91753    	2.14987E-3  	1.31 hours/million states
+440000	-1268.8110  	-23.9293    	-1244.8817  	-3.61125    	3.89105E-3  	1.31 hours/million states
+441000	-1267.8327  	-21.7915    	-1246.0413  	-2.93414    	3.73461E-3  	1.31 hours/million states
+442000	-1269.3500  	-22.7167    	-1246.6333  	-3.06004    	2.90224E-3  	1.31 hours/million states
+443000	-1271.7636  	-24.8387    	-1246.9249  	-4.51505    	2.42596E-3  	1.31 hours/million states
+444000	-1273.4180  	-25.2114    	-1248.2066  	-6.26603    	1.44782E-3  	1.31 hours/million states
+445000	-1278.2557  	-28.8430    	-1249.4128  	-6.63851    	1.75636E-3  	1.31 hours/million states
+446000	-1272.1853  	-25.3489    	-1246.8364  	-4.72074    	2.18277E-3  	1.31 hours/million states
+447000	-1277.3622  	-25.8337    	-1251.5284  	-4.67378    	2.16789E-3  	1.31 hours/million states
+448000	-1274.7300  	-23.7365    	-1250.9935  	-4.28031    	2.51458E-3  	1.31 hours/million states
+449000	-1270.3772  	-22.9316    	-1247.4456  	-4.63927    	2.43341E-3  	1.31 hours/million states
+450000	-1271.0809  	-25.2501    	-1245.8308  	-4.76267    	2.69112E-3  	1.31 hours/million states
+451000	-1272.4286  	-22.2767    	-1250.1520  	-3.25022    	2.64731E-3  	1.31 hours/million states
+452000	-1268.2085  	-20.8909    	-1247.3176  	-2.74179    	3.25379E-3  	1.31 hours/million states
+453000	-1271.5227  	-21.9631    	-1249.5596  	-3.24978    	4.31201E-3  	1.31 hours/million states
+454000	-1267.7044  	-20.9165    	-1246.7879  	-2.79341    	3.44702E-3  	1.31 hours/million states
+455000	-1276.2928  	-27.3601    	-1248.9327  	-3.42952    	2.84059E-3  	1.31 hours/million states
+456000	-1273.7670  	-20.0881    	-1253.6790  	-2.38744    	5.01345E-3  	1.31 hours/million states
+457000	-1276.0305  	-24.4833    	-1251.5473  	-3.58646    	2.91728E-3  	1.31 hours/million states
+458000	-1277.8722  	-25.9115    	-1251.9607  	-5.71698    	3.26459E-3  	1.31 hours/million states
+459000	-1273.8799  	-20.0418    	-1253.8381  	-3.14088    	4.0008E-3   	1.31 hours/million states
+460000	-1266.4017  	-17.6632    	-1248.7385  	-1.79155    	5.75762E-3  	1.31 hours/million states
+461000	-1266.3497  	-16.7642    	-1249.5855  	-1.53541    	9.31854E-3  	1.31 hours/million states
+462000	-1267.0707  	-15.2864    	-1251.7843  	-1.31383    	1.25227E-2  	1.31 hours/million states
+463000	-1266.5086  	-16.0917    	-1250.4169  	-1.40623    	7.82962E-3  	1.31 hours/million states
+464000	-1270.1725  	-19.3560    	-1250.8166  	-2.41380    	4.96647E-3  	1.31 hours/million states
+465000	-1272.1869  	-23.2538    	-1248.9331  	-3.94803    	3.3048E-3   	1.31 hours/million states
+466000	-1276.2668  	-23.7841    	-1252.4827  	-4.01282    	4.86599E-3  	1.31 hours/million states
+467000	-1268.5425  	-21.6430    	-1246.8995  	-3.36144    	4.10956E-3  	1.31 hours/million states
+468000	-1274.6539  	-28.0416    	-1246.6123  	-6.89665    	1.92246E-3  	1.31 hours/million states
+469000	-1276.2174  	-28.4315    	-1247.7859  	-8.09876    	1.24414E-3  	1.31 hours/million states
+470000	-1284.3792  	-34.2809    	-1250.0984  	-12.1213    	1.19296E-3  	1.31 hours/million states
+471000	-1279.6997  	-29.3501    	-1250.3496  	-10.0690    	1.44921E-3  	1.31 hours/million states
+472000	-1282.6366  	-31.7307    	-1250.9059  	-9.51495    	1.14036E-3  	1.31 hours/million states
+473000	-1277.3132  	-29.7308    	-1247.5824  	-8.06233    	1.42637E-3  	1.31 hours/million states
+474000	-1284.9185  	-30.1804    	-1254.7380  	-9.97726    	1.49977E-3  	1.31 hours/million states
+475000	-1282.8847  	-32.8252    	-1250.0595  	-14.2104    	1.15013E-3  	1.31 hours/million states
+476000	-1280.4489  	-30.9619    	-1249.4871  	-10.9703    	1.2881E-3   	1.31 hours/million states
+477000	-1281.5490  	-32.3363    	-1249.2127  	-12.4414    	1.14142E-3  	1.31 hours/million states
+478000	-1281.1707  	-32.9957    	-1248.1750  	-11.9431    	8.62352E-4  	1.31 hours/million states
+479000	-1277.5533  	-29.2168    	-1248.3365  	-10.2602    	1.22955E-3  	1.31 hours/million states
+480000	-1280.3660  	-29.5715    	-1250.7945  	-10.1078    	1.0711E-3   	1.31 hours/million states
+481000	-1289.4442  	-35.2532    	-1254.1909  	-13.7633    	7.00022E-4  	1.31 hours/million states
+482000	-1284.4194  	-34.4385    	-1249.9808  	-14.1345    	6.5801E-4   	1.31 hours/million states
+483000	-1280.9671  	-34.0193    	-1246.9478  	-12.0535    	9.32739E-4  	1.31 hours/million states
+484000	-1283.5388  	-31.0094    	-1252.5295  	-10.0600    	1.06513E-3  	1.31 hours/million states
+485000	-1283.6539  	-32.0330    	-1251.6209  	-10.2760    	7.9169E-4   	1.31 hours/million states
+486000	-1286.1316  	-32.0182    	-1254.1134  	-12.1582    	1.132E-3    	1.31 hours/million states
+487000	-1278.1427  	-29.8039    	-1248.3388  	-10.4696    	9.80302E-4  	1.31 hours/million states
+488000	-1276.5121  	-30.5012    	-1246.0109  	-8.46403    	1.13417E-3  	1.31 hours/million states
+489000	-1277.7506  	-30.8737    	-1246.8768  	-8.23015    	1.5082E-3   	1.31 hours/million states
+490000	-1286.7522  	-32.9935    	-1253.7587  	-8.76395    	1.2221E-3   	1.31 hours/million states
+491000	-1287.2850  	-31.0382    	-1256.2468  	-7.02296    	1.18708E-3  	1.31 hours/million states
+492000	-1285.4155  	-31.4550    	-1253.9605  	-6.00515    	1.67033E-3  	1.31 hours/million states
+493000	-1292.4885  	-37.1931    	-1255.2954  	-6.61541    	1.73804E-3  	1.31 hours/million states
+494000	-1283.6863  	-29.8502    	-1253.8361  	-5.70272    	2.08117E-3  	1.31 hours/million states
+495000	-1283.4959  	-33.4516    	-1250.0443  	-5.70334    	1.62025E-3  	1.31 hours/million states
+496000	-1287.4026  	-33.3311    	-1254.0715  	-5.45411    	1.88574E-3  	1.31 hours/million states
+497000	-1280.0455  	-27.2013    	-1252.8442  	-4.50059    	2.13914E-3  	1.31 hours/million states
+498000	-1279.6956  	-29.9502    	-1249.7454  	-4.80608    	2.35664E-3  	1.31 hours/million states
+499000	-1281.6529  	-33.3058    	-1248.3471  	-4.95653    	1.90611E-3  	1.31 hours/million states
+500000	-1280.7716  	-30.0461    	-1250.7255  	-4.66911    	1.8586E-3   	1.31 hours/million states
+501000	-1283.4887  	-33.9207    	-1249.5680  	-6.23673    	1.61359E-3  	1.31 hours/million states
+502000	-1284.7929  	-30.0819    	-1254.7111  	-7.46400    	8.48292E-4  	1.31 hours/million states
+503000	-1286.1754  	-35.4697    	-1250.7057  	-8.33720    	1.26451E-3  	1.31 hours/million states
+504000	-1290.7352  	-33.5708    	-1257.1645  	-9.11441    	9.11033E-4  	1.31 hours/million states
+505000	-1283.0154  	-32.3154    	-1250.7000  	-8.75605    	1.00483E-3  	1.31 hours/million states
+506000	-1284.0265  	-36.6843    	-1247.3422  	-9.18641    	1.18106E-3  	1.31 hours/million states
+507000	-1288.9107  	-35.8933    	-1253.0174  	-9.54989    	1.22965E-3  	1.31 hours/million states
+508000	-1285.1188  	-34.5779    	-1250.5409  	-8.99811    	1.42813E-3  	1.31 hours/million states
+509000	-1283.1637  	-30.7503    	-1252.4134  	-9.54326    	8.1842E-4   	1.31 hours/million states
+510000	-1281.7243  	-33.9606    	-1247.7637  	-11.9370    	7.60429E-4  	1.31 hours/million states
+511000	-1280.8659  	-30.9659    	-1249.9000  	-10.6798    	8.22219E-4  	1.31 hours/million states
+512000	-1282.1711  	-31.7884    	-1250.3827  	-10.5307    	1.06689E-3  	1.31 hours/million states
+513000	-1278.8486  	-28.6348    	-1250.2138  	-7.88179    	1.3234E-3   	1.31 hours/million states
+514000	-1279.8290  	-31.5266    	-1248.3024  	-6.84912    	1.83308E-3  	1.31 hours/million states
+515000	-1282.9154  	-24.8215    	-1258.0939  	-3.89183    	3.73366E-3  	1.31 hours/million states
+516000	-1278.9890  	-28.7829    	-1250.2061  	-6.17636    	2.70731E-3  	1.31 hours/million states
+517000	-1277.9947  	-27.5558    	-1250.4389  	-7.48639    	1.64233E-3  	1.31 hours/million states
+518000	-1276.1627  	-25.3041    	-1250.8586  	-5.54902    	1.84824E-3  	1.31 hours/million states
+519000	-1275.3649  	-25.7183    	-1249.6466  	-5.13422    	2.16255E-3  	1.31 hours/million states
+520000	-1276.8291  	-25.0878    	-1251.7413  	-5.48000    	1.88968E-3  	1.31 hours/million states
+521000	-1276.0600  	-26.7294    	-1249.3306  	-4.78662    	1.60798E-3  	1.31 hours/million states
+522000	-1279.3555  	-27.3752    	-1251.9802  	-5.25340    	1.97574E-3  	1.31 hours/million states
+523000	-1281.8811  	-27.3648    	-1254.5163  	-3.50327    	2.47402E-3  	1.31 hours/million states
+524000	-1272.4243  	-22.4578    	-1249.9664  	-3.18877    	5.416E-3    	1.31 hours/million states
+525000	-1270.9394  	-20.8830    	-1250.0564  	-2.71038    	3.38732E-3  	1.31 hours/million states
+526000	-1272.2778  	-20.6026    	-1251.6752  	-2.85684    	3.07455E-3  	1.31 hours/million states
+527000	-1274.8099  	-22.6501    	-1252.1598  	-2.81311    	3.03371E-3  	1.31 hours/million states
+528000	-1279.3647  	-28.7210    	-1250.6437  	-3.02372    	3.71606E-3  	1.31 hours/million states
+529000	-1275.1328  	-21.8255    	-1253.3073  	-2.73226    	3.13083E-3  	1.31 hours/million states
+530000	-1274.7273  	-24.7406    	-1249.9867  	-3.44574    	4.28939E-3  	1.31 hours/million states
+531000	-1275.5969  	-24.9962    	-1250.6008  	-3.88141    	2.9232E-3   	1.31 hours/million states
+532000	-1272.8106  	-24.0215    	-1248.7891  	-2.74275    	4.00971E-3  	1.31 hours/million states
+533000	-1278.2028  	-19.8924    	-1258.3104  	-2.27517    	6.70263E-3  	1.31 hours/million states
+534000	-1267.4841  	-18.1165    	-1249.3676  	-1.85860    	5.90413E-3  	1.31 hours/million states
+535000	-1264.4969  	-18.0459    	-1246.4510  	-2.04513    	5.63533E-3  	1.31 hours/million states
+536000	-1267.5382  	-16.5315    	-1251.0067  	-1.32435    	7.3471E-3   	1.31 hours/million states
+537000	-1272.6910  	-22.2309    	-1250.4601  	-3.25990    	4.08202E-3  	1.31 hours/million states
+538000	-1269.2619  	-23.3094    	-1245.9525  	-4.17007    	3.64272E-3  	1.31 hours/million states
+539000	-1277.8850  	-29.3888    	-1248.4963  	-7.17227    	1.15035E-3  	1.31 hours/million states
+540000	-1277.7838  	-31.4160    	-1246.3679  	-10.4191    	1.026E-3    	1.31 hours/million states
+541000	-1281.1880  	-34.2200    	-1246.9680  	-12.2644    	7.97269E-4  	1.31 hours/million states
+542000	-1281.9176  	-34.3872    	-1247.5304  	-15.3551    	8.39816E-4  	1.31 hours/million states
+543000	-1284.3974  	-37.1238    	-1247.2736  	-15.3155    	5.03451E-4  	1.31 hours/million states
+544000	-1284.8863  	-38.3682    	-1246.5181  	-22.9662    	3.95089E-4  	1.31 hours/million states
+545000	-1286.1137  	-36.2113    	-1249.9024  	-22.1708    	4.47975E-4  	1.31 hours/million states
+546000	-1298.4640  	-38.1658    	-1260.2983  	-19.5119    	6.534E-4    	1.31 hours/million states
+547000	-1279.7816  	-34.2637    	-1245.5179  	-12.9058    	9.45255E-4  	1.31 hours/million states
+548000	-1276.2215  	-30.6565    	-1245.5649  	-8.42645    	1.32774E-3  	1.31 hours/million states
+549000	-1276.3412  	-29.5049    	-1246.8364  	-8.68836    	1.59398E-3  	1.31 hours/million states
+550000	-1277.3614  	-28.3200    	-1249.0414  	-7.57036    	1.48341E-3  	1.31 hours/million states
+551000	-1279.6525  	-28.1765    	-1251.4760  	-6.11289    	1.85305E-3  	1.31 hours/million states
+552000	-1284.1253  	-29.1507    	-1254.9746  	-9.12441    	1.0799E-3   	1.31 hours/million states
+553000	-1279.3287  	-28.0532    	-1251.2755  	-6.44447    	1.49266E-3  	1.31 hours/million states
+554000	-1277.0641  	-24.7677    	-1252.2964  	-3.84090    	2.33829E-3  	1.31 hours/million states
+555000	-1269.7414  	-20.7925    	-1248.9490  	-3.58375    	3.15093E-3  	1.31 hours/million states
+556000	-1275.4818  	-26.7627    	-1248.7191  	-5.49793    	2.21627E-3  	1.31 hours/million states
+557000	-1276.2161  	-26.5678    	-1249.6483  	-5.30314    	1.63832E-3  	1.31 hours/million states
+558000	-1286.8337  	-38.0986    	-1248.7351  	-8.40909    	1.50274E-3  	1.31 hours/million states
+559000	-1275.4091  	-27.0557    	-1248.3533  	-5.77699    	1.60145E-3  	1.31 hours/million states
+560000	-1277.2866  	-29.9772    	-1247.3095  	-8.52084    	1.39348E-3  	1.31 hours/million states
+561000	-1277.9814  	-26.9088    	-1251.0726  	-4.82431    	2.41927E-3  	1.31 hours/million states
+562000	-1277.9649  	-23.9098    	-1254.0551  	-3.92426    	4.33168E-3  	1.31 hours/million states
+563000	-1266.6703  	-20.5754    	-1246.0949  	-2.56537    	5.02877E-3  	1.31 hours/million states
+564000	-1266.2592  	-17.3693    	-1248.8899  	-2.62125    	5.34542E-3  	1.31 hours/million states
+565000	-1276.7276  	-19.8778    	-1256.8498  	-2.39364    	6.16508E-3  	1.31 hours/million states
+566000	-1275.5668  	-21.0072    	-1254.5596  	-2.73030    	4.1302E-3   	1.31 hours/million states
+567000	-1271.6247  	-21.8498    	-1249.7749  	-3.38871    	3.5686E-3   	1.31 hours/million states
+568000	-1270.2303  	-18.5578    	-1251.6725  	-2.29218    	5.81701E-3  	1.31 hours/million states
+569000	-1271.2568  	-23.1542    	-1248.1026  	-4.50556    	3.17785E-3  	1.31 hours/million states
+570000	-1268.8174  	-21.2045    	-1247.6129  	-2.84237    	3.88094E-3  	1.31 hours/million states
+571000	-1264.8255  	-16.7662    	-1248.0593  	-1.57121    	9.69721E-3  	1.31 hours/million states
+572000	-1270.4013  	-21.3614    	-1249.0399  	-2.10922    	4.40974E-3  	1.31 hours/million states
+573000	-1265.5291  	-19.0376    	-1246.4915  	-2.02722    	6.2226E-3   	1.31 hours/million states
+574000	-1271.2537  	-22.4398    	-1248.8139  	-2.92242    	4.55882E-3  	1.31 hours/million states
+575000	-1279.4826  	-22.4424    	-1257.0402  	-3.24603    	4.23528E-3  	1.31 hours/million states
+576000	-1272.0570  	-22.3012    	-1249.7558  	-2.78144    	3.11739E-3  	1.31 hours/million states
+577000	-1273.8004  	-22.4902    	-1251.3102  	-3.69046    	2.1393E-3   	1.31 hours/million states
+578000	-1273.1437  	-23.3065    	-1249.8372  	-3.48064    	4.17147E-3  	1.31 hours/million states
+579000	-1278.6774  	-23.6227    	-1255.0547  	-3.74790    	1.70591E-3  	1.31 hours/million states
+580000	-1272.6959  	-25.6215    	-1247.0743  	-4.43528    	1.96432E-3  	1.31 hours/million states
+581000	-1279.6610  	-25.1060    	-1254.5550  	-5.13314    	1.60198E-3  	1.31 hours/million states
+582000	-1268.3387  	-18.6926    	-1249.6461  	-2.43011    	6.12278E-3  	1.31 hours/million states
+583000	-1269.3504  	-21.0767    	-1248.2737  	-2.31521    	3.85758E-3  	1.31 hours/million states
+584000	-1272.3072  	-23.1205    	-1249.1867  	-3.24396    	4.41313E-3  	1.31 hours/million states
+585000	-1274.4897  	-23.1037    	-1251.3859  	-4.28490    	1.54306E-3  	1.31 hours/million states
+586000	-1274.0415  	-26.3646    	-1247.6769  	-5.17347    	2.06913E-3  	1.31 hours/million states
+587000	-1278.4091  	-28.6615    	-1249.7476  	-4.33949    	2.3533E-3   	1.31 hours/million states
+588000	-1276.3639  	-26.3546    	-1250.0093  	-4.24002    	2.52419E-3  	1.31 hours/million states
+589000	-1282.5946  	-29.9440    	-1252.6506  	-4.49642    	2.42189E-3  	1.31 hours/million states
+590000	-1278.9770  	-28.3240    	-1250.6530  	-5.32461    	1.98663E-3  	1.31 hours/million states
+591000	-1273.7851  	-23.0474    	-1250.7377  	-4.30154    	2.53109E-3  	1.31 hours/million states
+592000	-1279.1910  	-22.4946    	-1256.6965  	-4.35235    	1.89657E-3  	1.31 hours/million states
+593000	-1274.4852  	-26.6115    	-1247.8737  	-5.17685    	1.73881E-3  	1.31 hours/million states
+594000	-1275.7232  	-27.7536    	-1247.9695  	-6.75909    	2.38255E-3  	1.31 hours/million states
+595000	-1275.3740  	-26.6944    	-1248.6796  	-5.98938    	2.2295E-3   	1.31 hours/million states
+596000	-1283.5116  	-28.3445    	-1255.1670  	-7.80832    	2.1039E-3   	1.31 hours/million states
+597000	-1278.5275  	-28.3305    	-1250.1970  	-6.78834    	1.6796E-3   	1.31 hours/million states
+598000	-1278.2680  	-31.6156    	-1246.6524  	-10.4908    	1.13192E-3  	1.31 hours/million states
+599000	-1278.9893  	-29.1096    	-1249.8797  	-6.52122    	1.33764E-3  	1.31 hours/million states
+600000	-1280.3344  	-29.9777    	-1250.3568  	-7.57630    	1.79806E-3  	1.31 hours/million states
+601000	-1279.3833  	-30.7341    	-1248.6492  	-7.19833    	1.66682E-3  	1.31 hours/million states
+602000	-1286.8446  	-31.4210    	-1255.4235  	-9.84554    	1.06078E-3  	1.31 hours/million states
+603000	-1280.9962  	-29.2002    	-1251.7959  	-9.23782    	1.42417E-3  	1.31 hours/million states
+604000	-1277.8950  	-29.2675    	-1248.6275  	-7.34132    	1.57036E-3  	1.31 hours/million states
+605000	-1287.2204  	-32.8424    	-1254.3779  	-9.40478    	1.13197E-3  	1.31 hours/million states
+606000	-1278.2368  	-28.3874    	-1249.8494  	-9.73199    	1.11927E-3  	1.31 hours/million states
+607000	-1281.4486  	-29.6306    	-1251.8181  	-9.20210    	1.00988E-3  	1.31 hours/million states
+608000	-1284.5833  	-34.5397    	-1250.0436  	-10.3658    	1.08137E-3  	1.31 hours/million states
+609000	-1282.1043  	-32.7495    	-1249.3548  	-9.56718    	8.59258E-4  	1.31 hours/million states
+610000	-1282.7392  	-31.4373    	-1251.3020  	-10.2782    	1.05172E-3  	1.31 hours/million states
+611000	-1280.8848  	-31.3689    	-1249.5158  	-10.2052    	1.14486E-3  	1.31 hours/million states
+612000	-1280.1581  	-30.6711    	-1249.4870  	-8.33548    	1.50647E-3  	1.31 hours/million states
+613000	-1278.1877  	-28.2807    	-1249.9070  	-5.93860    	1.31349E-3  	1.31 hours/million states
+614000	-1276.3386  	-27.1804    	-1249.1582  	-5.93823    	1.4239E-3   	1.31 hours/million states
+615000	-1279.7030  	-27.4584    	-1252.2445  	-6.95055    	1.42417E-3  	1.31 hours/million states
+616000	-1283.6410  	-34.8879    	-1248.7531  	-8.95109    	1.0814E-3   	1.31 hours/million states
+617000	-1278.9335  	-29.1937    	-1249.7398  	-8.35788    	1.20764E-3  	1.31 hours/million states
+618000	-1281.1229  	-30.1598    	-1250.9631  	-9.05277    	1.34429E-3  	1.31 hours/million states
+619000	-1279.2463  	-28.3877    	-1250.8586  	-8.04045    	1.11767E-3  	1.31 hours/million states
+620000	-1283.2903  	-29.7292    	-1253.5610  	-7.46073    	1.31349E-3  	1.31 hours/million states
+621000	-1285.0568  	-31.3255    	-1253.7313  	-10.1788    	1.0788E-3   	1.3 hours/million states
+622000	-1283.5483  	-33.3443    	-1250.2040  	-10.6570    	1.18867E-3  	1.3 hours/million states
+623000	-1282.1786  	-29.8179    	-1252.3607  	-9.24419    	1.24294E-3  	1.3 hours/million states
+624000	-1274.8766  	-29.6235    	-1245.2531  	-9.40419    	1.57873E-3  	1.3 hours/million states
+625000	-1280.4561  	-32.5227    	-1247.9334  	-11.9090    	1.21386E-3  	1.3 hours/million states
+626000	-1274.8729  	-23.4968    	-1251.3762  	-3.58494    	3.38376E-3  	1.3 hours/million states
+627000	-1274.4438  	-22.2854    	-1252.1584  	-3.74784    	5.21622E-3  	1.3 hours/million states
+628000	-1274.4335  	-24.4047    	-1250.0288  	-3.93443    	2.68078E-3  	1.3 hours/million states
+629000	-1268.6091  	-20.5253    	-1248.0838  	-2.22421    	4.45186E-3  	1.3 hours/million states
+630000	-1268.6594  	-19.4870    	-1249.1724  	-1.09891    	1.08516E-2  	1.3 hours/million states
+631000	-1273.1152  	-21.3110    	-1251.8042  	-1.65838    	7.20338E-3  	1.3 hours/million states
+632000	-1269.0247  	-17.1070    	-1251.9177  	-1.37145    	7.48529E-3  	1.3 hours/million states
+633000	-1269.8213  	-21.1267    	-1248.6946  	-1.78418    	9.01799E-3  	1.3 hours/million states
+634000	-1267.9433  	-17.7227    	-1250.2206  	-2.12206    	3.98115E-3  	1.3 hours/million states
+635000	-1271.1329  	-21.7775    	-1249.3554  	-2.41709    	4.72351E-3  	1.3 hours/million states
+636000	-1269.9601  	-21.9228    	-1248.0373  	-2.99789    	4.14661E-3  	1.3 hours/million states
+637000	-1272.8098  	-22.8898    	-1249.9200  	-2.87402    	3.62143E-3  	1.3 hours/million states
+638000	-1276.1921  	-24.4366    	-1251.7554  	-3.81603    	3.21559E-3  	1.3 hours/million states
+639000	-1276.1370  	-26.7702    	-1249.3668  	-5.79332    	1.51611E-3  	1.3 hours/million states
+640000	-1284.8985  	-36.0986    	-1248.7999  	-11.0327    	1.17798E-3  	1.3 hours/million states
+641000	-1293.5151  	-29.9562    	-1263.5589  	-8.93437    	1.21763E-3  	1.3 hours/million states
+642000	-1284.2990  	-33.8570    	-1250.4420  	-8.63334    	1.4831E-3   	1.3 hours/million states
+643000	-1275.2090  	-28.2589    	-1246.9501  	-7.62796    	1.54935E-3  	1.3 hours/million states
+644000	-1280.7348  	-31.7129    	-1249.0219  	-6.98045    	1.91407E-3  	1.3 hours/million states
+645000	-1279.6006  	-30.1661    	-1249.4346  	-9.35934    	1.3884E-3   	1.3 hours/million states
+646000	-1283.4268  	-32.6005    	-1250.8263  	-10.0441    	1.11389E-3  	1.3 hours/million states
+647000	-1284.9552  	-38.1553    	-1246.7999  	-9.99230    	1.19904E-3  	1.3 hours/million states
+648000	-1281.2778  	-29.6060    	-1251.6718  	-7.57129    	1.23829E-3  	1.3 hours/million states
+649000	-1287.7575  	-32.5401    	-1255.2174  	-8.15747    	1.93845E-3  	1.3 hours/million states
+650000	-1288.8467  	-34.4695    	-1254.3772  	-9.39560    	1.17137E-3  	1.3 hours/million states
+651000	-1278.5654  	-29.6849    	-1248.8805  	-7.22426    	1.60742E-3  	1.3 hours/million states
+652000	-1283.8551  	-32.7558    	-1251.0992  	-8.59337    	1.20587E-3  	1.3 hours/million states
+653000	-1283.1639  	-31.7541    	-1251.4098  	-9.91649    	7.7646E-4   	1.3 hours/million states
+654000	-1283.7740  	-35.1767    	-1248.5973  	-10.7420    	8.67516E-4  	1.3 hours/million states
+655000	-1280.9287  	-31.8758    	-1249.0528  	-8.89053    	9.62736E-4  	1.3 hours/million states
+656000	-1281.8445  	-33.1176    	-1248.7269  	-9.09153    	1.04956E-3  	1.3 hours/million states
+657000	-1284.2941  	-37.2871    	-1247.0070  	-9.78779    	1.00695E-3  	1.3 hours/million states
+658000	-1286.4720  	-36.0084    	-1250.4636  	-9.77492    	1.00328E-3  	1.3 hours/million states
+659000	-1288.0637  	-38.5940    	-1249.4697  	-10.4606    	9.88881E-4  	1.3 hours/million states
+660000	-1287.6252  	-36.3053    	-1251.3200  	-10.2097    	7.34272E-4  	1.3 hours/million states
+661000	-1289.2144  	-36.8313    	-1252.3831  	-10.3507    	7.6096E-4   	1.3 hours/million states
+662000	-1285.4894  	-35.2517    	-1250.2377  	-10.6052    	7.60971E-4  	1.3 hours/million states
+663000	-1288.3921  	-36.0943    	-1252.2978  	-9.64740    	1.05734E-3  	1.3 hours/million states
+664000	-1289.8033  	-35.5209    	-1254.2824  	-11.0184    	7.35527E-4  	1.3 hours/million states
+665000	-1290.6855  	-35.5535    	-1255.1320  	-10.9782    	8.68968E-4  	1.3 hours/million states
+666000	-1295.9377  	-42.1481    	-1253.7897  	-12.6734    	5.46448E-4  	1.3 hours/million states
+667000	-1288.8003  	-33.2516    	-1255.5487  	-10.7608    	1.10119E-3  	1.3 hours/million states
+668000	-1287.7954  	-34.8259    	-1252.9695  	-9.94466    	9.91466E-4  	1.3 hours/million states
+669000	-1285.1702  	-36.2494    	-1248.9208  	-9.87051    	1.01717E-3  	1.3 hours/million states
+670000	-1286.2494  	-35.0087    	-1251.2407  	-10.4886    	8.48512E-4  	1.3 hours/million states
+671000	-1284.8613  	-33.6590    	-1251.2024  	-10.3007    	8.1919E-4   	1.3 hours/million states
+672000	-1281.7085  	-33.8763    	-1247.8322  	-8.93551    	1.10776E-3  	1.3 hours/million states
+673000	-1283.5239  	-31.8046    	-1251.7193  	-8.61516    	1.09477E-3  	1.3 hours/million states
+674000	-1287.9393  	-39.7055    	-1248.2337  	-6.45920    	1.32692E-3  	1.3 hours/million states
+675000	-1275.8992  	-26.8688    	-1249.0304  	-5.58088    	2.11698E-3  	1.3 hours/million states
+676000	-1280.3609  	-25.4713    	-1254.8896  	-5.70700    	1.29325E-3  	1.3 hours/million states
+677000	-1280.8641  	-29.8098    	-1251.0543  	-6.56879    	1.43337E-3  	1.3 hours/million states
+678000	-1285.4593  	-34.4524    	-1251.0069  	-6.38477    	1.82476E-3  	1.3 hours/million states
+679000	-1281.1048  	-33.0154    	-1248.0894  	-6.36803    	1.54052E-3  	1.3 hours/million states
+680000	-1279.9050  	-29.1467    	-1250.7583  	-5.50450    	2.22211E-3  	1.3 hours/million states
+681000	-1287.0441  	-30.7142    	-1256.3299  	-6.51140    	1.78273E-3  	1.3 hours/million states
+682000	-1284.5476  	-31.4219    	-1253.1257  	-5.93619    	1.42305E-3  	1.3 hours/million states
+683000	-1287.6240  	-36.4678    	-1251.1562  	-5.95279    	1.48266E-3  	1.3 hours/million states
+684000	-1285.8132  	-31.2205    	-1254.5928  	-6.54883    	1.78317E-3  	1.3 hours/million states
+685000	-1283.8931  	-31.2262    	-1252.6669  	-6.04347    	1.49988E-3  	1.3 hours/million states
+686000	-1283.2328  	-33.7214    	-1249.5114  	-6.76793    	1.53955E-3  	1.3 hours/million states
+687000	-1286.3096  	-29.9946    	-1256.3151  	-6.74223    	1.28465E-3  	1.3 hours/million states
+688000	-1283.6119  	-34.3734    	-1249.2385  	-6.23150    	1.60725E-3  	1.3 hours/million states
+689000	-1290.0780  	-33.9676    	-1256.1103  	-6.26692    	1.5635E-3   	1.3 hours/million states
+690000	-1290.1427  	-41.6475    	-1248.4952  	-5.92025    	2.01076E-3  	1.3 hours/million states
+691000	-1286.8134  	-38.5081    	-1248.3053  	-5.53692    	1.6477E-3   	1.3 hours/million states
+692000	-1285.7588  	-34.2606    	-1251.4982  	-6.19305    	1.65656E-3  	1.3 hours/million states
+693000	-1287.1032  	-28.6222    	-1258.4811  	-5.83817    	1.56567E-3  	1.3 hours/million states
+694000	-1284.8539  	-30.4174    	-1254.4365  	-6.89491    	1.30528E-3  	1.3 hours/million states
+695000	-1286.9089  	-30.1034    	-1256.8055  	-6.51808    	1.38918E-3  	1.3 hours/million states
+696000	-1283.9007  	-32.0365    	-1251.8642  	-6.15773    	1.27862E-3  	1.3 hours/million states
+697000	-1279.4862  	-29.7835    	-1249.7026  	-4.85726    	2.07396E-3  	1.3 hours/million states
+698000	-1278.5367  	-29.3923    	-1249.1443  	-4.99572    	1.67551E-3  	1.3 hours/million states
+699000	-1276.4889  	-31.1454    	-1245.3435  	-5.22097    	2.41852E-3  	1.3 hours/million states
+700000	-1280.6368  	-24.8093    	-1255.8275  	-4.66211    	2.30498E-3  	1.3 hours/million states
+701000	-1280.8458  	-27.9761    	-1252.8696  	-4.97439    	1.78868E-3  	1.3 hours/million states
+702000	-1277.7129  	-24.8662    	-1252.8467  	-3.66508    	2.70839E-3  	1.3 hours/million states
+703000	-1277.5064  	-23.9420    	-1253.5644  	-3.62108    	2.68161E-3  	1.3 hours/million states
+704000	-1285.1270  	-32.9151    	-1252.2119  	-4.84598    	2.10315E-3  	1.3 hours/million states
+705000	-1278.3118  	-23.4161    	-1254.8956  	-4.39240    	1.92068E-3  	1.3 hours/million states
+706000	-1273.2183  	-22.8988    	-1250.3194  	-2.95030    	3.08825E-3  	1.3 hours/million states
+707000	-1274.2088  	-21.7160    	-1252.4928  	-2.54440    	3.43025E-3  	1.3 hours/million states
+708000	-1271.7932  	-22.9062    	-1248.8870  	-3.13311    	2.78014E-3  	1.3 hours/million states
+709000	-1282.7652  	-27.2793    	-1255.4859  	-3.70306    	4.19638E-3  	1.3 hours/million states
+710000	-1279.7933  	-26.1485    	-1253.6448  	-4.33060    	2.45029E-3  	1.3 hours/million states
+711000	-1275.5521  	-26.1200    	-1249.4322  	-4.07409    	2.37891E-3  	1.3 hours/million states
+712000	-1272.1089  	-23.5502    	-1248.5587  	-3.36567    	2.91502E-3  	1.3 hours/million states
+713000	-1276.5159  	-26.0816    	-1250.4344  	-4.98942    	1.66334E-3  	1.3 hours/million states
+714000	-1278.5717  	-27.5618    	-1251.0099  	-6.07999    	1.73957E-3  	1.3 hours/million states
+715000	-1276.2026  	-27.3358    	-1248.8668  	-7.07465    	1.45308E-3  	1.3 hours/million states
+716000	-1276.9101  	-28.4398    	-1248.4703  	-5.07882    	1.51655E-3  	1.3 hours/million states
+717000	-1275.7115  	-27.0529    	-1248.6586  	-5.53397    	1.9592E-3   	1.3 hours/million states
+718000	-1281.7687  	-33.9049    	-1247.8638  	-6.11253    	2.32619E-3  	1.3 hours/million states
+719000	-1277.4769  	-25.5646    	-1251.9123  	-4.58103    	1.68021E-3  	1.3 hours/million states
+720000	-1276.0061  	-27.6591    	-1248.3470  	-6.79948    	1.22042E-3  	1.3 hours/million states
+721000	-1282.0423  	-31.0992    	-1250.9431  	-9.21059    	1.10172E-3  	1.3 hours/million states
+722000	-1279.9430  	-31.5068    	-1248.4362  	-9.29629    	1.22987E-3  	1.3 hours/million states
+723000	-1283.7914  	-27.7740    	-1256.0174  	-6.18184    	1.75087E-3  	1.3 hours/million states
+724000	-1270.8936  	-21.3731    	-1249.5205  	-3.59441    	3.85158E-3  	1.3 hours/million states
+725000	-1273.4451  	-25.0861    	-1248.3590  	-4.35637    	2.48169E-3  	1.3 hours/million states
+726000	-1276.0515  	-25.3292    	-1250.7223  	-4.30653    	2.26075E-3  	1.3 hours/million states
+727000	-1271.6694  	-26.4977    	-1245.1717  	-5.28536    	2.15535E-3  	1.3 hours/million states
+728000	-1267.5085  	-21.8353    	-1245.6732  	-3.28763    	3.41378E-3  	1.3 hours/million states
+729000	-1272.8181  	-22.8690    	-1249.9491  	-2.94679    	2.93037E-3  	1.3 hours/million states
+730000	-1272.0977  	-21.5131    	-1250.5846  	-3.19164    	3.73796E-3  	1.3 hours/million states
+731000	-1269.1755  	-21.2176    	-1247.9579  	-3.22386    	3.9638E-3   	1.3 hours/million states
+732000	-1270.7114  	-23.0903    	-1247.6211  	-2.77447    	3.9504E-3   	1.3 hours/million states
+733000	-1268.4253  	-21.6492    	-1246.7761  	-2.97534    	4.51383E-3  	1.3 hours/million states
+734000	-1270.7064  	-22.4942    	-1248.2122  	-2.80702    	3.5279E-3   	1.3 hours/million states
+735000	-1268.8287  	-21.7725    	-1247.0561  	-2.69927    	3.19188E-3  	1.3 hours/million states
+736000	-1270.3384  	-22.3173    	-1248.0211  	-2.41782    	3.8347E-3   	1.3 hours/million states
+737000	-1273.4723  	-22.6740    	-1250.7983  	-3.22364    	3.38946E-3  	1.3 hours/million states
+738000	-1269.3069  	-23.4974    	-1245.8095  	-3.19654    	3.9185E-3   	1.3 hours/million states
+739000	-1272.2227  	-20.7464    	-1251.4763  	-2.94846    	4.21696E-3  	1.3 hours/million states
+740000	-1275.2092  	-22.4562    	-1252.7530  	-4.06646    	3.65241E-3  	1.3 hours/million states
+741000	-1277.1215  	-24.8322    	-1252.2893  	-3.41795    	4.93035E-3  	1.3 hours/million states
+742000	-1261.0675  	-13.3956    	-1247.6719  	-0.87278    	1.11906E-2  	1.3 hours/million states
+743000	-1270.0043  	-20.2208    	-1249.7836  	-1.23565    	8.45648E-3  	1.3 hours/million states
+744000	-1278.7682  	-16.5846    	-1262.1836  	-1.25071    	1.30457E-2  	1.3 hours/million states
+745000	-1269.2178  	-20.0634    	-1249.1544  	-2.78303    	4.14372E-3  	1.3 hours/million states
+746000	-1269.8515  	-18.6572    	-1251.1943  	-2.17269    	4.27785E-3  	1.3 hours/million states
+747000	-1265.3884  	-18.6825    	-1246.7059  	-2.04182    	5.36456E-3  	1.3 hours/million states
+748000	-1268.0804  	-16.0522    	-1252.0282  	-2.11968    	6.57836E-3  	1.3 hours/million states
+749000	-1261.6399  	-14.7137    	-1246.9263  	-1.64471    	9.31906E-3  	1.3 hours/million states
+750000	-1278.6118  	-22.8565    	-1255.7553  	-4.21099    	3.72542E-3  	1.3 hours/million states
+751000	-1273.4211  	-24.3453    	-1249.0758  	-4.78110    	1.99688E-3  	1.3 hours/million states
+752000	-1274.1074  	-23.5997    	-1250.5078  	-5.03169    	2.92333E-3  	1.3 hours/million states
+753000	-1274.0852  	-25.2719    	-1248.8133  	-5.78416    	2.73811E-3  	1.3 hours/million states
+754000	-1278.6949  	-23.5289    	-1255.1660  	-3.41057    	4.01095E-3  	1.3 hours/million states
+755000	-1278.5181  	-26.3833    	-1252.1348  	-7.89195    	1.58777E-3  	1.3 hours/million states
+756000	-1274.1118  	-25.3643    	-1248.7475  	-6.47824    	2.37808E-3  	1.3 hours/million states
+757000	-1267.3037  	-20.8932    	-1246.4106  	-2.72779    	3.54655E-3  	1.3 hours/million states
+758000	-1275.7874  	-23.6295    	-1252.1579  	-4.10951    	3.04379E-3  	1.3 hours/million states
+759000	-1270.8223  	-20.8975    	-1249.9248  	-3.02033    	5.39785E-3  	1.3 hours/million states
+760000	-1272.4269  	-17.8966    	-1254.5303  	-1.80780    	5.67935E-3  	1.3 hours/million states
+761000	-1272.9680  	-23.8722    	-1249.0958  	-3.35063    	3.95449E-3  	1.3 hours/million states
+762000	-1278.6992  	-25.7454    	-1252.9538  	-5.50844    	2.39073E-3  	1.3 hours/million states
+763000	-1277.3388  	-26.0424    	-1251.2963  	-5.69134    	1.55303E-3  	1.3 hours/million states
+764000	-1277.0223  	-28.2224    	-1248.8000  	-6.20187    	1.86728E-3  	1.3 hours/million states
+765000	-1279.3073  	-31.4046    	-1247.9027  	-8.71855    	1.12422E-3  	1.3 hours/million states
+766000	-1285.1104  	-36.4615    	-1248.6489  	-14.6901    	7.70757E-4  	1.3 hours/million states
+767000	-1285.2881  	-34.2126    	-1251.0755  	-15.6090    	7.15449E-4  	1.3 hours/million states
+768000	-1271.8324  	-23.0141    	-1248.8183  	-3.42577    	2.404E-3    	1.3 hours/million states
+769000	-1272.8410  	-22.4557    	-1250.3853  	-3.15508    	3.45443E-3  	1.3 hours/million states
+770000	-1270.4104  	-22.0145    	-1248.3959  	-3.30693    	3.52085E-3  	1.3 hours/million states
+771000	-1272.1696  	-21.2216    	-1250.9480  	-3.60390    	5.10355E-3  	1.3 hours/million states
+772000	-1270.2895  	-22.3090    	-1247.9805  	-2.85499    	4.95781E-3  	1.3 hours/million states
+773000	-1274.3378  	-24.3690    	-1249.9688  	-4.39419    	3.06513E-3  	1.3 hours/million states
+774000	-1279.3286  	-31.6571    	-1247.6715  	-9.20920    	1.2423E-3   	1.3 hours/million states
+775000	-1277.8335  	-31.6082    	-1246.2253  	-11.3842    	8.98479E-4  	1.3 hours/million states
+776000	-1286.7726  	-30.5467    	-1256.2259  	-10.9353    	1.11892E-3  	1.3 hours/million states
+777000	-1284.9809  	-32.4945    	-1252.4864  	-9.14151    	9.30358E-4  	1.3 hours/million states
+778000	-1276.7217  	-28.7741    	-1247.9475  	-8.52761    	1.73261E-3  	1.3 hours/million states
+779000	-1281.3542  	-28.1048    	-1253.2495  	-5.80016    	1.83564E-3  	1.3 hours/million states
+780000	-1279.6299  	-34.4093    	-1245.2206  	-16.9154    	9.73001E-4  	1.3 hours/million states
+781000	-1285.2201  	-35.0280    	-1250.1921  	-15.3118    	8.05587E-4  	1.3 hours/million states
+782000	-1294.6239  	-39.5884    	-1255.0355  	-32.4734    	4.46695E-4  	1.3 hours/million states
+783000	-1298.9717  	-40.3456    	-1258.6261  	-28.3911    	4.05014E-4  	1.3 hours/million states
+784000	-1286.2412  	-39.4779    	-1246.7633  	-26.7741    	3.81908E-4  	1.3 hours/million states
+785000	-1284.3875  	-36.7554    	-1247.6320  	-20.0859    	6.02382E-4  	1.3 hours/million states
+786000	-1286.1383  	-36.8794    	-1249.2589  	-18.7167    	8.37432E-4  	1.3 hours/million states
+787000	-1284.9752  	-39.6514    	-1245.3238  	-26.3072    	4.2683E-4   	1.3 hours/million states
+788000	-1288.0406  	-36.0114    	-1252.0292  	-14.0398    	8.3417E-4   	1.3 hours/million states
+789000	-1283.8975  	-33.7150    	-1250.1825  	-13.7772    	6.97726E-4  	1.3 hours/million states
+790000	-1288.4185  	-36.8557    	-1251.5628  	-12.5053    	9.46001E-4  	1.3 hours/million states
+791000	-1282.7268  	-35.9194    	-1246.8074  	-16.9229    	9.81562E-4  	1.3 hours/million states
+792000	-1282.5985  	-34.7114    	-1247.8871  	-16.4234    	6.27413E-4  	1.3 hours/million states
+793000	-1283.7928  	-37.2770    	-1246.5158  	-18.7818    	4.68579E-4  	1.3 hours/million states
+794000	-1285.1898  	-36.8289    	-1248.3609  	-18.4814    	4.7547E-4   	1.3 hours/million states
+795000	-1285.4432  	-39.9168    	-1245.5264  	-25.9860    	4.90074E-4  	1.3 hours/million states
+796000	-1293.2704  	-38.7392    	-1254.5312  	-23.8742    	6.14954E-4  	1.3 hours/million states
+797000	-1291.6555  	-43.2161    	-1248.4394  	-31.7365    	4.24617E-4  	1.3 hours/million states
+798000	-1299.2390  	-45.0012    	-1254.2377  	-49.4346    	1.77093E-4  	1.3 hours/million states
+799000	-1298.8674  	-48.2355    	-1250.6319  	-57.6617    	2.24485E-4  	1.3 hours/million states
+800000	-1300.3727  	-48.2477    	-1252.1250  	-64.7056    	1.30281E-4  	1.3 hours/million states
+801000	-1295.1434  	-46.5695    	-1248.5739  	-49.0262    	1.78642E-4  	1.3 hours/million states
+802000	-1292.4212  	-46.0719    	-1246.3493  	-50.7848    	3.01976E-4  	1.3 hours/million states
+803000	-1298.8053  	-48.9952    	-1249.8101  	-57.1860    	2.32664E-4  	1.3 hours/million states
+804000	-1301.3531  	-47.7364    	-1253.6167  	-58.4239    	1.58585E-4  	1.3 hours/million states
+805000	-1295.1984  	-44.0366    	-1251.1618  	-48.8325    	1.89134E-4  	1.3 hours/million states
+806000	-1304.3447  	-49.0182    	-1255.3265  	-76.9420    	2.31369E-4  	1.3 hours/million states
+807000	-1296.4485  	-48.2435    	-1248.2050  	-60.5649    	2.42894E-4  	1.3 hours/million states
+808000	-1306.4209  	-52.5540    	-1253.8669  	-58.8680    	1.97311E-4  	1.3 hours/million states
+809000	-1302.2702  	-47.5524    	-1254.7178  	-61.8885    	2.21607E-4  	1.3 hours/million states
+810000	-1297.5032  	-52.0591    	-1245.4441  	-81.5353    	1.51701E-4  	1.3 hours/million states
+811000	-1297.7262  	-47.4255    	-1250.3007  	-60.0519    	1.96681E-4  	1.3 hours/million states
+812000	-1298.9471  	-48.3697    	-1250.5775  	-71.3051    	1.56771E-4  	1.3 hours/million states
+813000	-1294.2364  	-47.0608    	-1247.1757  	-70.6992    	1.42332E-4  	1.3 hours/million states
+814000	-1301.1763  	-50.0847    	-1251.0917  	-74.4944    	1.30356E-4  	1.3 hours/million states
+815000	-1298.8118  	-46.7962    	-1252.0156  	-70.7455    	1.37276E-4  	1.3 hours/million states
+816000	-1299.8768  	-50.9997    	-1248.8771  	-71.7496    	1.35278E-4  	1.3 hours/million states
+817000	-1299.9044  	-49.8881    	-1250.0163  	-58.0759    	1.85233E-4  	1.3 hours/million states
+818000	-1293.4407  	-46.2403    	-1247.2004  	-50.1784    	1.90545E-4  	1.3 hours/million states
+819000	-1289.8902  	-38.6304    	-1251.2598  	-26.2929    	6.39067E-4  	1.3 hours/million states
+820000	-1292.3259  	-41.1990    	-1251.1269  	-24.2139    	5.80369E-4  	1.3 hours/million states
+821000	-1289.5454  	-40.2557    	-1249.2897  	-20.7994    	5.17906E-4  	1.3 hours/million states
+822000	-1289.7665  	-39.9461    	-1249.8204  	-30.7161    	2.10917E-4  	1.3 hours/million states
+823000	-1293.8147  	-40.8150    	-1252.9997  	-34.4178    	2.7637E-4   	1.3 hours/million states
+824000	-1292.7297  	-42.6634    	-1250.0664  	-30.9532    	3.93465E-4  	1.3 hours/million states
+825000	-1285.9644  	-39.4481    	-1246.5162  	-26.4880    	3.54044E-4  	1.3 hours/million states
+826000	-1292.1050  	-45.3377    	-1246.7672  	-36.6139    	2.75719E-4  	1.3 hours/million states
+827000	-1291.9026  	-41.4054    	-1250.4972  	-33.7434    	3.50855E-4  	1.3 hours/million states
+828000	-1293.1339  	-43.0559    	-1250.0780  	-31.5034    	2.89548E-4  	1.3 hours/million states
+829000	-1288.6343  	-41.2187    	-1247.4156  	-24.3855    	5.30492E-4  	1.3 hours/million states
+830000	-1292.7709  	-42.1781    	-1250.5928  	-28.9539    	4.30245E-4  	1.3 hours/million states
+831000	-1286.9638  	-38.4307    	-1248.5331  	-20.8584    	5.37034E-4  	1.3 hours/million states
+832000	-1288.4169  	-38.7591    	-1249.6578  	-22.4265    	4.09462E-4  	1.3 hours/million states
+833000	-1293.9120  	-41.1700    	-1252.7420  	-26.6215    	4.75674E-4  	1.3 hours/million states
+834000	-1299.3094  	-42.6990    	-1256.6104  	-32.3243    	4.96048E-4  	1.3 hours/million states
+835000	-1288.8880  	-40.8299    	-1248.0582  	-29.6878    	3.68505E-4  	1.3 hours/million states
+836000	-1292.0014  	-41.2413    	-1250.7600  	-34.0656    	2.91765E-4  	1.3 hours/million states
+837000	-1292.3916  	-44.4819    	-1247.9097  	-34.8631    	3.76921E-4  	1.3 hours/million states
+838000	-1304.8971  	-48.7057    	-1256.1914  	-52.3203    	1.3485E-4   	1.3 hours/million states
+839000	-1306.0467  	-47.7201    	-1258.3265  	-76.2326    	1.83563E-4  	1.3 hours/million states
+840000	-1298.6358  	-45.0585    	-1253.5774  	-51.5908    	1.99344E-4  	1.3 hours/million states
+841000	-1297.2399  	-48.8791    	-1248.3607  	-51.8572    	2.58099E-4  	1.3 hours/million states
+842000	-1295.5905  	-45.5715    	-1250.0190  	-43.5611    	3.05821E-4  	1.3 hours/million states
+843000	-1296.1798  	-43.7828    	-1252.3970  	-47.4649    	2.28636E-4  	1.3 hours/million states
+844000	-1293.7633  	-46.1158    	-1247.6475  	-35.9650    	3.32289E-4  	1.3 hours/million states
+845000	-1290.5495  	-41.8256    	-1248.7239  	-39.9732    	2.10891E-4  	1.3 hours/million states
+846000	-1299.6712  	-46.4740    	-1253.1972  	-45.6745    	1.73346E-4  	1.3 hours/million states
+847000	-1298.7089  	-47.4248    	-1251.2841  	-51.1351    	1.8521E-4   	1.3 hours/million states
+848000	-1293.4455  	-42.3168    	-1251.1288  	-42.7541    	2.50918E-4  	1.3 hours/million states
+849000	-1298.4432  	-46.1124    	-1252.3308  	-35.6653    	2.396E-4    	1.3 hours/million states
+850000	-1299.8351  	-45.8227    	-1254.0124  	-47.8083    	1.70586E-4  	1.3 hours/million states
+851000	-1291.0602  	-43.3094    	-1247.7508  	-31.9565    	2.3671E-4   	1.3 hours/million states
+852000	-1289.3944  	-41.7988    	-1247.5956  	-31.9751    	4.82808E-4  	1.3 hours/million states
+853000	-1297.5753  	-45.5921    	-1251.9832  	-34.3402    	3.20063E-4  	1.3 hours/million states
+854000	-1296.7915  	-48.3991    	-1248.3924  	-36.2967    	3.30942E-4  	1.3 hours/million states
+855000	-1291.6153  	-42.3201    	-1249.2952  	-28.6398    	4.40939E-4  	1.3 hours/million states
+856000	-1291.0442  	-43.2234    	-1247.8208  	-26.6326    	3.3031E-4   	1.3 hours/million states
+857000	-1297.5975  	-41.0081    	-1256.5894  	-25.0286    	3.63086E-4  	1.3 hours/million states
+858000	-1292.3261  	-44.6986    	-1247.6275  	-24.6143    	3.98612E-4  	1.3 hours/million states
+859000	-1291.8496  	-40.8391    	-1251.0105  	-25.3116    	3.94292E-4  	1.3 hours/million states
+860000	-1286.2266  	-38.3231    	-1247.9034  	-26.6203    	4.03646E-4  	1.3 hours/million states
+861000	-1294.3235  	-39.4138    	-1254.9097  	-19.3765    	6.67985E-4  	1.3 hours/million states
+862000	-1293.3042  	-37.6885    	-1255.6157  	-26.4379    	5.19401E-4  	1.3 hours/million states
+863000	-1287.0756  	-38.9806    	-1248.0950  	-23.3808    	6.00593E-4  	1.3 hours/million states
+864000	-1288.7709  	-40.8409    	-1247.9301  	-22.9793    	4.67982E-4  	1.3 hours/million states
+865000	-1287.0571  	-38.9526    	-1248.1045  	-21.1164    	5.04486E-4  	1.3 hours/million states
+866000	-1290.9046  	-39.2514    	-1251.6532  	-27.9662    	4.21169E-4  	1.3 hours/million states
+867000	-1290.3045  	-43.5275    	-1246.7770  	-35.8538    	3.11303E-4  	1.3 hours/million states
+868000	-1292.8479  	-46.4986    	-1246.3493  	-33.0469    	3.93757E-4  	1.3 hours/million states
+869000	-1295.2313  	-40.8982    	-1254.3331  	-38.6426    	2.07079E-4  	1.3 hours/million states
+870000	-1298.2127  	-47.0786    	-1251.1341  	-38.8985    	2.81469E-4  	1.3 hours/million states
+871000	-1300.6910  	-46.6844    	-1254.0065  	-38.8940    	2.02604E-4  	1.3 hours/million states
+872000	-1298.4183  	-43.8363    	-1254.5820  	-44.0170    	1.78552E-4  	1.3 hours/million states
+873000	-1303.9638  	-49.5228    	-1254.4410  	-44.5178    	2.32905E-4  	1.3 hours/million states
+874000	-1304.6122  	-47.8797    	-1256.7325  	-41.8461    	2.12982E-4  	1.3 hours/million states
+875000	-1298.7072  	-46.1154    	-1252.5918  	-37.6697    	2.03562E-4  	1.3 hours/million states
+876000	-1299.1469  	-49.8307    	-1249.3162  	-38.5968    	2.37E-4     	1.3 hours/million states
+877000	-1305.0921  	-50.4496    	-1254.6425  	-32.8244    	2.53171E-4  	1.3 hours/million states
+878000	-1298.1800  	-44.7662    	-1253.4138  	-27.1794    	3.04998E-4  	1.3 hours/million states
+879000	-1295.3786  	-47.7039    	-1247.6748  	-27.3418    	3.91229E-4  	1.3 hours/million states
+880000	-1294.3616  	-39.4230    	-1254.9386  	-28.0390    	2.74368E-4  	1.3 hours/million states
+881000	-1296.7517  	-46.0093    	-1250.7424  	-31.6833    	3.43449E-4  	1.3 hours/million states
+882000	-1295.5253  	-43.5460    	-1251.9793  	-30.8952    	2.73969E-4  	1.3 hours/million states
+883000	-1300.0227  	-46.5553    	-1253.4674  	-32.3222    	3.70775E-4  	1.3 hours/million states
+884000	-1304.7877  	-48.7091    	-1256.0786  	-27.3750    	2.98455E-4  	1.3 hours/million states
+885000	-1297.9960  	-49.7719    	-1248.2241  	-29.0348    	2.72913E-4  	1.3 hours/million states
+886000	-1291.9161  	-43.6226    	-1248.2935  	-28.6187    	3.14885E-4  	1.3 hours/million states
+887000	-1291.5987  	-43.6740    	-1247.9247  	-32.1638    	2.80777E-4  	1.3 hours/million states
+888000	-1296.5178  	-41.6525    	-1254.8653  	-30.2611    	2.75168E-4  	1.3 hours/million states
+889000	-1295.1248  	-46.6938    	-1248.4310  	-37.4021    	3.16871E-4  	1.3 hours/million states
+890000	-1296.8072  	-43.4780    	-1253.3291  	-38.9338    	2.55147E-4  	1.3 hours/million states
+891000	-1300.8265  	-47.2670    	-1253.5595  	-39.3623    	2.56017E-4  	1.3 hours/million states
+892000	-1301.8303  	-44.1268    	-1257.7035  	-39.2094    	2.36788E-4  	1.3 hours/million states
+893000	-1299.9192  	-43.2480    	-1256.6712  	-36.0658    	2.7355E-4   	1.3 hours/million states
+894000	-1299.6079  	-46.5458    	-1253.0620  	-40.7786    	2.44328E-4  	1.3 hours/million states
+895000	-1301.2126  	-44.3326    	-1256.8800  	-44.4970    	2.34361E-4  	1.3 hours/million states
+896000	-1297.8152  	-48.3313    	-1249.4838  	-57.2542    	1.81598E-4  	1.3 hours/million states
+897000	-1295.5417  	-45.0526    	-1250.4891  	-41.6718    	2.23514E-4  	1.3 hours/million states
+898000	-1295.8735  	-42.5334    	-1253.3401  	-43.6005    	2.47544E-4  	1.3 hours/million states
+899000	-1295.7979  	-47.3214    	-1248.4765  	-46.1983    	2.29379E-4  	1.3 hours/million states
+900000	-1296.0398  	-48.2533    	-1247.7865  	-49.9891    	1.9318E-4   	1.31 hours/million states
+901000	-1298.3972  	-52.0917    	-1246.3055  	-73.6522    	1.32112E-4  	1.31 hours/million states
+902000	-1302.5072  	-50.2904    	-1252.2168  	-68.1106    	1.6605E-4   	1.31 hours/million states
+903000	-1300.0134  	-47.8849    	-1252.1285  	-60.6028    	1.0869E-4   	1.31 hours/million states
+904000	-1298.9718  	-48.6042    	-1250.3677  	-54.8969    	1.65762E-4  	1.31 hours/million states
+905000	-1300.2994  	-49.2311    	-1251.0682  	-67.9093    	1.19168E-4  	1.31 hours/million states
+906000	-1295.8101  	-46.8310    	-1248.9790  	-66.2129    	1.42794E-4  	1.31 hours/million states
+907000	-1304.1628  	-47.8951    	-1256.2678  	-75.3260    	9.90297E-5  	1.31 hours/million states
+908000	-1301.7420  	-47.0057    	-1254.7363  	-61.9558    	1.81065E-4  	1.31 hours/million states
+909000	-1304.1899  	-43.4940    	-1260.6959  	-53.4677    	2.1612E-4   	1.31 hours/million states
+910000	-1299.7183  	-51.4403    	-1248.2780  	-56.1826    	1.49527E-4  	1.31 hours/million states
+911000	-1299.1477  	-53.8580    	-1245.2897  	-105.689    	9.32376E-5  	1.31 hours/million states
+912000	-1301.1819  	-51.1331    	-1250.0487  	-103.826    	8.39379E-5  	1.31 hours/million states
+913000	-1301.3352  	-52.8880    	-1248.4471  	-103.712    	8.09669E-5  	1.31 hours/million states
+914000	-1299.9778  	-52.0892    	-1247.8885  	-125.155    	9.91022E-5  	1.31 hours/million states
+915000	-1299.4819  	-49.9675    	-1249.5143  	-99.8848    	8.15894E-5  	1.31 hours/million states
+916000	-1304.4018  	-57.1132    	-1247.2886  	-123.256    	8.01012E-5  	1.31 hours/million states
+917000	-1301.1496  	-53.9758    	-1247.1738  	-129.756    	1.14562E-4  	1.31 hours/million states
+918000	-1311.0173  	-52.4935    	-1258.5238  	-121.025    	9.73354E-5  	1.31 hours/million states
+919000	-1312.1136  	-61.2201    	-1250.8935  	-167.964    	5.9631E-5   	1.31 hours/million states
+920000	-1310.9879  	-55.3434    	-1255.6445  	-176.281    	3.60219E-5  	1.31 hours/million states
+921000	-1312.0490  	-58.7629    	-1253.2860  	-222.636    	6.41022E-5  	1.31 hours/million states
+922000	-1308.6185  	-54.9788    	-1253.6397  	-137.196    	1.03876E-4  	1.31 hours/million states
+923000	-1306.0012  	-53.5367    	-1252.4645  	-144.612    	7.03327E-5  	1.31 hours/million states
+924000	-1301.8381  	-55.0867    	-1246.7514  	-105.771    	9.13201E-5  	1.31 hours/million states
+925000	-1304.6890  	-55.0620    	-1249.6270  	-119.672    	1.25979E-4  	1.31 hours/million states
+926000	-1311.8642  	-61.4899    	-1250.3743  	-189.950    	6.08423E-5  	1.31 hours/million states
+927000	-1306.8362  	-58.0696    	-1248.7666  	-243.379    	6.59318E-5  	1.31 hours/million states
+928000	-1307.1969  	-51.3594    	-1255.8375  	-121.772    	1.1922E-4   	1.31 hours/million states
+929000	-1314.4249  	-62.9146    	-1251.5104  	-265.493    	4.15713E-5  	1.31 hours/million states
+930000	-1311.5435  	-61.5692    	-1249.9743  	-208.499    	4.9636E-5   	1.31 hours/million states
+931000	-1309.1111  	-58.0525    	-1251.0585  	-219.659    	6.28703E-5  	1.31 hours/million states
+932000	-1305.6205  	-57.5864    	-1248.0341  	-198.196    	6.46817E-5  	1.31 hours/million states
+933000	-1305.2505  	-55.1661    	-1250.0844  	-144.682    	6.64707E-5  	1.31 hours/million states
+934000	-1302.3684  	-55.4343    	-1246.9341  	-160.937    	7.89497E-5  	1.31 hours/million states
+935000	-1303.1848  	-55.0247    	-1248.1601  	-173.668    	4.66689E-5  	1.31 hours/million states
+936000	-1312.6156  	-61.7372    	-1250.8784  	-179.360    	8.11656E-5  	1.31 hours/million states
+937000	-1307.5682  	-54.9156    	-1252.6526  	-182.416    	4.62492E-5  	1.31 hours/million states
+938000	-1306.4021  	-60.6065    	-1245.7957  	-185.304    	5.26569E-5  	1.31 hours/million states
+939000	-1304.3163  	-54.7913    	-1249.5250  	-178.566    	4.19562E-5  	1.31 hours/million states
+940000	-1307.3265  	-59.1070    	-1248.2196  	-212.250    	4.1153E-5   	1.31 hours/million states
+941000	-1314.3111  	-61.7126    	-1252.5985  	-232.373    	4.01954E-5  	1.31 hours/million states
+942000	-1318.4957  	-59.2287    	-1259.2670  	-167.792    	5.62939E-5  	1.31 hours/million states
+943000	-1309.0439  	-55.5023    	-1253.5416  	-143.917    	6.02566E-5  	1.31 hours/million states
+944000	-1310.3140  	-58.2648    	-1252.0493  	-140.105    	8.22835E-5  	1.31 hours/million states
+945000	-1305.6870  	-52.7944    	-1252.8926  	-128.660    	8.4111E-5   	1.31 hours/million states
+946000	-1305.3370  	-55.3602    	-1249.9768  	-154.187    	5.13918E-5  	1.31 hours/million states
+947000	-1304.6037  	-54.1218    	-1250.4819  	-135.441    	6.81979E-5  	1.31 hours/million states
+948000	-1303.4535  	-55.5832    	-1247.8703  	-134.497    	7.32078E-5  	1.31 hours/million states
+949000	-1307.6427  	-57.6436    	-1249.9991  	-129.493    	1.03007E-4  	1.31 hours/million states
+950000	-1305.6358  	-50.1950    	-1255.4408  	-100.471    	1.2832E-4   	1.31 hours/million states
+951000	-1303.5467  	-51.8594    	-1251.6873  	-90.6103    	9.47051E-5  	1.31 hours/million states
+952000	-1302.7915  	-51.4662    	-1251.3254  	-115.664    	1.0815E-4   	1.31 hours/million states
+953000	-1299.1344  	-52.6671    	-1246.4674  	-117.161    	8.4825E-5   	1.31 hours/million states
+954000	-1300.7031  	-51.5596    	-1249.1435  	-85.0695    	1.48086E-4  	1.31 hours/million states
+955000	-1293.4396  	-44.2608    	-1249.1788  	-39.8829    	2.45662E-4  	1.31 hours/million states
+956000	-1289.0167  	-41.1060    	-1247.9107  	-35.2053    	3.18491E-4  	1.31 hours/million states
+957000	-1291.6641  	-41.4651    	-1250.1990  	-34.1068    	2.3055E-4   	1.31 hours/million states
+958000	-1291.3735  	-43.4153    	-1247.9582  	-40.9005    	2.11419E-4  	1.31 hours/million states
+959000	-1293.9408  	-43.9851    	-1249.9557  	-38.9531    	2.65791E-4  	1.31 hours/million states
+960000	-1291.6094  	-44.0688    	-1247.5406  	-29.9374    	4.59095E-4  	1.31 hours/million states
+961000	-1295.4594  	-43.5344    	-1251.9250  	-41.5998    	2.91188E-4  	1.31 hours/million states
+962000	-1296.7873  	-46.6822    	-1250.1051  	-73.4763    	1.78371E-4  	1.31 hours/million states
+963000	-1293.7758  	-45.9368    	-1247.8391  	-58.0554    	1.8924E-4   	1.31 hours/million states
+964000	-1291.5910  	-41.3513    	-1250.2397  	-32.6416    	5.08314E-4  	1.31 hours/million states
+965000	-1294.8906  	-38.9941    	-1255.8965  	-23.1416    	4.86999E-4  	1.31 hours/million states
+966000	-1298.8927  	-47.9053    	-1250.9874  	-37.4971    	3.41044E-4  	1.31 hours/million states
+967000	-1293.3107  	-40.1425    	-1253.1683  	-28.4867    	3.99056E-4  	1.31 hours/million states
+968000	-1289.1824  	-41.6817    	-1247.5006  	-33.7856    	3.56505E-4  	1.31 hours/million states
+969000	-1297.4367  	-45.8196    	-1251.6172  	-37.9423    	2.99667E-4  	1.31 hours/million states
+970000	-1295.0714  	-48.0165    	-1247.0549  	-44.2905    	1.80854E-4  	1.31 hours/million states
+971000	-1294.5207  	-45.1677    	-1249.3530  	-31.1747    	3.77452E-4  	1.31 hours/million states
+972000	-1291.8366  	-41.2097    	-1250.6269  	-29.4087    	3.5223E-4   	1.31 hours/million states
+973000	-1289.1299  	-45.5428    	-1243.5870  	-49.3351    	2.59345E-4  	1.31 hours/million states
+974000	-1285.1908  	-39.3562    	-1245.8346  	-27.2387    	4.17327E-4  	1.31 hours/million states
+975000	-1289.3778  	-42.6060    	-1246.7717  	-32.3660    	2.78491E-4  	1.31 hours/million states
+976000	-1292.3616  	-41.1264    	-1251.2352  	-30.4688    	4.75158E-4  	1.31 hours/million states
+977000	-1294.0089  	-41.9950    	-1252.0139  	-27.0333    	4.48066E-4  	1.31 hours/million states
+978000	-1292.8674  	-44.0870    	-1248.7805  	-28.2939    	4.74008E-4  	1.31 hours/million states
+979000	-1289.1811  	-40.8527    	-1248.3284  	-23.5391    	5.81906E-4  	1.31 hours/million states
+980000	-1287.4647  	-40.5709    	-1246.8938  	-21.3598    	4.30046E-4  	1.31 hours/million states
+981000	-1289.0739  	-38.5676    	-1250.5063  	-19.4601    	5.51434E-4  	1.31 hours/million states
+982000	-1290.1154  	-39.3279    	-1250.7875  	-27.4620    	3.66636E-4  	1.31 hours/million states
+983000	-1283.7138  	-35.2801    	-1248.4337  	-13.8432    	8.85668E-4  	1.31 hours/million states
+984000	-1286.2765  	-33.9535    	-1252.3230  	-15.9036    	7.86153E-4  	1.31 hours/million states
+985000	-1291.3794  	-40.6450    	-1250.7344  	-24.7282    	6.65365E-4  	1.31 hours/million states
+986000	-1286.2454  	-34.7780    	-1251.4674  	-19.3760    	5.0537E-4   	1.31 hours/million states
+987000	-1282.7295  	-34.1170    	-1248.6126  	-13.6189    	1.10571E-3  	1.31 hours/million states
+988000	-1290.1215  	-33.5873    	-1256.5342  	-16.3015    	9.73365E-4  	1.31 hours/million states
+989000	-1287.6674  	-37.6294    	-1250.0380  	-17.6824    	7.0837E-4   	1.31 hours/million states
+990000	-1284.6905  	-37.6659    	-1247.0246  	-18.6284    	6.24991E-4  	1.31 hours/million states
+991000	-1289.4129  	-36.7523    	-1252.6606  	-18.6535    	6.10768E-4  	1.3 hours/million states
+992000	-1281.1801  	-34.6128    	-1246.5673  	-11.2773    	8.68844E-4  	1.3 hours/million states
+993000	-1282.9507  	-31.4024    	-1251.5483  	-10.6849    	1.17282E-3  	1.3 hours/million states
+994000	-1282.8737  	-34.7270    	-1248.1467  	-12.3614    	8.54439E-4  	1.3 hours/million states
+995000	-1290.6544  	-39.9583    	-1250.6961  	-13.3950    	9.70914E-4  	1.3 hours/million states
+996000	-1284.0438  	-35.9632    	-1248.0806  	-14.1280    	6.56879E-4  	1.3 hours/million states
+997000	-1288.5658  	-37.5892    	-1250.9767  	-13.1209    	1.02214E-3  	1.3 hours/million states
+998000	-1286.5747  	-38.0686    	-1248.5061  	-14.6221    	6.52877E-4  	1.3 hours/million states
+999000	-1293.5304  	-44.4029    	-1249.1274  	-18.5188    	7.00017E-4  	1.3 hours/million states
+1000000	-1291.8633  	-38.7696    	-1253.0937  	-16.5033    	6.69066E-4  	1.3 hours/million states
+
+Operator analysis
+Operator                                          Tuning   Count      Time     Time/Op  Pr(accept) 
+scale(kappa)                                      0.283   8908       1057     0.12     0.239       
+frequencies                                       0.076   8758       1025     0.12     0.2416      
+scale(alpha)                                      0.119   8665       959      0.11     0.2424      
+scale(clock.rate)                                 0.403   26179      2829     0.11     0.2385      
+up:nodeHeights(treeModel) down:clock.rate         0.8     26355      3187     0.12     0.2395      
+subtreeSlide(treeModel)                           6.092   262971     15068    0.06     0.2334      
+Narrow Exchange(treeModel)                                263259     14092    0.05     0.4114      
+Wide Exchange(treeModel)                                  26305      1089     0.04     0.0785      
+wilsonBalding(treeModel)                                  26444      1586     0.06     0.0802      
+scale(treeModel.rootHeight)                       0.163   26462      1227     0.05     0.2404      
+uniform(nodeHeights(treeModel))                           262956     19603    0.07     0.5531      
+scale(exponential.popSize)                        0.245   26327      133      0.01     0.2394      
+exponential.growthRate                            0.177   26411      170      0.01     0.2367      
+
+1.3080297222222224 hours
+
