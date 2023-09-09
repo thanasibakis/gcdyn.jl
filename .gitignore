@@ -1,2 +1,4 @@
 .DS_Store
 __pycache__/
+inference-demo/slurm-out/
+inference-demo/samples.csv
