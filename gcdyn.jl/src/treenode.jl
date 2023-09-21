@@ -13,21 +13,44 @@ AbstractTrees.NodeType(::Type{<:TreeNode}) = HasNodeType()
 AbstractTrees.nodetype(::Type{<:TreeNode}) = TreeNode
 
 AbstractTrees.nodevalue(node::TreeNode) = node.name
-
 Base.show(io::IO, tree::TreeNode) = AbstractTrees.print_tree(io, tree)
 
 Base.IteratorEltype(::Type{<:TreeIterator{TreeNode}}) = Base.HasEltype()
 Base.eltype(::Type{<:TreeIterator{TreeNode}}) = TreeNode
 
-# AbstractTrees doesn't seem type stable, so let's do this instead
+"""
+```julia
+TreeTraversal
+```
+Abstract supertype for iterators over `TreeNode`s.
 
-# TODO: DOCUMENT
+Pre-order and post-order traversals are defined.
+These are present mainly because the iterators in `AbstractTrees` were difficult to make type-stable.
+
+See also [`PostOrderTraversal`](@ref), [`PreOrderTraversal`](@ref).
+"""
 abstract type TreeTraversal end
 
+"""
+```julia
+PostOrderTraversal(tree)
+```
+
+Iterator for performing a post-order traversal over `tree`.
+
+See also [`TreeTraversal`](@ref).
+"""
 struct PostOrderTraversal <: TreeTraversal
     root::TreeNode
 end
 
+"""
+```julia
+PreOrderTraversal(tree)
+```
+
+Iterator for performing a pre-order traversal over `tree`.
+"""
 struct PreOrderTraversal <: TreeTraversal
     root::TreeNode
 end
@@ -77,10 +100,11 @@ function Base.iterate(::TreeTraversal, to_visit)
     return popfirst!(to_visit), to_visit
 end
 
+# For `collect` and list comprehensions on TreeTraversals to function
 function Base.length(t::TreeTraversal)
     count = 0
 
-    for node in t
+    for _ in t
         count += 1
     end
 

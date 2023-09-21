@@ -1,9 +1,20 @@
 # Methods involving `AbstractBranchingProcess` objects.
 
+"``\\frac{1}{1 + exp(-x)}``"
 expit(x) = 1 / (1 + exp(-x))
+
+"``\\frac{\\text{yscale}}{1 + exp(-(\\text{xscale} * (x - \text{{xshift}})))} + \\text{yshift}``"
 sigmoid(x, xscale, xshift, yscale, yshift) = yscale * expit(xscale * (x - xshift)) + yshift
 
-# TODO: document
+"""
+```julia
+λ(model::AbstractBranchingProcess, state)
+```
+
+Evaluates the `model`'s birth rate function at the given `state`.
+"""
+function λ(::AbstractBranchingProcess, state) end
+
 function λ(model::ConstantRateBranchingProcess, state)
     return model.λ
 end
@@ -11,6 +22,15 @@ end
 function λ(model::SigmoidalBirthRateBranchingProcess, state)
     return sigmoid(state, model.xscale, model.xshift, model.yscale, model.yshift)
 end
+
+"""
+```julia
+μ(model::AbstractBranchingProcess, state)
+```
+
+Evaluates the `model`'s death rate function at the given `state`.
+"""
+function μ(::AbstractBranchingProcess, state) end
 
 function μ(model::AbstractBranchingProcess, state)
     return model.μ
@@ -20,7 +40,7 @@ function γ(model::AbstractBranchingProcess, state)
     return model.γ
 end
 
-# To allow us to broadcast the rate parameter functions
+# To allow us to broadcast the rate parameter functions over states
 Base.length(::AbstractBranchingProcess) = 1
 Base.iterate(model::AbstractBranchingProcess) = (model, nothing)
 Base.iterate(::AbstractBranchingProcess, state) = nothing
@@ -70,7 +90,7 @@ function StatsAPI.loglikelihood(
             abstol = abstol
         )
 
-        leaf.p_end = p.u[end][:]
+        leaf.info[:p_end] = p.u[end][:]
     end
 
     for event in PostOrderTraversal(tree.children[1])
@@ -79,23 +99,23 @@ function StatsAPI.loglikelihood(
 
         if event.event == :sampled_survival
             # event already has p_end
-            event.q_end = ρ
+            event.info[:q_end] = ρ
         elseif event.event == :sampled_death
             # event already has p_end
-            event.q_end = μ(model, event.up.state) * σ
+            event.info[:q_end] = μ(model, event.up.state) * σ
         elseif event.event == :birth
-            event.p_end = event.children[1].p_start
-            event.q_end = (
-                λ(model, event.up.state) * event.children[1].q_start * event.children[2].q_start
+            event.info[:p_end] = event.children[1].info[:p_start]
+            event.info[:q_end] = (
+                λ(model, event.up.state) * event.children[1].info[:q_start] * event.children[2].info[:q_start]
             )
         elseif event.event == :mutation
             mutation_prob = transition_matrix[findfirst(state_space .== event.up.state), findfirst(state_space .== event.state)]
 
-            event.p_end = event.children[1].p_start
-            event.q_end = (
+            event.info[:p_end] = event.children[1].info[:p_start]
+            event.info[:q_end] = (
                 γ(model, event.up.state)
                 * mutation_prob
-                * event.children[1].q_start
+                * event.children[1].info[:q_start]
             )
         else
             throw(ArgumentError("Unknown event type $(event.event)"))
@@ -105,7 +125,7 @@ function StatsAPI.loglikelihood(
             ODEProblem(
                 dpq_dt!,
                 # TODO: I can probably drop the convert now?
-                convert(Vector{Float64}, [event.p_end; event.q_end]),
+                convert(Vector{Float64}, [event.info[:p_end]; event.info[:q_end]]),
                 (t_end, t_start),
                 (model, state_space, event.up.state)
             ),
@@ -116,11 +136,11 @@ function StatsAPI.loglikelihood(
             abstol = abstol
         )
 
-        event.p_start = pq.u[end][1:end-1]
-        event.q_start = pq.u[end][end]
+        event.info[:p_start] = pq.u[end][1:end-1]
+        event.info[:q_start] = pq.u[end][end]
     end
 
-    result = log(tree.children[1].q_start)
+    result = log(tree.children[1].info[:q_start])
 
     # Non-extinction probability
 
@@ -144,7 +164,11 @@ function StatsAPI.loglikelihood(
     return result
 end
 
-# TODO: annotate but don't export
+"""
+See equation (1) of this paper:
+
+Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
+"""
 function dp_dt!(dp, p, args, t)
     model, state_space = args
 
@@ -162,7 +186,11 @@ function dp_dt!(dp, p, args, t)
     )
 end
 
-# TODO: annotate but don't export
+"""
+See equations (1) and (2) of this paper:
+
+Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
+"""
 function dpq_dt!(dpq, pq, args, t)
     p, q_i = pq[1:end-1], pq[end]
     model, state_space, parent_state = args

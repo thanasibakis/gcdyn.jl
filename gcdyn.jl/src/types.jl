@@ -1,17 +1,24 @@
-# Custom types.
+# Custom types and their constructors.
+# Note: since Julia expects types to be defined before any functions that use them,
+# this file should contain only types and be `include`d before other files.
 
 "The possible events that can occur at a node in a [`TreeNode`](@ref)."
 const EVENTS = (:root, :birth, :sampled_death, :unsampled_death, :mutation, :sampled_survival, :unsampled_survival)
 
 """
 ```julia
+TreeNode(state)
+TreeNode(event, t, state)
 TreeNode(name, event, t, state, children)
 ```
-A data structure for building realizations of multitype branching processes, defaulting to time `t = 0` and the root `event`.
+A data structure for building realizations of multitype branching processes.
 
-A "tree" is defined as a `TreeNode` with `event = :root` and optional `children`.
-Defaults to having time `t` be `0` and event type be `:root`.
-Requires an initial state value.
+A "tree" is defined as a `TreeNode` with `event = :root` and optional `TreeNode` `children` of other non-root events.
+All nodes in the tree (including the root) have an integer `name`, a time `t` at which the event occurred, and a `state` attribute whose meaning is left to the user.
+
+If only `state` is provided, the node defaults to being a root node at time 0.
+Node names default to `0` for root nodes, and `1` for all others.
+Child vectors always default to be empty.
 
 See also [`rand_tree`](@ref), [`EVENTS`](@ref).
 """
@@ -22,13 +29,6 @@ mutable struct TreeNode
     state::Float64
     const children::Vector{TreeNode}
     up::Union{TreeNode, Nothing}
-
-    
-    # (for calculations for the likelihood)
-    #p_start::Vector{Float64}
-    #p_end::Vector{Float64}
-    #q_start::Float64
-    #q_end::Float64
 
     # A place to write temporary values pertaining to this node
     # (eg. for likelihood calculations)
@@ -51,6 +51,9 @@ mutable struct TreeNode
     end
 end
 
+TreeNode(state) = TreeNode(0, :root, 0, state, [])
+TreeNode(event, t, state) = TreeNode(event == :root ? 0 : 1, event, t, state, [])
+
 """
 ```julia
 AbstractBranchingProcess
@@ -63,13 +66,17 @@ abstract type AbstractBranchingProcess end
 
 """
 ```julia
-ConstantRateBranchingProcess(λ, μ, γ, state_space, transition_matrix, ρ, σ, present_time)
+ConstantRateBranchingProcess(λ, μ, γ, state_space, [transition_matrix,] ρ, σ, present_time)
 ```
 
 Constructs a multitype branching process with the given parameters.
 
 Rate parameters are notated as `λ` (birth rate), `μ` (death rate), and `γ` (mutation rate).
 Sampling probabilities are notated as `ρ` (survival sampling probability) and `σ` (death sampling probability).
+
+If `transition_matrix` is omitted, specifies uniform transition probabilities to all states.
+
+See also [`uniform_transition_matrix`](@ref), [`random_walk_transition_matrix`](@ref).
 """
 struct ConstantRateBranchingProcess <: AbstractBranchingProcess
     λ::Float64
@@ -106,12 +113,6 @@ struct ConstantRateBranchingProcess <: AbstractBranchingProcess
     end
 end
 
-"""
-```julia
-ConstantRateBranchingProcess(λ, μ, γ, state_space, ρ, σ, present_time)
-```
-Specifies uniform transition probabilities to all states.
-"""
 function ConstantRateBranchingProcess(λ, μ, γ, state_space, ρ, σ, present_time)
     n = length(state_space)
     transition_matrix = (ones(n, n) - I) / (n - 1)
@@ -121,7 +122,7 @@ end
 
 """
 ```julia
-SigmoidalBirthRateBranchingProcess(xscale, xshift, yscale, yshift, μ, γ, state_space, transition_matrix, ρ, σ, present_time)
+SigmoidalBirthRateBranchingProcess(xscale, xshift, yscale, yshift, μ, γ, state_space, [transition_matrix,] ρ, σ, present_time)
 ```
 
 Constructs a multitype branching process with the given parameters.
@@ -129,6 +130,10 @@ Constructs a multitype branching process with the given parameters.
 A parameterized sigmoid curve (with `xscale`, `xshift`, `yscale`, and `yshift`) maps states to birth rates.
 Other rate parameters are notated as `μ` (death rate), and `γ` (mutation rate).
 Sampling probabilities are notated as `ρ` (survival sampling probability) and `σ` (death sampling probability).
+
+If `transition_matrix` is omitted, specifies uniform transition probabilities to all states.
+
+See also [`uniform_transition_matrix`](@ref), [`random_walk_transition_matrix`](@ref).
 """
 struct SigmoidalBirthRateBranchingProcess <: AbstractBranchingProcess
     xscale::Float64
@@ -166,25 +171,35 @@ struct SigmoidalBirthRateBranchingProcess <: AbstractBranchingProcess
     end
 end
 
-"""
-```julia
-SigmoidalBirthRateBranchingProcess(xscale, xshift, yscale, yshift, μ, γ, state_space, ρ, σ, present_time)
-```
-Specifies uniform transition probabilities to all states.
-"""
 function SigmoidalBirthRateBranchingProcess(xscale, xshift, yscale, yshift, μ, γ, state_space, ρ, σ, present_time)
-    transition_matrix = UniformTransitionMatrix(state_space)
+    transition_matrix = uniform_transition_matrix(state_space)
 
     return SigmoidalBirthRateBranchingProcess(xscale, xshift, yscale, yshift, μ, γ, state_space, transition_matrix, ρ, σ, present_time)
 end
 
-function UniformTransitionMatrix(state_space)
+"""
+```julia
+uniform_transition_matrix(state_space)
+```
+
+Constructs a transition matrix where all states have equal probability of transitioning to all other states.
+
+Note that self-loops cannot occur (ie. the diagonal of the matrix is all zeros).
+"""
+function uniform_transition_matrix(state_space)
     n = length(state_space)
 
     return (ones(n, n) - I) / (n - 1)
 end
 
-function RandomWalkTransitionMatrix(state_space, p)
+"""
+```julia
+random_walk_transition_matrix(state_space, p)
+```
+
+Constructs a transition matrix where the probability of transitioning to the next state is `p`, and the probability of transitioning to the previous state is `1 - p`.
+"""
+function random_walk_transition_matrix(state_space, p)
     if p <= 0 || p >= 1
         throw(ArgumentError("p must be between 0 and 1"))
     end
