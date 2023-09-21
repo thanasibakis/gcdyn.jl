@@ -1,4 +1,17 @@
+# macOS
 .DS_Store
+
+# Python
 __pycache__/
-inference-demo/slurm-out/
-inference-demo/samples.csv
+
+# Simulation study products
+examples/simulation-study/slurm-out/
+examples/simulation-study/samples.csv
+
+# tenseqs analysis products
+examples/tenseqs/*.jld2
+examples/tenseqs/*.json
+
+# BEAST runs
+data/*.trees
+data/*.log

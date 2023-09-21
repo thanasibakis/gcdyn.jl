@@ -17,7 +17,7 @@ function naive_loglikelihood(model::AbstractBranchingProcess, tree::TreeNode)
     ρ = model.ρ
     state_space, transition_matrix = model.state_space, model.transition_matrix
 
-    for node in PostOrder(tree.children[1])
+    for node in PostOrderTraversal(tree.children[1])
         λₓ::Float64, μₓ::Float64, γₓ::Float64 = λ(model, node.up.state), μ(model, node.up.state), γ(model, node.up.state)
         Λₓ = λₓ + μₓ + γₓ
 
@@ -55,7 +55,7 @@ function stadler_appx_loglikelhood(model::AbstractBranchingProcess, tree::TreeNo
     ρ, σ, present_time = model.ρ, model.σ, model.present_time
     state_space, transition_matrix = model.state_space, model.transition_matrix
 
-    for node in PostOrder(tree.children[1])
+    for node in PostOrderTraversal(tree.children[1])
         λₓ::Float64, μₓ::Float64, γₓ::Float64 = λ(model, node.up.state), μ(model, node.up.state), γ(model, node.up.state)
         Λₓ = λₓ + μₓ + γₓ
         c = √(Λₓ^2 - 4 * μₓ * (1 - σ) * λₓ)
@@ -127,7 +127,7 @@ function stadler_appx_unconditioned_loglikelhood(model::AbstractBranchingProcess
     ρ, σ, present_time = model.ρ, model.σ, model.present_time
     state_space, transition_matrix = model.state_space, model.transition_matrix
 
-    for node in PostOrder(tree.children[1])
+    for node in PostOrderTraversal(tree.children[1])
         λₓ::Float64, μₓ::Float64, γₓ::Float64 = λ(model, node.up.state), μ(model, node.up.state), γ(model, node.up.state)
 
         Λₓ = λₓ + μₓ + γₓ

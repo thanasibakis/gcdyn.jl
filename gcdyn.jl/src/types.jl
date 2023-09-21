@@ -5,8 +5,7 @@ const EVENTS = (:root, :birth, :sampled_death, :unsampled_death, :mutation, :sam
 
 """
 ```julia
-TreeNode(state)
-TreeNode(event, t, state)
+TreeNode(name, event, t, state, children)
 ```
 A data structure for building realizations of multitype branching processes, defaulting to time `t = 0` and the root `event`.
 
@@ -17,32 +16,39 @@ Requires an initial state value.
 See also [`rand_tree`](@ref), [`EVENTS`](@ref).
 """
 mutable struct TreeNode
-    const event::Symbol
-    const t::Float64
-    state::Int
+    name::Int
+    event::Symbol
+    t::Float64
+    state::Float64
     const children::Vector{TreeNode}
     up::Union{TreeNode, Nothing}
 
-    # A place to write temporary values pertaining to this node
+    
     # (for calculations for the likelihood)
-    p_start::Vector{Float64}
-    p_end::Vector{Float64}
-    q_start::Float64
-    q_end::Float64
+    #p_start::Vector{Float64}
+    #p_end::Vector{Float64}
+    #q_start::Float64
+    #q_end::Float64
 
-    function TreeNode(event, t, state)
+    # A place to write temporary values pertaining to this node
+    # (eg. for likelihood calculations)
+    info::Dict{Symbol, Any}
+
+    function TreeNode(name, event, t, state, children)
         if event ∉ EVENTS
             throw(ArgumentError("Event must be one of $(EVENTS)"))
         elseif t < 0
             throw(ArgumentError("Time must be positive"))
         end
 
-        return new(event, t, state, [], nothing, [], [], 0, 0)
-    end
-end
+        self = new(name, event, t, state, children, nothing, Dict())
 
-function TreeNode(state)
-    return TreeNode(:root, 0, state)
+        for child in self.children
+            child.up = self
+        end
+
+        return self
+    end
 end
 
 """

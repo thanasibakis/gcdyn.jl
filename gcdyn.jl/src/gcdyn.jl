@@ -15,6 +15,8 @@ export
     TreeNode,
     UniformTransitionMatrix,
     RandomWalkTransitionMatrix,
+    PostOrderTraversal,
+    PreOrderTraversal,
 
     loglikelihood,
     rand_tree

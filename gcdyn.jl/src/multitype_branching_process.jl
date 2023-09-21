@@ -73,7 +73,7 @@ function StatsAPI.loglikelihood(
         leaf.p_end = p.u[end][:]
     end
 
-    for event in PostOrder(tree.children[1])
+    for event in PostOrderTraversal(tree.children[1])
         t_start = present_time - event.up.t
         t_end = present_time - event.t
 

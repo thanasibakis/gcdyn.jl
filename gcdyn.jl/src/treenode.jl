@@ -12,18 +12,27 @@ AbstractTrees.parent(node::TreeNode) = node.up
 AbstractTrees.NodeType(::Type{<:TreeNode}) = HasNodeType()
 AbstractTrees.nodetype(::Type{<:TreeNode}) = TreeNode
 
-AbstractTrees.nodevalue(node::TreeNode) = node.state
+AbstractTrees.nodevalue(node::TreeNode) = node.name
+
+Base.show(io::IO, tree::TreeNode) = AbstractTrees.print_tree(io, tree)
 
 Base.IteratorEltype(::Type{<:TreeIterator{TreeNode}}) = Base.HasEltype()
 Base.eltype(::Type{<:TreeIterator{TreeNode}}) = TreeNode
 
 # AbstractTrees doesn't seem type stable, so let's do this instead
 
-struct PostOrder
+# TODO: DOCUMENT
+abstract type TreeTraversal end
+
+struct PostOrderTraversal <: TreeTraversal
     root::TreeNode
 end
 
-function Base.iterate(it::PostOrder)
+struct PreOrderTraversal <: TreeTraversal
+    root::TreeNode
+end
+
+function Base.iterate(it::PostOrderTraversal)
     if isnothing(it.root)
         return nothing
     end
@@ -41,7 +50,26 @@ function Base.iterate(it::PostOrder)
     return popfirst!(to_visit), to_visit
 end
 
-function Base.iterate(::PostOrder, to_visit)
+function Base.iterate(it::PreOrderTraversal)
+    if isnothing(it.root)
+        return nothing
+    end
+
+    function collect_nodes!(nodes, tree)
+        push!(nodes, tree)
+
+        for child in tree.children
+            collect_nodes!(nodes, child)
+        end
+    end
+
+    to_visit = Vector{TreeNode}()
+    collect_nodes!(to_visit, it.root)
+
+    return popfirst!(to_visit), to_visit
+end
+
+function Base.iterate(::TreeTraversal, to_visit)
     if isempty(to_visit)
         return nothing
     end
@@ -49,7 +77,15 @@ function Base.iterate(::PostOrder, to_visit)
     return popfirst!(to_visit), to_visit
 end
 
-Base.show(io::IO, tree::TreeNode) = AbstractTrees.print_tree(io, tree)
+function Base.length(t::TreeTraversal)
+    count = 0
+
+    for node in t
+        count += 1
+    end
+
+    return count
+end
 
 """
 ```julia

@@ -1,0 +1,107 @@
+#!/usr/bin/env Rscript
+
+# BEAST .history.trees information extracter.
+# Tested on R 4.2.
+#
+# Needs installed packages:
+#   - install.packages(c("tidyverse", "BiocManager"))
+#   - BiocManager::install("treeio")
+#
+# Usage:
+#     extract-tree-data.R [myfile.history.trees]
+#
+# The input file should be the .history.trees file output by BEAST when
+# `States > State Change Count Reconstruction > Reconstruct complete change history on tree`
+# is enabled in BEAUti. Be sure that the `compactHistory` option of the `markovJumpsTreeLikelihood` entry
+# in your BEAST XML file is set to `false` (which is the default) or is unset.
+#
+# Outputs to stdout:
+#     a JSON list of objects representing each tree, obeying the specification in the README.
+
+
+suppressPackageStartupMessages(library(treeio))
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(library(jsonlite))
+
+process_tree <- function(tree) {
+    history <- get.data(tree) |>
+        select(node, starts_with("history")) |>
+        pivot_longer(starts_with("history"),
+            names_to = "site",
+            names_prefix = "history_",
+            values_to = "history"
+        ) |>
+        filter(!is.na(history)) |>
+        rowwise() |>
+        filter(!is.null(history)) |>
+        ungroup() |>
+        mutate(history = map(history,
+            \(row) str_c(
+                row[seq(1, length(row), 3)],
+                row[seq(1, length(row), 3) + 1],
+                row[seq(1, length(row), 3) + 2],
+                sep = "|"
+            )
+        )) |>
+        unnest(history) |>
+        mutate(history = str_replace_all(history, "\\}|\\{", "")) |>
+        separate(history, c("when", "from_base", "to_base"), "\\|") |>
+        mutate(across(c("site", "when"), as.numeric))
+
+    ancestry <- get.tree(tree)$edge |>
+        as_tibble(.name_repair = "minimal") |>
+        magrittr::set_colnames(c("parent", "node"))
+
+    states <- get.data(tree) |> select(node, states) |> rename(state = states)
+
+    newick <- get.tree(tree) |>
+        write.nexus() |>
+        capture.output() |>
+        str_match("\\[&(?:R|U)\\] (.+);") |>
+        magrittr::extract(, 2) %>%
+        magrittr::extract(!is.na(.))
+
+    node_info <- full_join(states, ancestry, by = "node") |>
+        nest_join(history, by = "node") |>
+        rename(name = node)
+
+    original_tip_names <- tibble(
+        name = seq_along(get.tree(tree)$tip.label),
+        original_name = get.tree(tree)$tip.label
+    )
+
+    list(
+        newick = unbox(newick), # unbox ensures strings aren't JSON-encoded as a 1-length vector
+        nodes = node_info,
+        original_tip_names = original_tip_names
+    )
+}
+
+shrink_newick_line <- function(line) {
+    shrunk <- line |>
+        # Remove the tree-wide comment block, we won't use it
+        str_replace("\\[&((lnP|c_count\\[[0-9]+\\]|c_allTransitions\\[[0-9]+\\])=[0-9.-]+,?)+\\] ", "") |>
+        # Remove the count annotations on each node
+        str_replace_all("count=\\{[0-9.,]+\\},?", "") |>
+        # Clean up
+        str_replace_all(",\\]", "]") |>
+        str_replace_all("\\[&\\]", "")
+
+    ifelse(str_starts(line, "tree"), shrunk, line)
+}
+
+
+in_filename <- commandArgs(trailingOnly = TRUE)[1]
+temp_filename <- tempfile()
+
+# This will make the next step take much less time
+read_lines(in_filename) |>
+    map_chr(shrink_newick_line) |>
+    write_lines(temp_filename)
+
+# This step takes the longest
+trees <- read.beast(temp_filename)
+
+trees |>
+    map(process_tree) |>
+    toJSON(digits = 10, na = "null")
