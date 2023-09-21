@@ -1,8 +1,6 @@
-This folder gets added to the PATH for the environment that the nextflow script runs in.
-
 ## TreeJSON spec
 
-Scripts in this folder pass around JSON lists of objects that represent trees.
+`beast-to-treejson` parses a `.history.trees` file from BEAST into a JSON list of objects that represent trees.
 These objects obey the following schema:
 
 ```{json}
