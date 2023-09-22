@@ -214,9 +214,12 @@ rand_tree(model, n, init_state; reject_stubs=true)
 
 Generate `n` random trees from the given model (optional parameter, default is `1`), each starting at the given initial state.
 
+Note that trees will have root time `0`, with time increasing toward the tips.
+This aligns us with the branching process models, but contradicts the notion of time typically used in phylogenetics.
+
 Can optionally choose not to `reject_stubs`, equivalent to not conditioning on the root node having at least one sampled descendant.
 
-See also [`TreeNode`](@ref).
+See also [`TreeNode`](@ref), [`sample_child!`](@ref), [`mutate!`](@ref).
 """
 function rand_tree(
     model::AbstractBranchingProcess,
@@ -289,4 +292,62 @@ function rand_tree(
     end
 
     return root
+end
+
+"""
+```julia
+mutate!(node, model)
+```
+
+Change the state of the given node according to the transition probabilities in the given model.
+"""
+function mutate!(node::TreeNode, model::AbstractBranchingProcess)
+    if node.state ∉ model.state_space
+        throw(ArgumentError("The state of the node must be in the state space of the mutator."))
+    end
+
+    transition_probs = model.transition_matrix[findfirst(model.state_space .== node.state), :]
+    node.state = sample(model.state_space, Weights(transition_probs))
+end
+
+"""
+```julia
+sample_child!(parent, model)
+```
+
+Append a new child event to the given parent node, selecting between events from [`EVENTS`](@ref) according to the given model's rate parameters.
+
+Note that the child will a time `t` larger than its parent.
+This aligns us with the branching process models, but contradicts the notion of time typically used in phylogenetics.
+"""
+function sample_child!(parent::TreeNode, model::AbstractBranchingProcess)
+    if length(parent.children) == 2
+        throw(ArgumentError("Can only have 2 children max"))
+    end
+
+    λₓ, μₓ, γₓ = λ(model, parent.state), μ(model, parent.state), γ(model, parent.state)
+
+    waiting_time = rand(Exponential(1 / (λₓ + μₓ + γₓ)))
+
+    if parent.t + waiting_time > model.present_time
+        event = sample([:sampled_survival, :unsampled_survival], Weights([model.ρ, 1 - model.ρ]))
+        child = TreeNode(event, model.present_time, parent.state)
+    else
+        event = sample([:birth, :unsampled_death, :mutation], Weights([λₓ, μₓ, γₓ]))
+
+        if event == :unsampled_death && rand() < model.σ
+            event = :sampled_death
+        end
+
+        child = TreeNode(event, parent.t + waiting_time, parent.state)
+
+        if event == :mutation
+            mutate!(child, model)
+        end
+    end
+
+    push!(parent.children, child)
+    child.up = parent
+
+    return child
 end

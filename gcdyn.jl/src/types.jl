@@ -73,6 +73,7 @@ Constructs a multitype branching process with the given parameters.
 
 Rate parameters are notated as `λ` (birth rate), `μ` (death rate), and `γ` (mutation rate).
 Sampling probabilities are notated as `ρ` (survival sampling probability) and `σ` (death sampling probability).
+Ensure that `present_time > 0`, since the process is defined to start at time `0`.
 
 If `transition_matrix` is omitted, specifies uniform transition probabilities to all states.
 
@@ -130,6 +131,7 @@ Constructs a multitype branching process with the given parameters.
 A parameterized sigmoid curve (with `xscale`, `xshift`, `yscale`, and `yshift`) maps states to birth rates.
 Other rate parameters are notated as `μ` (death rate), and `γ` (mutation rate).
 Sampling probabilities are notated as `ρ` (survival sampling probability) and `σ` (death sampling probability).
+Ensure that `present_time > 0`, since the process is defined to start at time `0`.
 
 If `transition_matrix` is omitted, specifies uniform transition probabilities to all states.
 
