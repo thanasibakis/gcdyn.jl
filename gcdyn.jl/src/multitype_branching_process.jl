@@ -30,12 +30,17 @@ end
 
 Evaluates the `model`'s death rate function at the given `state`.
 """
-function μ(::AbstractBranchingProcess, state) end
-
 function μ(model::AbstractBranchingProcess, state)
     return model.μ
 end
 
+"""
+```julia
+γ(model::AbstractBranchingProcess, state)
+```
+
+Evaluates the `model`'s type change rate function at the given `state`.
+"""
 function γ(model::AbstractBranchingProcess, state)
     return model.γ
 end
