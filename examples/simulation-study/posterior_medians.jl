@@ -11,31 +11,37 @@ priors = Dict(
     :yshift => Gamma(1, 1),
     :μ => LogNormal(0, 0.3),
     :γ => LogNormal(0, .5),
-    :p => Uniform(0, 1)
+    :logit_p => Normal(0, 1.8),
+    :logit_δ => Normal(1.4, 1.4),
+    
+    # The logit priors are used in MH, but these are used in visualization
+    :p => Uniform(0, 1),
+    :δ => Beta(3, 1)
 )
 
 # https://docs.julialang.org/en/v1/manual/performance-tips/index.html#Avoid-untyped-global-variables
 const transition_p = 0.3
-const truth = SigmoidalBirthRateBranchingProcess(1, 5, 1.5, 1, 1.3, 1.3, [2, 4, 6, 8], random_walk_transition_matrix([2, 4, 6, 8], transition_p), 1, 0, 1.5)
+const transition_δ = 0.8
+const truth = SigmoidalBirthRateBranchingProcess(1, 5, 1.5, 1, 1.3, 1.3, [2, 4, 6, 8], random_walk_transition_matrix([2, 4, 6, 8], transition_p; δ=transition_δ), 1, 0, 1.5)
 
 @model function Model(trees::Vector{TreeNode})
-    xscale ~ priors[:xscale]
-    xshift ~ priors[:xshift]
-    yscale ~ priors[:yscale]
-    yshift ~ priors[:yshift]
-    # λ ~ LogNormal(1.5, 1)
+    xscale  ~ priors[:xscale]
+    xshift  ~ priors[:xshift]
+    yscale  ~ priors[:yscale]
+    yshift  ~ priors[:yshift]
+    μ       ~ priors[:μ]
+    γ       ~ priors[:γ]
+    logit_p ~ priors[:logit_p]
+    logit_δ ~ priors[:logit_δ]
 
-    μ ~ priors[:μ]
-    γ ~ priors[:γ]
-    logit_p ~ Normal(0, 1.8)
     p = gcdyn.expit(logit_p)
+    δ = gcdyn.expit(logit_p)
 
     sampled_model = SigmoidalBirthRateBranchingProcess(
-        xscale, xshift, yscale, yshift, μ, γ, truth.state_space, random_walk_transition_matrix(truth.state_space, p), truth.ρ, truth.σ, truth.present_time
+        xscale, xshift, yscale, yshift, μ, γ, truth.state_space, random_walk_transition_matrix(truth.state_space, p; δ=δ), truth.ρ, truth.σ, truth.present_time
     )
 
     Turing.@addlogprob! loglikelihood(sampled_model, trees; reltol=1e-3, abstol=1e-3)
-    # Turing.@addlogprob! sum(gcdyn.stadler_appx_loglikelhood(sampled_model, tree) for tree in trees)
 end
 
 println("Sampling...")
@@ -56,7 +62,8 @@ function run_simulations(num_treesets, num_trees, num_samples)
                 :yshift => x -> LogNormal(log(x), 0.3),
                 :μ => x -> LogNormal(log(x), 0.3),
                 :γ => x -> LogNormal(log(x), 0.3),
-                :logit_p => x -> Normal(x, 0.5)
+                :logit_p => x -> Normal(x, 0.5),
+                :logit_δ => x -> Normal(x, 0.5)
             ),
             num_samples
         )
@@ -86,21 +93,27 @@ medians = combine(
     :yshift => median => :yshift,
     :μ => median => :μ,
     :γ => median => :γ,
-    :logit_p => median => :logit_p
+    :logit_p => (x -> gcdyn.expit(median(x))) => :p,
+    :logit_δ => (x -> gcdyn.expit(median(x))) => :δ
 )
-
-medians.p = gcdyn.expit.(medians.logit_p)
+select!(medians, Not(:run))
 
 println("Visualizing...")
 
-hists = map((:xscale, :xshift, :yscale, :yshift, :μ, :γ, :p)) do param
+hists = map(propertynames(medians)) do param
     histogram(medians[!, param]; normalize=:pdf, label="Medians")
 
-    true_value = param == :p ? transition_p : getfield(truth, param)
+    true_value =
+        if param == :p
+            transition_p
+        elseif param == :δ
+            transition_δ
+        else
+            getfield(truth, param)
+        end
+
     vline!([true_value]; label="Truth", linewidth=4)
-
-    plot!(priors[param]; label="Prior", fill = (0, 0.5))
-
+    plot!(priors[param]; label="Prior", fill=(0, 0.5))
     title!(string(param))
 end
 

@@ -196,12 +196,15 @@ end
 
 """
 ```julia
-random_walk_transition_matrix(state_space, p)
+random_walk_transition_matrix(state_space, p; δ=1)
 ```
 
 Constructs a transition matrix where the probability of transitioning to the next state is `p`, and the probability of transitioning to the previous state is `1 - p`.
+
+Additionally, if a scaling parameter δ is applied, then the transition probability `p` is scaled by `δⁱ`, where `i` is the number of transitions needed to reach the target state from
+the first state in `state_space`.
 """
-function random_walk_transition_matrix(state_space, p)
+function random_walk_transition_matrix(state_space, p; δ=1)
     if p <= 0 || p >= 1
         throw(ArgumentError("p must be between 0 and 1"))
     end
@@ -215,8 +218,8 @@ function random_walk_transition_matrix(state_space, p)
         elseif i == n
             transition_matrix[i, i-1] = 1
         else
-            transition_matrix[i, i+1] = p
-            transition_matrix[i, i-1] = 1 - p
+            transition_matrix[i, i+1] = p * δ^(i-1)
+            transition_matrix[i, i-1] = 1 - p * δ^(i-1)
         end
     end
 
