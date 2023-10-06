@@ -22,7 +22,7 @@ priors = Dict(
 # https://docs.julialang.org/en/v1/manual/performance-tips/index.html#Avoid-untyped-global-variables
 const transition_p = 0.3
 const transition_δ = 0.8
-const truth = SigmoidalBirthRateBranchingProcess(1, 5, 1.5, 1, 1.3, 1.3, [2, 4, 6, 8], random_walk_transition_matrix([2, 4, 6, 8], transition_p; δ=transition_δ), 1, 0, 1.5)
+const truth = SigmoidalBirthRateBranchingProcess(1, 5, 0.3, 0.4, 0.1, 0.2, [2, 4, 6, 8], random_walk_transition_matrix([2, 4, 6, 8], transition_p; δ=transition_δ), 0.1, 0, 20)
 
 @model function Model(trees::Vector{TreeNode})
     xscale  ~ priors[:xscale]
@@ -72,7 +72,7 @@ function run_simulations(num_treesets, num_trees, num_samples)
     chns
 end
 
-chns = run_simulations(100, 15, 5000)
+chns = run_simulations(100, 68, 5000)
 
 println("Exporting samples...")
 
