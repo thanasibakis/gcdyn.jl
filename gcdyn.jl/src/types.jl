@@ -30,9 +30,13 @@ mutable struct TreeNode
     const children::Vector{TreeNode}
     up::Union{TreeNode, Nothing}
 
-    # A place to write temporary values pertaining to this node
-    # (eg. for likelihood calculations)
-    info::Dict{Symbol, Any}
+    p_start::Vector{Float64}
+    p_end::Vector{Float64}
+    q_start::Float64
+    q_end::Float64
+
+    # A not-so-type-stable way to store any extra info
+    info::Dict
 
     function TreeNode(name, event, t, state, children)
         if event ∉ EVENTS
@@ -41,7 +45,7 @@ mutable struct TreeNode
             throw(ArgumentError("Time must be positive"))
         end
 
-        self = new(name, event, t, state, children, nothing, Dict())
+        self = new(name, event, t, state, children, nothing, [], [], 0, 0, Dict())
 
         for child in self.children
             child.up = self

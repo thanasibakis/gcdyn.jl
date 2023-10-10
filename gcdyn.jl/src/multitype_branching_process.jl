@@ -95,7 +95,7 @@ function StatsAPI.loglikelihood(
             abstol = abstol
         )
 
-        leaf.info[:p_end] = p.u[end][:]
+        leaf.p_end = p.u[end][:]
     end
 
     for event in PostOrderTraversal(tree.children[1])
@@ -104,23 +104,23 @@ function StatsAPI.loglikelihood(
 
         if event.event == :sampled_survival
             # event already has p_end
-            event.info[:q_end] = ρ
+            event.q_end = ρ
         elseif event.event == :sampled_death
             # event already has p_end
-            event.info[:q_end] = μ(model, event.up.state) * σ
+            event.q_end = μ(model, event.up.state) * σ
         elseif event.event == :birth
-            event.info[:p_end] = event.children[1].info[:p_start]
-            event.info[:q_end] = (
-                λ(model, event.up.state) * event.children[1].info[:q_start] * event.children[2].info[:q_start]
+            event.p_end = event.children[1].p_start
+            event.q_end = (
+                λ(model, event.up.state) * event.children[1].q_start * event.children[2].q_start
             )
         elseif event.event == :mutation
             mutation_prob = transition_matrix[findfirst(state_space .== event.up.state), findfirst(state_space .== event.state)]
 
-            event.info[:p_end] = event.children[1].info[:p_start]
-            event.info[:q_end] = (
+            event.p_end = event.children[1].p_start
+            event.q_end = (
                 γ(model, event.up.state)
                 * mutation_prob
-                * event.children[1].info[:q_start]
+                * event.children[1].q_start
             )
         else
             throw(ArgumentError("Unknown event type $(event.event)"))
@@ -130,7 +130,7 @@ function StatsAPI.loglikelihood(
             ODEProblem(
                 dpq_dt!,
                 # TODO: I can probably drop the convert now?
-                convert(Vector{Float64}, [event.info[:p_end]; event.info[:q_end]]),
+                convert(Vector{Float64}, [event.p_end; event.q_end]),
                 (t_end, t_start),
                 (model, state_space, event.up.state)
             ),
@@ -141,11 +141,11 @@ function StatsAPI.loglikelihood(
             abstol = abstol
         )
 
-        event.info[:p_start] = pq.u[end][1:end-1]
-        event.info[:q_start] = pq.u[end][end]
+        event.p_start = pq.u[end][1:end-1]
+        event.q_start = pq.u[end][end]
     end
 
-    result = log(tree.children[1].info[:q_start])
+    result = log(tree.children[1].q_start)
 
     # Non-extinction probability
 
