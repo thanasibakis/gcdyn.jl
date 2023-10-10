@@ -4,38 +4,23 @@ using gcdyn, CSV, DataFrames, Turing, StatsPlots
 
 println("Setting up model...")
 
-priors = Dict(
-    :xscale => Gamma(2, 1),
-    :xshift => Normal(5, 1),
-    :yscale => Gamma(2, 1),
-    :yshift => Gamma(1, 1),
-    :μ => LogNormal(0, 0.3),
-    :γ => LogNormal(0, .5),
-    :logit_p => Normal(0, 1.8),
-    :logit_δ => Normal(1.4, 1.4),
-    
-    # The logit priors are used in MH, but these are used in visualization
-    :p => Uniform(0, 1),
-    :δ => Beta(3, 1)
-)
-
 # https://docs.julialang.org/en/v1/manual/performance-tips/index.html#Avoid-untyped-global-variables
 const transition_p = 0.3
 const transition_δ = 0.8
 const truth = SigmoidalBirthRateBranchingProcess(1, 5, 1.5, 1, 1.3, 1.3, [2, 4, 6, 8], random_walk_transition_matrix([2, 4, 6, 8], transition_p; δ=transition_δ), 1, 0, 5)
 
 @model function Model(trees::Vector{TreeNode})
-    xscale  ~ priors[:xscale]
-    xshift  ~ priors[:xshift]
-    yscale  ~ priors[:yscale]
-    yshift  ~ priors[:yshift]
-    μ       ~ priors[:μ]
-    γ       ~ priors[:γ]
-    logit_p ~ priors[:logit_p]
-    logit_δ ~ priors[:logit_δ]
+    xscale  ~ Gamma(2, 1)
+    xshift  ~ Normal(5, 1)
+    yscale  ~ Gamma(2, 1)
+    yshift  ~ Gamma(1, 1)
+    μ       ~ LogNormal(0, 0.3)
+    γ       ~ LogNormal(0, .5)
+    logit_p ~ Normal(0, 1.8)
+    logit_δ ~ Normal(1.4, 1.4)
 
-    p = gcdyn.expit(logit_p)
-    δ = gcdyn.expit(logit_p)
+    p = gcdyn.expit(logit_p)  # roughly Uniform(0, 1)
+    δ = gcdyn.expit(logit_p)  # roughly Beta(3, 1)
 
     sampled_model = SigmoidalBirthRateBranchingProcess(
         xscale, xshift, yscale, yshift, μ, γ, truth.state_space, random_walk_transition_matrix(truth.state_space, p; δ=δ), truth.ρ, truth.σ, truth.present_time
@@ -113,7 +98,7 @@ hists = map(propertynames(medians)) do param
         end
 
     vline!([true_value]; label="Truth", linewidth=4)
-    plot!(priors[param]; label="Prior", fill=(0, 0.5))
+    #plot!(priors[param]; label="Prior", fill=(0, 0.5))
     title!(string(param))
 end
 
