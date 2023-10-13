@@ -39,5 +39,6 @@ end
 @testset "gcdyn" begin
     test_rand_tree(10000, 2.5, 1.1, 2)
     test_fully_observed_likelihoods(1000, 2.5, 1.1, 0, 1:3, 1)
+    #test_fully_observed_likelihoods(1000, x -> x, 1.1, 2, 1:3, 1)
     test_stadler_likelihoods(1000, 2.5, 1.1, 1)
 end

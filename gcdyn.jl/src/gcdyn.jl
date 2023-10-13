@@ -13,10 +13,8 @@ export
     ConstantRateBranchingProcess,
     SigmoidalBirthRateBranchingProcess,
     TreeNode,
-    uniform_transition_matrix,
-    random_walk_transition_matrix,
-    PostOrderTraversal,
-    PreOrderTraversal,
+    UniformTransitionMatrix,
+    RandomWalkTransitionMatrix,
 
     loglikelihood,
     rand_tree

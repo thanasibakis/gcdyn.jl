@@ -1,5 +1,4 @@
-# macOS
 .DS_Store
-
-# Python
 __pycache__/
+inference-demo/slurm-out/
+inference-demo/samples.csv

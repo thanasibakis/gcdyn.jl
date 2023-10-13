@@ -1,5 +1,10 @@
 # Alternate likelihoods for multitype branching processes, with various assumptions.
 
+# TODO: once I get this type stable, fix the others
+# What I've done:
+#   - PostOrderDFS -> PostOrder
+#   - result::Float64
+#   - λ::Float64, μ::Float64, γ::Float64
 """
 ```julia
 naive_loglikelihood(model, tree)
@@ -8,12 +13,12 @@ naive_loglikelihood(model, tree)
 Compute the log-likelihood of the given model under the assumption that the given tree is fully observed (ie. all nodes are sampled, dead or not).
 """
 function naive_loglikelihood(model::AbstractBranchingProcess, tree::TreeNode)
-    result = 0.0
+    result::Float64 = 0.0
     ρ = model.ρ
     state_space, transition_matrix = model.state_space, model.transition_matrix
 
-    for node in PostOrderTraversal(tree.children[1])
-        λₓ, μₓ, γₓ = λ(model, node.up.state), μ(model, node.up.state), γ(model, node.up.state)
+    for node in PostOrder(tree.children[1])
+        λₓ::Float64, μₓ::Float64, γₓ::Float64 = λ(model, node.up.state), μ(model, node.up.state), γ(model, node.up.state)
         Λₓ = λₓ + μₓ + γₓ
 
         if node.event == :birth
@@ -46,12 +51,12 @@ Compute the log-likelihood of the given model under the assumption that all muta
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
 function stadler_appx_loglikelhood(model::AbstractBranchingProcess, tree::TreeNode)
-    result = 0
+    result::Float64 = 0
     ρ, σ, present_time = model.ρ, model.σ, model.present_time
     state_space, transition_matrix = model.state_space, model.transition_matrix
 
-    for node in PostOrderTraversal(tree.children[1])
-        λₓ, μₓ, γₓ = λ(model, node.up.state), μ(model, node.up.state), γ(model, node.up.state)
+    for node in PostOrder(tree.children[1])
+        λₓ::Float64, μₓ::Float64, γₓ::Float64 = λ(model, node.up.state), μ(model, node.up.state), γ(model, node.up.state)
         Λₓ = λₓ + μₓ + γₓ
         c = √(Λₓ^2 - 4 * μₓ * (1 - σ) * λₓ)
         x = (-Λₓ - c) / 2
@@ -85,7 +90,7 @@ function stadler_appx_loglikelhood(model::AbstractBranchingProcess, tree::TreeNo
     # Let p be the extinction (or more generally, emptiness) prob
     
     p = let
-        λₓ, μₓ, γₓ = λ(model, tree.state), μ(model, tree.state), γ(model, tree.state)
+        λₓ::Float64, μₓ::Float64, γₓ::Float64 = λ(model, tree.state), μ(model, tree.state), γ(model, tree.state)
 
         Λₓ = λₓ + μₓ + γₓ
         root_time = present_time - 0
@@ -113,7 +118,7 @@ stadler_appx_unconditioned_loglikelhood(model, tree)
 
 Compute the log-likelihood of the given model under the assumption that all mutation nodes have at least one sampled descendant.
 
-Does not condition on all trees having at least one sampled descendant (ie. [`rand_tree`](@ref) has keyword argument `reject_stubs=False`).
+Does not condition on at trees having at least one sampled descendant (ie. [`rand_tree`](@ref) has keyword argument `reject_stubs=False`).
 
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
@@ -122,7 +127,7 @@ function stadler_appx_unconditioned_loglikelhood(model::AbstractBranchingProcess
     ρ, σ, present_time = model.ρ, model.σ, model.present_time
     state_space, transition_matrix = model.state_space, model.transition_matrix
 
-    for node in PostOrderTraversal(tree.children[1])
+    for node in PostOrder(tree.children[1])
         λₓ::Float64, μₓ::Float64, γₓ::Float64 = λ(model, node.up.state), μ(model, node.up.state), γ(model, node.up.state)
 
         Λₓ = λₓ + μₓ + γₓ
