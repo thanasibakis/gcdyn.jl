@@ -19,6 +19,6 @@ Generates many sets of trees, performs Bayesian inference for each set, and exam
 
 Examines the effect of using a likelihood that does or does not condition on trees having at least one sampled descendant at present day.
 
-### `examples/tenseqs`
+### `examples/beast-analysis`
 
 Work in progress to run inference on BEAST trees.
