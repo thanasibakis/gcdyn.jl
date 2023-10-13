@@ -14,7 +14,7 @@ BiocManager::install("treeio")
 ### Usage
 
 ```{shell}
-extract-tree-data.R [myfile.history.trees]
+beast-to-treejson [myfile.history.trees]
 ```
 
 The input file should be the .history.trees file output by BEAST when `States > State Change Count Reconstruction > Reconstruct complete change history on tree` is enabled in BEAUti.
