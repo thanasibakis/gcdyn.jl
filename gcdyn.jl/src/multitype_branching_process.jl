@@ -46,9 +46,7 @@ function γ(model::AbstractBranchingProcess, state)
 end
 
 # To allow us to broadcast the rate parameter functions over states
-Base.length(::AbstractBranchingProcess) = 1
-Base.iterate(model::AbstractBranchingProcess) = (model, nothing)
-Base.iterate(::AbstractBranchingProcess, state) = nothing
+Base.broadcastable(model::AbstractBranchingProcess) = Ref(model)
 
 """
 ```julia
@@ -75,18 +73,17 @@ function StatsAPI.loglikelihood(
     reltol = 1e-6,
     abstol = 1e-6
 )
+
     ρ, σ = model.ρ, model.σ
-    state_space = model.state_space
-    transition_matrix = model.transition_matrix
     present_time = model.present_time
 
-    for leaf in Leaves(tree)
+    for leaf in LeafTraversal(tree)
         p = solve(
             ODEProblem(
                 dp_dt!,
-                ones(Float64, axes(state_space)) .- ρ,
+                ones(Float64, axes(model.state_space)) .- ρ,
                 (0, present_time - leaf.t),
-                (model, state_space)
+                model
             ),
             Tsit5();
             isoutofdomain = (p, args, t) -> any(x -> x < 0 || x > 1, p),
@@ -95,7 +92,8 @@ function StatsAPI.loglikelihood(
             abstol = abstol
         )
 
-        leaf.p_end = p.u[end][:]
+        # Type annotation because @code_warntype shows ODEProblem is Any
+        leaf.p_end = p.u[end]::Vector{Float64}
     end
 
     for event in PostOrderTraversal(tree.children[1])
@@ -114,7 +112,7 @@ function StatsAPI.loglikelihood(
                 λ(model, event.up.state) * event.children[1].q_start * event.children[2].q_start
             )
         elseif event.event == :mutation
-            mutation_prob = transition_matrix[findfirst(state_space .== event.up.state), findfirst(state_space .== event.state)]
+            mutation_prob = model.transition_matrix[findfirst(model.state_space .== event.up.state), findfirst(model.state_space .== event.state)]
 
             event.p_end = event.children[1].p_start
             event.q_end = (
@@ -129,10 +127,9 @@ function StatsAPI.loglikelihood(
         pq = solve(
             ODEProblem(
                 dpq_dt!,
-                # TODO: I can probably drop the convert now?
-                convert(Vector{Float64}, [event.p_end; event.q_end]),
+                [event.p_end; event.q_end],
                 (t_end, t_start),
-                (model, state_space, event.up.state)
+                (model, event.up.state)
             ),
             Tsit5();
             isoutofdomain = (pq, args, t) -> any(x -> x < 0, pq),
@@ -141,8 +138,8 @@ function StatsAPI.loglikelihood(
             abstol = abstol
         )
 
-        event.p_start = pq.u[end][1:end-1]
-        event.q_start = pq.u[end][end]
+        event.p_start = pq.u[end][1:end-1]::Vector{Float64}
+        event.q_start = pq.u[end][end]::Float64
     end
 
     result = log(tree.children[1].q_start)
@@ -152,9 +149,9 @@ function StatsAPI.loglikelihood(
     p = solve(
         ODEProblem(
             dp_dt!,
-            ones(Float64, axes(state_space)) .- ρ,
+            ones(Float64, axes(model.state_space)) .- ρ,
             (0, present_time),
-            (model, state_space)
+            model
         ),
         Tsit5();
         isoutofdomain = (p, args, t) -> any(x -> x < 0 || x > 1, p),
@@ -163,7 +160,7 @@ function StatsAPI.loglikelihood(
         abstol = abstol
     )
 
-    p_i::Float64 = p.u[end][findfirst(state_space .== tree.state)]
+    p_i = p.u[end][findfirst(model.state_space .== tree.state)]::Float64
     result -= log(1 - p_i)
 
     return result
@@ -174,21 +171,19 @@ See equation (1) of this paper:
 
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
-function dp_dt!(dp, p, args, t)
-    model, state_space = args
+function dp_dt!(dp, p, model, t)
+    for (i, state) in enumerate(model.state_space)
+        λₓ = λ(model, state)
+        μₓ = μ(model, state)
+        γₓ = γ(model, state)
 
-    λₓ::Vector{Float64} = λ.(model, state_space)
-    μₓ::Vector{Float64} = μ.(model, state_space)
-    γₓ::Vector{Float64} = γ.(model, state_space)
-    σ = model.σ
-    transition_matrix = model.transition_matrix
-
-    dp[:] = (
-        -(γₓ + λₓ + μₓ) .* p
-        + μₓ * (1 - σ)
-        + λₓ .* p.^2
-        + γₓ .* (transition_matrix * p)
-    )
+        dp[i] = (
+            -(γₓ + λₓ + μₓ) * p[i]
+            + μₓ * (1 - model.σ)
+            + λₓ * p[i]^2
+            + γₓ * sum(model.transition_matrix[i, j] * p[j] for j in 1:length(model.state_space))
+        )
+    end
 end
 
 """
@@ -197,17 +192,18 @@ See equations (1) and (2) of this paper:
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
 function dpq_dt!(dpq, pq, args, t)
-    p, q_i = pq[1:end-1], pq[end]
-    model, state_space, parent_state = args
+    p, q_i = view(pq, 1:lastindex(pq)-1), pq[end]
+    model, parent_state = args
 
-    λₓ::Float64 = λ(model, parent_state)
-    μₓ::Float64 = μ(model, parent_state)
-    γₓ::Float64 = γ(model, parent_state)
+    λₓ = λ(model, parent_state)
+    μₓ = μ(model, parent_state)
+    γₓ = γ(model, parent_state)
 
-    dq_i = -(γₓ + λₓ + μₓ) * q_i + 2 * λₓ * q_i * p[findfirst(state_space .== parent_state)]
+    p_i = p[findfirst(view(model.state_space, :) .== parent_state)]
+    dq_i = -(γₓ + λₓ + μₓ) * q_i + 2 * λₓ * q_i * p_i
 
     # Need to pass a view instead of a slice, to pass by reference instead of value
-    dp_dt!(view(dpq, 1:lastindex(dpq)-1), p, (model, state_space), t)
+    dp_dt!(view(dpq, 1:lastindex(dpq)-1), p, model, t)
     dpq[end] = dq_i
 end
 
