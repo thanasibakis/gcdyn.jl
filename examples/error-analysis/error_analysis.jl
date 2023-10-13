@@ -1,12 +1,12 @@
 using gcdyn, Turing, StatsPlots
 
-truth = MultitypeBranchingProcess(1.8, 1, 0, 1:2, 1, 0, 2)
+const truth = ConstantRateBranchingProcess(1.8, 1, 0, 1:2, 1, 0, 2)
 
 @model function CorrectedModel(trees::Vector{TreeNode})
     λ ~ LogNormal(1.5, 1)
     μ ~ LogNormal(0, 0.3)
 
-    sampled_model = MultitypeBranchingProcess(λ, μ, truth.γ, truth.state_space, truth.ρ, truth.σ, truth.present_time)
+    sampled_model = ConstantRateBranchingProcess(λ, μ, truth.γ, truth.state_space, truth.ρ, truth.σ, truth.present_time)
 
     Turing.@addlogprob! sum(gcdyn.stadler_appx_loglikelhood(sampled_model, tree) for tree in trees)
 end
@@ -15,15 +15,39 @@ end
     λ ~ LogNormal(1.5, 1)
     μ ~ LogNormal(0, 0.3)
 
-    sampled_model = MultitypeBranchingProcess(λ, μ, truth.γ, truth.state_space, truth.ρ, truth.σ, truth.present_time)
+    sampled_model = ConstantRateBranchingProcess(λ, μ, truth.γ, truth.state_space, truth.ρ, truth.σ, truth.present_time)
 
     Turing.@addlogprob! sum(gcdyn.stadler_appx_unconditioned_loglikelhood(sampled_model, tree) for tree in trees)
 end
 
-NUM_TREESETS = 400
+function run_simulation(num_trees)
+    trees = rand_tree(truth, num_trees, truth.state_space[1])
+
+    corrected = sample(
+        CorrectedModel(trees),
+        MH(
+            :λ => x -> LogNormal(log(x), 0.2),
+            :μ => x -> LogNormal(log(x), 0.3)
+        ),
+        2000
+    )
+
+    original = sample(
+        OriginalModel(trees),
+        MH(
+            :λ => x -> LogNormal(log(x), 0.2),
+            :μ => x -> LogNormal(log(x), 0.3)
+        ),
+        2000
+    )
+
+    corrected, original
+end
+
+const NUM_TREESETS = 100
 
 # num_trees => Dict(:corrected => [Chains], :original => [Chains])
-chns = Dict(
+const chns = Dict(
     1 => Dict(
         :corrected => Vector{Chains}(undef, NUM_TREESETS),
         :original => Vector{Chains}(undef, NUM_TREESETS)
@@ -42,21 +66,11 @@ chns = Dict(
     )
 )
 
-sample_model(model) = sample(
-    model,
-    MH(
-        :λ => x -> LogNormal(log(x), 0.2),
-        :μ => x -> LogNormal(log(x), 0.3)
-    ),
-    2000
-)
-
 for (num_trees, chns_dict) in chns
     Threads.@threads for i in 1:NUM_TREESETS
-        trees = rand_tree(truth, num_trees, truth.state_space[1])
-
-        chns_dict[:corrected][i] = sample_model(CorrectedModel(trees))
-        chns_dict[:original][i] = sample_model(OriginalModel(trees))
+        corrected, original = run_simulation(num_trees)
+        chns_dict[:corrected][i] = corrected
+        chns_dict[:original][i] = original
     end
 end
 

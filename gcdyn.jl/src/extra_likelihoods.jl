@@ -118,15 +118,15 @@ Does not condition on all trees having at least one sampled descendant (ie. [`ra
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
 function stadler_appx_unconditioned_loglikelhood(model::AbstractBranchingProcess, tree::TreeNode)
-    result::Float64 = 0
+    result = 0
     ρ, σ, present_time = model.ρ, model.σ, model.present_time
     state_space, transition_matrix = model.state_space, model.transition_matrix
 
     for node in PostOrderTraversal(tree.children[1])
-        λₓ::Float64, μₓ::Float64, γₓ::Float64 = λ(model, node.up.state), μ(model, node.up.state), γ(model, node.up.state)
+        λₓ, μₓ, γₓ = λ(model, node.up.state), μ(model, node.up.state), γ(model, node.up.state)
 
         Λₓ = λₓ + μₓ + γₓ
-        c = √(Λₓ^2 - 4 * μ * (1 - σ) * λ)
+        c = √(Λₓ^2 - 4 * μₓ * (1 - σ) * λₓ)
         x = (-Λₓ - c) / 2
         y = (-Λₓ + c) / 2
 
