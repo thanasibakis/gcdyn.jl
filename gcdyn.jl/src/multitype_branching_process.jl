@@ -1,20 +1,9 @@
 # Methods involving `AbstractBranchingProcess` objects.
 
-"``\\frac{1}{1 + exp(-x)}``"
 expit(x) = 1 / (1 + exp(-x))
-
-"``\\frac{\\text{yscale}}{1 + exp(-(\\text{xscale} * (x - \text{{xshift}})))} + \\text{yshift}``"
 sigmoid(x, xscale, xshift, yscale, yshift) = yscale * expit(xscale * (x - xshift)) + yshift
 
-"""
-```julia
-λ(model::AbstractBranchingProcess, state)
-```
-
-Evaluates the `model`'s birth rate function at the given `state`.
-"""
-function λ(::AbstractBranchingProcess, state) end
-
+# TODO: document
 function λ(model::ConstantRateBranchingProcess, state)
     return model.λ
 end
@@ -23,30 +12,18 @@ function λ(model::SigmoidalBirthRateBranchingProcess, state)
     return sigmoid(state, model.xscale, model.xshift, model.yscale, model.yshift)
 end
 
-"""
-```julia
-μ(model::AbstractBranchingProcess, state)
-```
-
-Evaluates the `model`'s death rate function at the given `state`.
-"""
 function μ(model::AbstractBranchingProcess, state)
     return model.μ
 end
 
-"""
-```julia
-γ(model::AbstractBranchingProcess, state)
-```
-
-Evaluates the `model`'s type change rate function at the given `state`.
-"""
 function γ(model::AbstractBranchingProcess, state)
     return model.γ
 end
 
-# To allow us to broadcast the rate parameter functions over states
-Base.broadcastable(model::AbstractBranchingProcess) = Ref(model)
+# To allow us to broadcast the rate parameter functions
+Base.length(::AbstractBranchingProcess) = 1
+Base.iterate(model::AbstractBranchingProcess) = (model, nothing)
+Base.iterate(::AbstractBranchingProcess, state) = nothing
 
 """
 ```julia
@@ -73,17 +50,18 @@ function StatsAPI.loglikelihood(
     reltol = 1e-6,
     abstol = 1e-6
 )
-
     ρ, σ = model.ρ, model.σ
+    state_space = model.state_space
+    transition_matrix = model.transition_matrix
     present_time = model.present_time
 
-    for leaf in LeafTraversal(tree)
+    for leaf in Leaves(tree)
         p = solve(
             ODEProblem(
                 dp_dt!,
-                ones(Float64, axes(model.state_space)) .- ρ,
+                ones(Float64, axes(state_space)) .- ρ,
                 (0, present_time - leaf.t),
-                model
+                (model, state_space)
             ),
             Tsit5();
             isoutofdomain = (p, args, t) -> any(x -> x < 0 || x > 1, p),
@@ -92,11 +70,10 @@ function StatsAPI.loglikelihood(
             abstol = abstol
         )
 
-        # Type annotation because @code_warntype shows ODEProblem is Any
-        leaf.p_end = p.u[end]::Vector{Float64}
+        leaf.p_end = p.u[end][:]
     end
 
-    for event in PostOrderTraversal(tree.children[1])
+    for event in PostOrder(tree.children[1])
         t_start = present_time - event.up.t
         t_end = present_time - event.t
 
@@ -112,7 +89,7 @@ function StatsAPI.loglikelihood(
                 λ(model, event.up.state) * event.children[1].q_start * event.children[2].q_start
             )
         elseif event.event == :mutation
-            mutation_prob = model.transition_matrix[findfirst(model.state_space .== event.up.state), findfirst(model.state_space .== event.state)]
+            mutation_prob = transition_matrix[findfirst(state_space .== event.up.state), findfirst(state_space .== event.state)]
 
             event.p_end = event.children[1].p_start
             event.q_end = (
@@ -127,9 +104,10 @@ function StatsAPI.loglikelihood(
         pq = solve(
             ODEProblem(
                 dpq_dt!,
-                [event.p_end; event.q_end],
+                # TODO: I can probably drop the convert now?
+                convert(Vector{Float64}, [event.p_end; event.q_end]),
                 (t_end, t_start),
-                (model, event.up.state)
+                (model, state_space, event.up.state)
             ),
             Tsit5();
             isoutofdomain = (pq, args, t) -> any(x -> x < 0, pq),
@@ -138,8 +116,8 @@ function StatsAPI.loglikelihood(
             abstol = abstol
         )
 
-        event.p_start = pq.u[end][1:end-1]::Vector{Float64}
-        event.q_start = pq.u[end][end]::Float64
+        event.p_start = pq.u[end][1:end-1]
+        event.q_start = pq.u[end][end]
     end
 
     result = log(tree.children[1].q_start)
@@ -149,9 +127,9 @@ function StatsAPI.loglikelihood(
     p = solve(
         ODEProblem(
             dp_dt!,
-            ones(Float64, axes(model.state_space)) .- ρ,
+            ones(Float64, axes(state_space)) .- ρ,
             (0, present_time),
-            model
+            (model, state_space)
         ),
         Tsit5();
         isoutofdomain = (p, args, t) -> any(x -> x < 0 || x > 1, p),
@@ -160,50 +138,43 @@ function StatsAPI.loglikelihood(
         abstol = abstol
     )
 
-    p_i = p.u[end][findfirst(model.state_space .== tree.state)]::Float64
+    p_i::Float64 = p.u[end][findfirst(state_space .== tree.state)]
     result -= log(1 - p_i)
 
     return result
 end
 
-"""
-See equation (1) of this paper:
+# TODO: annotate but don't export
+function dp_dt!(dp, p, args, t)
+    model, state_space = args
 
-Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
-"""
-function dp_dt!(dp, p, model, t)
-    for (i, state) in enumerate(model.state_space)
-        λₓ = λ(model, state)
-        μₓ = μ(model, state)
-        γₓ = γ(model, state)
+    λₓ::Vector{Float64} = λ.(model, state_space)
+    μₓ::Vector{Float64} = μ.(model, state_space)
+    γₓ::Vector{Float64} = γ.(model, state_space)
+    σ = model.σ
+    transition_matrix = model.transition_matrix
 
-        dp[i] = (
-            -(γₓ + λₓ + μₓ) * p[i]
-            + μₓ * (1 - model.σ)
-            + λₓ * p[i]^2
-            + γₓ * sum(model.transition_matrix[i, j] * p[j] for j in 1:length(model.state_space))
-        )
-    end
+    dp[:] = (
+        -(γₓ + λₓ + μₓ) .* p
+        + μₓ * (1 - σ)
+        + λₓ .* p.^2
+        + γₓ .* (transition_matrix * p)
+    )
 end
 
-"""
-See equations (1) and (2) of this paper:
-
-Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
-"""
+# TODO: annotate but don't export
 function dpq_dt!(dpq, pq, args, t)
-    p, q_i = view(pq, 1:lastindex(pq)-1), pq[end]
-    model, parent_state = args
+    p, q_i = pq[1:end-1], pq[end]
+    model, state_space, parent_state = args
 
-    λₓ = λ(model, parent_state)
-    μₓ = μ(model, parent_state)
-    γₓ = γ(model, parent_state)
+    λₓ::Float64 = λ(model, parent_state)
+    μₓ::Float64 = μ(model, parent_state)
+    γₓ::Float64 = γ(model, parent_state)
 
-    p_i = p[findfirst(view(model.state_space, :) .== parent_state)]
-    dq_i = -(γₓ + λₓ + μₓ) * q_i + 2 * λₓ * q_i * p_i
+    dq_i = -(γₓ + λₓ + μₓ) * q_i + 2 * λₓ * q_i * p[findfirst(state_space .== parent_state)]
 
     # Need to pass a view instead of a slice, to pass by reference instead of value
-    dp_dt!(view(dpq, 1:lastindex(dpq)-1), p, model, t)
+    dp_dt!(view(dpq, 1:lastindex(dpq)-1), p, (model, state_space), t)
     dpq[end] = dq_i
 end
 
@@ -215,12 +186,9 @@ rand_tree(model, n, init_state; reject_stubs=true)
 
 Generate `n` random trees from the given model (optional parameter, default is `1`), each starting at the given initial state.
 
-Note that trees will have root time `0`, with time increasing toward the tips.
-This aligns us with the branching process models, but contradicts the notion of time typically used in phylogenetics.
-
 Can optionally choose not to `reject_stubs`, equivalent to not conditioning on the root node having at least one sampled descendant.
 
-See also [`TreeNode`](@ref), [`sample_child!`](@ref), [`mutate!`](@ref).
+See also [`TreeNode`](@ref).
 """
 function rand_tree(
     model::AbstractBranchingProcess,
@@ -293,62 +261,4 @@ function rand_tree(
     end
 
     return root
-end
-
-"""
-```julia
-mutate!(node, model)
-```
-
-Change the state of the given node according to the transition probabilities in the given model.
-"""
-function mutate!(node::TreeNode, model::AbstractBranchingProcess)
-    if node.state ∉ model.state_space
-        throw(ArgumentError("The state of the node must be in the state space of the mutator."))
-    end
-
-    transition_probs = model.transition_matrix[findfirst(model.state_space .== node.state), :]
-    node.state = sample(model.state_space, Weights(transition_probs))
-end
-
-"""
-```julia
-sample_child!(parent, model)
-```
-
-Append a new child event to the given parent node, selecting between events from [`EVENTS`](@ref) according to the given model's rate parameters.
-
-Note that the child will a time `t` larger than its parent.
-This aligns us with the branching process models, but contradicts the notion of time typically used in phylogenetics.
-"""
-function sample_child!(parent::TreeNode, model::AbstractBranchingProcess)
-    if length(parent.children) == 2
-        throw(ArgumentError("Can only have 2 children max"))
-    end
-
-    λₓ, μₓ, γₓ = λ(model, parent.state), μ(model, parent.state), γ(model, parent.state)
-
-    waiting_time = rand(Exponential(1 / (λₓ + μₓ + γₓ)))
-
-    if parent.t + waiting_time > model.present_time
-        event = sample([:sampled_survival, :unsampled_survival], Weights([model.ρ, 1 - model.ρ]))
-        child = TreeNode(event, model.present_time, parent.state)
-    else
-        event = sample([:birth, :unsampled_death, :mutation], Weights([λₓ, μₓ, γₓ]))
-
-        if event == :unsampled_death && rand() < model.σ
-            event = :sampled_death
-        end
-
-        child = TreeNode(event, parent.t + waiting_time, parent.state)
-
-        if event == :mutation
-            mutate!(child, model)
-        end
-    end
-
-    push!(parent.children, child)
-    child.up = parent
-
-    return child
 end
