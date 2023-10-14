@@ -1,4 +1,0 @@
-[submodule "gcdyn"]
-	path = gcdyn
-	url = git@github.com:matsengrp/gcdyn.git
-	branch = bd-inference-experiments
