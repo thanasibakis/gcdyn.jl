@@ -11,6 +11,10 @@ julia -e 'using Pkg; Pkg.develop(path="./gcdyn.jl")'
 
 ## Examples
 
+### `examples/demo`
+
+Contains a basic inferential demo, generating a single set of trees and performing posterior inference on the rate parameters.
+
 ### `examples/simulation-study`
 
 Generates many sets of trees, performs Bayesian inference for each set, and examines the resulting sampling distribution of posterior medians across treesets.

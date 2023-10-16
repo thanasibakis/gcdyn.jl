@@ -15,6 +15,7 @@ export
     TreeNode,
     uniform_transition_matrix,
     random_walk_transition_matrix,
+    LeafTraversal,
     PostOrderTraversal,
     PreOrderTraversal,
 
