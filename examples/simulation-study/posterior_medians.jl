@@ -81,7 +81,33 @@ function main()
     )
     select!(medians, Not(:run))
 
-    hists = map(propertynames(medians)) do param
+    quantiles_025 = combine(
+        groupby(posterior_samples, :run),
+        :xscale => (x -> quantile(x, 0.025)) => :xscale,
+        :xshift => (x -> quantile(x, 0.025)) => :xshift,
+        :yscale => (x -> quantile(x, 0.025)) => :yscale,
+        :yshift => (x -> quantile(x, 0.025)) => :yshift,
+        :μ => (x -> quantile(x, 0.025)) => :μ,
+        :γ => (x -> quantile(x, 0.025)) => :γ,
+        :logit_p => (x -> gcdyn.expit(quantile(x, 0.025))) => :p,
+        :logit_δ => (x -> gcdyn.expit(quantile(x, 0.025))) => :δ
+    )
+    select!(quantiles_025, Not(:run))
+
+    quantiles_975 = combine(
+        groupby(posterior_samples, :run),
+        :xscale => (x -> quantile(x, 0.975)) => :xscale,
+        :xshift => (x -> quantile(x, 0.975)) => :xshift,
+        :yscale => (x -> quantile(x, 0.975)) => :yscale,
+        :yshift => (x -> quantile(x, 0.975)) => :yshift,
+        :μ => (x -> quantile(x, 0.975)) => :μ,
+        :γ => (x -> quantile(x, 0.975)) => :γ,
+        :logit_p => (x -> gcdyn.expit(quantile(x, 0.975))) => :p,
+        :logit_δ => (x -> gcdyn.expit(quantile(x, 0.975))) => :δ
+    )
+    select!(quantiles_975, Not(:run))
+
+    median_hists = map(propertynames(medians)) do param
         histogram(prior_samples[:, param]; normalize=:pdf, label="Prior", fill="grey")
         histogram!(medians[!, param]; normalize=:pdf, fill="lightblue", alpha=0.7, label="Medians")
     
@@ -98,7 +124,7 @@ function main()
         title!(string(param))
     end
     
-    plot(hists...;
+    plot(median_hists...;
         layout=(2, 4),
         thickness_scaling=2.25,
         size=(3600, 1200),
@@ -106,6 +132,64 @@ function main()
     )
 
     png("posterior-medians.png")
+
+    error_hists = map(propertynames(medians)) do param
+        true_value =
+            if param == :p
+                transition_p
+            elseif param == :δ
+                transition_δ
+            else
+                getfield(truth, param)
+            end
+
+        relative_errors = (medians[:, param] .- true_value) ./ true_value
+    
+        histogram(relative_errors; normalize=:pdf, fill="lightblue", alpha=0.7, label="Errors")
+        xlims!((-3, 3))
+        title!(string(param))
+    end
+    
+    plot(error_hists...;
+        layout=(2, 4),
+        thickness_scaling=2.25,
+        size=(3600, 1200),
+        plot_title="Relative error distribution of posterior median"
+    )
+
+    ci_length_hists = map(propertynames(quantiles_025)) do param
+        len = quantiles_975[:, param] .- quantiles_025[:, param]
+    
+        histogram(len; normalize=:pdf, fill="lightblue", alpha=0.7, label="CI length")
+        xlims!((0, xlims()[2]))
+        title!(string(param))
+    end
+    
+    plot(ci_length_hists...;
+        layout=(2, 4),
+        thickness_scaling=2.25,
+        size=(3600, 1200),
+        plot_title="Length distribution of 95% CIs"
+    )
+
+    png("ci-lengths.png")
+
+    open("ci-coverage-proportions.txt", "w") do file
+        println(file, "95% Coverage proportions", "\n")
+        map(propertynames(quantiles_025)) do param
+            true_value =
+                if param == :p
+                    transition_p
+                elseif param == :δ
+                    transition_δ
+                else
+                    getfield(truth, param)
+                end
+
+            coverage = quantiles_025[:, param] .<= true_value .<= quantiles_975[:, param]
+            println(file, string(param), ": ", mean(coverage))
+        end
+    end
     
     println("Done!")
 end

@@ -28,10 +28,10 @@ function main()
     num_nodes = sort(length(PostOrderTraversal(tree)) for tree in trees)
 
     open("tree-summary.txt", "w") do file
-        write(file, "Leaf count distribution:\n")
-        write(file, join(num_leaves, ", ") * "\n\n")
-        write(file, "Node count distribution:\n")
-        write(file, join(num_nodes, ", ") * "\n")
+        println(file, "Leaf count distribution:")
+        println(file, join(num_leaves, ", "), "\n")
+        println(file, "Node count distribution:")
+        println(file, join(num_nodes, ", "))
     end
 
     println("Sampling from prior...")

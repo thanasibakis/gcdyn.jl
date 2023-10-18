@@ -1,0 +1,10 @@
+95% Coverage proportions
+
+xscale: 0.98
+xshift: 0.99
+yscale: 1.0
+yshift: 0.97
+μ: 0.97
+γ: 0.98
+p: 0.02
+δ: 1.0
