@@ -222,8 +222,8 @@ function random_walk_transition_matrix(state_space, p; δ=1)
         elseif i == n
             transition_matrix[i, i-1] = 1
         else
-            transition_matrix[i, i+1] = p * δ^(i-1)
-            transition_matrix[i, i-1] = 1 - p * δ^(i-1)
+            transition_matrix[i, i+1] = p * δ^(i-2)
+            transition_matrix[i, i-1] = 1 - p * δ^(i-2)
         end
     end
 

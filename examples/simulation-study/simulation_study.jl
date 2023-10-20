@@ -107,10 +107,11 @@ function main()
     )
     select!(quantiles_975, Not(:run))
 
-    median_hists = map(propertynames(medians)) do param
-        histogram(prior_samples[:, param]; normalize=:pdf, label="Prior", fill="grey")
-        histogram!(medians[!, param]; normalize=:pdf, fill="lightblue", alpha=0.7, label="Medians")
-    
+    median_hists = []
+    error_hists = []
+    ci_length_hists = []
+
+    for param in propertynames(medians)
         true_value =
             if param == :p
                 transition_p
@@ -119,9 +120,24 @@ function main()
             else
                 getfield(truth, param)
             end
-    
+
+        median_hist = histogram(prior_samples[:, param]; normalize=:pdf, label="Prior", fill="grey")
+        histogram!(medians[!, param]; normalize=:pdf, fill="lightblue", alpha=0.7, label="Medians")
         vline!([true_value]; label="Truth", color="#1A4F87", width=6)
         title!(string(param))
+        push!(median_hists, median_hist)
+
+        relative_errors = (medians[:, param] .- true_value) ./ true_value
+        error_hist = histogram(relative_errors; normalize=:pdf, fill="lightblue", alpha=0.7, label="Errors")
+        xlims!((-3, 3))
+        title!(string(param))
+        push!(error_hists, error_hist)
+
+        ci_lengths = (quantiles_975[:, param] .- quantiles_025[:, param]) ./ true_value
+        ci_length_hist = histogram(ci_lengths; normalize=:pdf, fill="lightblue", alpha=0.7, label="CI length")
+        xlims!((0, xlims()[2]))
+        title!(string(param))
+        push!(ci_length_hists, ci_length_hist)
     end
     
     plot(median_hists...;
@@ -132,23 +148,6 @@ function main()
     )
 
     png("posterior-medians.png")
-
-    error_hists = map(propertynames(medians)) do param
-        true_value =
-            if param == :p
-                transition_p
-            elseif param == :δ
-                transition_δ
-            else
-                getfield(truth, param)
-            end
-
-        relative_errors = (medians[:, param] .- true_value) ./ true_value
-    
-        histogram(relative_errors; normalize=:pdf, fill="lightblue", alpha=0.7, label="Errors")
-        xlims!((-3, 3))
-        title!(string(param))
-    end
     
     plot(error_hists...;
         layout=(2, 4),
@@ -157,19 +156,13 @@ function main()
         plot_title="Relative error distribution of posterior median"
     )
 
-    ci_length_hists = map(propertynames(quantiles_025)) do param
-        len = quantiles_975[:, param] .- quantiles_025[:, param]
-    
-        histogram(len; normalize=:pdf, fill="lightblue", alpha=0.7, label="CI length")
-        xlims!((0, xlims()[2]))
-        title!(string(param))
-    end
+    png("relative-errors.png")
     
     plot(ci_length_hists...;
         layout=(2, 4),
         thickness_scaling=2.25,
         size=(3600, 1200),
-        plot_title="Length distribution of 95% CIs"
+        plot_title="Length distribution of 95% CIs (normalized)"
     )
 
     png("ci-lengths.png")
