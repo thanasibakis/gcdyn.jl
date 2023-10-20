@@ -112,7 +112,10 @@ function StatsAPI.loglikelihood(
                 λ(model, event.up.state) * event.children[1].q_start * event.children[2].q_start
             )
         elseif event.event == :mutation
-            mutation_prob = model.transition_matrix[findfirst(model.state_space .== event.up.state), findfirst(model.state_space .== event.state)]
+            mutation_prob = model.transition_matrix[
+                findfirst_equals(model.state_space, event.up.state),
+                findfirst_equals(model.state_space, event.state)
+            ]
 
             event.p_end = event.children[1].p_start
             event.q_end = (
@@ -160,7 +163,7 @@ function StatsAPI.loglikelihood(
         abstol = abstol
     )
 
-    p_i = p.u[end][findfirst(model.state_space .== tree.state)]::Float64
+    p_i = p.u[end][findfirst_equals(model.state_space, tree.state)]::Float64
     result -= log(1 - p_i)
 
     return result
@@ -172,6 +175,8 @@ See equation (1) of this paper:
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
 function dp_dt!(dp, p, model, t)
+    # This function is currently allocation-free according to --track-allocation=user
+
     for (i, state) in enumerate(model.state_space)
         λₓ = λ(model, state)
         μₓ = μ(model, state)
@@ -192,6 +197,8 @@ See equations (1) and (2) of this paper:
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
 function dpq_dt!(dpq, pq, args, t)
+    # This function is currently allocation-free according to --track-allocation=user
+    
     p, q_i = view(pq, 1:lastindex(pq)-1), pq[end]
     model, parent_state = args
 
@@ -199,12 +206,31 @@ function dpq_dt!(dpq, pq, args, t)
     μₓ = μ(model, parent_state)
     γₓ = γ(model, parent_state)
 
-    p_i = p[findfirst(view(model.state_space, :) .== parent_state)]
+    p_i = p[findfirst_equals(model.state_space, parent_state)]
     dq_i = -(γₓ + λₓ + μₓ) * q_i + 2 * λₓ * q_i * p_i
 
     # Need to pass a view instead of a slice, to pass by reference instead of value
     dp_dt!(view(dpq, 1:lastindex(dpq)-1), p, model, t)
     dpq[end] = dq_i
+end
+
+"""
+```julia
+findfirst_equals(x, c)
+```
+
+Like `findfirst(x .== c)`, but avoids making memory allocations.
+
+See also [`findfirst`](@ref).
+"""
+function findfirst_equals(x, c)
+    for i in 1:length(x)
+        if x[i] == c
+            return i
+        end
+    end
+
+    return nothing
 end
 
 """
@@ -307,7 +333,7 @@ function mutate!(node::TreeNode, model::AbstractBranchingProcess)
         throw(ArgumentError("The state of the node must be in the state space of the mutator."))
     end
 
-    transition_probs = model.transition_matrix[findfirst(model.state_space .== node.state), :]
+    transition_probs = model.transition_matrix[findfirst_equals(model.state_space, node.state), :]
     node.state = sample(model.state_space, Weights(transition_probs))
 end
 
