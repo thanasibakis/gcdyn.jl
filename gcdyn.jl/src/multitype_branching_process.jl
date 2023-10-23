@@ -77,6 +77,11 @@ function StatsAPI.loglikelihood(
     ρ, σ = model.ρ, model.σ
     present_time = model.present_time
 
+    p_start = Dict{TreeNode, Vector{Float64}}()
+    p_end = Dict{TreeNode, Vector{Float64}}()
+    q_start = Dict{TreeNode, Float64}()
+    q_end = Dict{TreeNode, Float64}()
+
     for leaf in LeafTraversal(tree)
         # Be sure to specify the iip=true of the ODEProblem for type stability
         # and fewer memory allocations
@@ -95,7 +100,7 @@ function StatsAPI.loglikelihood(
             abstol = abstol
         )
 
-        leaf.p_end = p.u[end]
+        p_end[leaf] = p.u[end]
     end
 
     for event in PostOrderTraversal(tree.children[1])
@@ -104,14 +109,14 @@ function StatsAPI.loglikelihood(
 
         if event.event == :sampled_survival
             # event already has p_end
-            event.q_end = ρ
+            q_end[event] = ρ
         elseif event.event == :sampled_death
             # event already has p_end
-            event.q_end = μ(model, event.up.state) * σ
+            q_end[event] = μ(model, event.up.state) * σ
         elseif event.event == :birth
-            event.p_end = event.children[1].p_start
-            event.q_end = (
-                λ(model, event.up.state) * event.children[1].q_start * event.children[2].q_start
+            p_end[event] = p_start[event.children[1]]
+            q_end[event] = (
+                λ(model, event.up.state) * q_start[event.children[1]] * q_start[event.children[2]]
             )
         elseif event.event == :mutation
             mutation_prob = model.transition_matrix[
@@ -119,11 +124,11 @@ function StatsAPI.loglikelihood(
                 findfirst_equals(model.state_space, event.state)
             ]
 
-            event.p_end = event.children[1].p_start
-            event.q_end = (
+            p_end[event] = p_start[event.children[1]]
+            q_end[event] = (
                 γ(model, event.up.state)
                 * mutation_prob
-                * event.children[1].q_start
+                * q_start[event.children[1]]
             )
         else
             throw(ArgumentError("Unknown event type $(event.event)"))
@@ -132,7 +137,7 @@ function StatsAPI.loglikelihood(
         pq = solve(
             ODEProblem{true}(
                 dpq_dt!,
-                [event.p_end; event.q_end],
+                [p_end[event]; q_end[event]],
                 (t_end, t_start),
                 (model, event.up.state)
             ),
@@ -144,11 +149,11 @@ function StatsAPI.loglikelihood(
             abstol = abstol
         )
 
-        event.p_start = pq.u[end][1:end-1]
-        event.q_start = pq.u[end][end]
+        p_start[event] = pq.u[end][1:end-1]
+        q_start[event] = pq.u[end][end]
     end
 
-    result = log(tree.children[1].q_start)
+    result = log(q_start[tree.children[1]])
 
     # Non-extinction probability
 

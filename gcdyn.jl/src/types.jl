@@ -30,11 +30,6 @@ mutable struct TreeNode
     const children::Vector{TreeNode}
     up::Union{TreeNode, Nothing}
 
-    p_start::Vector{Float64}
-    p_end::Vector{Float64}
-    q_start::Float64
-    q_end::Float64
-
     # A not-so-type-stable way to store any extra info
     info::Dict
 
@@ -45,7 +40,7 @@ mutable struct TreeNode
             throw(ArgumentError("Time must be positive"))
         end
 
-        self = new(name, event, t, state, children, nothing, [], [], 0, 0, Dict())
+        self = new(name, event, t, state, children, nothing, Dict())
 
         for child in self.children
             child.up = self
