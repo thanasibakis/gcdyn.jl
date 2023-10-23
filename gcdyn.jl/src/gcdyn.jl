@@ -2,9 +2,9 @@ module gcdyn
 
 using
     AbstractTrees,
-    DifferentialEquations,
     Distributions,
     LinearAlgebra,
+    OrdinaryDiffEq,
     StatsAPI,
     StatsBase
 

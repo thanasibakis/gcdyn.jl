@@ -78,8 +78,10 @@ function StatsAPI.loglikelihood(
     present_time = model.present_time
 
     for leaf in LeafTraversal(tree)
+        # Be sure to specify the iip=true of the ODEProblem for type stability
+        # and fewer memory allocations
         p = solve(
-            ODEProblem(
+            ODEProblem{true}(
                 dp_dt!,
                 ones(Float64, axes(model.state_space)) .- ρ,
                 (0, present_time - leaf.t),
@@ -88,12 +90,12 @@ function StatsAPI.loglikelihood(
             Tsit5();
             isoutofdomain = (p, args, t) -> any(x -> x < 0 || x > 1, p),
             save_everystep = false,
+            save_start = false,
             reltol = reltol,
             abstol = abstol
         )
 
-        # Type annotation because @code_warntype shows ODEProblem is Any
-        leaf.p_end = p.u[end]::Vector{Float64}
+        leaf.p_end = p.u[end]
     end
 
     for event in PostOrderTraversal(tree.children[1])
@@ -128,7 +130,7 @@ function StatsAPI.loglikelihood(
         end
 
         pq = solve(
-            ODEProblem(
+            ODEProblem{true}(
                 dpq_dt!,
                 [event.p_end; event.q_end],
                 (t_end, t_start),
@@ -137,12 +139,13 @@ function StatsAPI.loglikelihood(
             Tsit5();
             isoutofdomain = (pq, args, t) -> any(x -> x < 0, pq),
             save_everystep = false,
+            save_start = false,
             reltol = reltol,
             abstol = abstol
         )
 
-        event.p_start = pq.u[end][1:end-1]::Vector{Float64}
-        event.q_start = pq.u[end][end]::Float64
+        event.p_start = pq.u[end][1:end-1]
+        event.q_start = pq.u[end][end]
     end
 
     result = log(tree.children[1].q_start)
@@ -150,7 +153,7 @@ function StatsAPI.loglikelihood(
     # Non-extinction probability
 
     p = solve(
-        ODEProblem(
+        ODEProblem{true}(
             dp_dt!,
             ones(Float64, axes(model.state_space)) .- ρ,
             (0, present_time),
@@ -159,11 +162,12 @@ function StatsAPI.loglikelihood(
         Tsit5();
         isoutofdomain = (p, args, t) -> any(x -> x < 0 || x > 1, p),
         save_everystep = false,
+        save_start = false,
         reltol = reltol,
         abstol = abstol
     )
 
-    p_i = p.u[end][findfirst_equals(model.state_space, tree.state)]::Float64
+    p_i = p.u[end][findfirst_equals(model.state_space, tree.state)]
     result -= log(1 - p_i)
 
     return result
@@ -175,8 +179,6 @@ See equation (1) of this paper:
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
 function dp_dt!(dp, p, model, t)
-    # This function is currently allocation-free according to --track-allocation=user
-
     for (i, state) in enumerate(model.state_space)
         λₓ = λ(model, state)
         μₓ = μ(model, state)
@@ -196,9 +198,7 @@ See equations (1) and (2) of this paper:
 
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
-function dpq_dt!(dpq, pq, args, t)
-    # This function is currently allocation-free according to --track-allocation=user
-    
+function dpq_dt!(dpq, pq, args, t)    
     p, q_i = view(pq, 1:lastindex(pq)-1), pq[end]
     model, parent_state = args
 
@@ -210,7 +210,8 @@ function dpq_dt!(dpq, pq, args, t)
     dq_i = -(γₓ + λₓ + μₓ) * q_i + 2 * λₓ * q_i * p_i
 
     # Need to pass a view instead of a slice, to pass by reference instead of value
-    dp_dt!(view(dpq, 1:lastindex(dpq)-1), p, model, t)
+    dp = view(dpq, 1:lastindex(dpq)-1)
+    dp_dt!(dp, p, model, t)
     dpq[end] = dq_i
 end
 
@@ -230,7 +231,7 @@ function findfirst_equals(x, c)
         end
     end
 
-    return nothing
+    return -1
 end
 
 """
