@@ -1,3 +1,5 @@
+#!/usr/bin/env julia
+
 using AbstractTrees, gcdyn, JLD2
 import JSON
 
@@ -14,8 +16,8 @@ get_node_data(json_tree, node_name, field) = filter(d -> d["name"] == node_name,
 # Create an ancestral node. We will have to fill in the name and state and adjust `t`
 ↓(children::Tuple{TreeNode, TreeNode}, length::Real) = TreeNode(-1, :birth, length, -1, collect(children))
 
-function parse_treejson(dict::Dict)
-    trees = map(dict) do json_tree
+function parse_treejson(json_trees)
+    trees = map(json_trees) do json_tree
         # Fancy trick to parse Newick directly into TreeNode objects
         tree = replace(json_tree["newick"], ":" => "↓") |> Meta.parse |> eval
 
@@ -103,6 +105,6 @@ function parse_treejson(dict::Dict)
     return trees
 end
 
-dict = isempty(ARGS) ? JSON.parse(stdin) : JSON.parse(read(ARGS[1], String))
-trees = parse_treejson(dict)
+json_trees = isempty(ARGS) ? JSON.parse(stdin) : JSON.parse(read(ARGS[1], String))
+trees = parse_treejson(json_trees)
 save_object("output/tenseqs.trees.jld2", trees)
