@@ -3,23 +3,12 @@
 import fileinput
 from pathlib import Path
 
-from gcdyn.phenotype import DMSPhenotype
+from gcdyn import gpmap
+from experiments import replay
 
-model = DMSPhenotype(
-    1,
-    1,
-    336,
-
-    # https://github.com/jbloomlab/Ab-CGGnaive_DMS/blob/main/data/CGGnaive_sites.csv
-    Path(__file__).parent / "support" / "CGGnaive_sites.csv",
-
-    # https://github.com/matsengrp/gcdyn/blob/29-sampling/notebooks/tdms-linear.model
-    Path(__file__).parent / "support" / "tdms-linear.model",
-
-    ["delta_log10_KD", "delta_expression", "delta_psr"],
-    -10.43,
-)
+dms = replay.dms(Path(__file__).parent / "support" / "final_variant_scores.csv")
+gp_map = gpmap.AdditiveGPMap(dms["affinity"], nonsense_phenotype=dms["affinity"].min().min())
 
 for line in fileinput.input():
     sequence = line.strip()
-    print(model.calculate_KD([sequence])[0])
+    print(gp_map(sequence))
