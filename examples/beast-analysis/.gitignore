@@ -1,6 +1,6 @@
 .nextflow/
+data/
+output/
 work/
 
-*.jld2
-*.json
 .nextflow.log*

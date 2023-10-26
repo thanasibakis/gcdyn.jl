@@ -1,6 +1,10 @@
 #!/usr/bin/env julia
 
-using AbstractTrees, gcdyn, JLD2
+# Activate the "examples" Julia project from the nextflow work folder
+# One day I'll find a prettier way to do this
+import Pkg; Pkg.activate("../../../..")
+
+using gcdyn, JLD2
 import JSON
 
 # Shorthand for extracting node data from the JSON `nodes` objects
@@ -19,18 +23,19 @@ get_node_data(json_tree, node_name, field) = filter(d -> d["name"] == node_name,
 function parse_treejson(json_trees)
     trees = map(json_trees) do json_tree
         # Fancy trick to parse Newick directly into TreeNode objects
-        tree = replace(json_tree["newick"], ":" => "↓") |> Meta.parse |> eval
+        subtrees = replace(json_tree["newick"], ":" => "↓") |> Meta.parse |> eval
 
-        # Why am I missing the birth event of the single ancestor?
-        # and what is its branch length? (currently i'll just put 0)
-        tree = TreeNode(-1, :birth, 0, -1, collect(tree))
-
-        # Create root node
-        # TODO: document why we do this (ie. because we want to store the root state, especially if we will add a mutation to the first branch)
-        root = TreeNode(0, :root, 0, tree.state, [tree])
+		# BEAST doesn't infer the length of the branch leading to the first birth event;
+		# this means `tree` is really a tuple of the two root-most subtrees.
+		# For the replay experiment, though, we trick BEAST into "knowing" the root sequence
+		# by inducing a birth event very close to time 0, so that one of the root-most subtrees
+		# is the root sequence. We don't include that in the final tree though.
+		# Thus, here, we just need to add a root event node before the other subtree.
+		first_child = (length(LeafTraversal(subtrees[1])) == 1) ? subtrees[2] : subtrees[1]
+        root = TreeNode(0, :root, 0, -1, [first_child])
 
         # Fill in the names of ancestral nodes
-        for node in PostOrderTraversal(tree)
+        for node in PostOrderTraversal(root.children[1])
             if node.up.event != :root
                 node.up.name = get_node_data(json_tree, node.name, "parent")
             end
@@ -38,18 +43,19 @@ function parse_treejson(json_trees)
 
         # Correct `node.t` to be time since root, not branch length,
         # and fill in the sequences (into temporary storage, since the node state will be the corresponding affinity)
-        for node in PreOrderTraversal(tree)
+        for node in PreOrderTraversal(root.children[1])
             node.t = node.t + node.up.t
             node.info[:sequence] = get_node_data(json_tree, node.name, "state")
         end
 
-        root.info[:sequence] = tree.info[:sequence]
+		root_sequence = (length(LeafTraversal(subtrees[1])) == 1) ? get_node_data(json_tree, subtrees[1].name, "state") : get_node_data(json_tree, subtrees[2].name, "state")
+        root.info[:sequence] = root_sequence
 
         # Add mutation events per the history
         # Remember that the history describes mutation leading TO this node
-        present_time = maximum(leaf.t for leaf in Leaves(tree))
+        present_time = maximum(leaf.t for leaf in LeafTraversal(root))
 
-        for node in PreOrderTraversal(tree)
+        for node in PreOrderTraversal(root.children[1])
             history = get_node_data(json_tree, node.name, "history")
 
             for mutation in history
@@ -92,7 +98,7 @@ function parse_treejson(json_trees)
     all_nodes = [node for tree in trees for node in PreOrderTraversal(tree)]
     sequences = [node.info[:sequence] for node in all_nodes]
 
-    affinities = pipeline(`bin/get-affinity`; stdin=IOBuffer(join(sequences, "\n"))) |>
+    affinities = pipeline(`get-affinity`; stdin=IOBuffer(join(sequences, "\n"))) |>
         (command -> read(command, String)) |>
         strip |>
         (text -> split(text, "\n")) |>
@@ -107,4 +113,4 @@ end
 
 json_trees = isempty(ARGS) ? JSON.parse(stdin) : JSON.parse(read(ARGS[1], String))
 trees = parse_treejson(json_trees)
-save_object("output/tenseqs.trees.jld2", trees)
+save_object("trees.jld2", trees)
