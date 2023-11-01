@@ -58,27 +58,15 @@ process_tree <- function(tree, compact_history=FALSE) {
 
     states <- get.data(tree) |> select(node, states) |> rename(state = states)
 
-    newick <- get.tree(tree) |>
-        write.nexus() |>
-        capture.output() |>
-        str_match("\\[&(?:R|U)\\] (.+);") |>
-        magrittr::extract(, 2) %>%
-        magrittr::extract(!is.na(.))
+    lengths <- tibble(
+		length = get.tree(tree)$edge.length,
+		node = seq_along(get.tree(tree)$edge.length)
+	)
 
-    node_info <- full_join(states, ancestry, by = "node") |>
+    full_join(ancestry, lengths, by = "node") |>
+		full_join(states, by = "node") |>
         nest_join(history, by = "node") |>
         rename(name = node)
-
-    original_tip_names <- tibble(
-        name = seq_along(get.tree(tree)$tip.label),
-        original_name = get.tree(tree)$tip.label
-    )
-
-    list(
-        newick = unbox(newick), # unbox ensures strings aren't JSON-encoded as a 1-length vector
-        nodes = node_info,
-        original_tip_names = original_tip_names
-    )
 }
 
 shrink_newick_line <- function(line) {
