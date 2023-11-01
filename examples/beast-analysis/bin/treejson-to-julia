@@ -1,8 +1,9 @@
 #!/usr/bin/env julia
 
-# Activate the "examples" Julia project from the nextflow work folder
-# One day I'll find a prettier way to do this
-import Pkg; Pkg.activate("../../../..")
+# Run this program as though it were invoked with `julia --project`
+# to find the project in the `examples` directory
+@everywhere pushfirst!(LOAD_PATH, "@.")
+import Pkg; Pkg.activate()
 
 using gcdyn, JLD2
 import JSON
