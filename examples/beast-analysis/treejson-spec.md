@@ -6,7 +6,7 @@ These objects obey the following schema:
 ```{json}
 {
     "name":   /* a number, assigned to each node in the tree for identification purposes */,
-    "parent": /* a number, the name of the parent of this node */,
+    "parent": /* a number (or `null`), the name of the parent of this node */,
     "length": /* a number, the length of the branch leading to this node */,
     "state":  /* a string, the sequence at this node */,
 

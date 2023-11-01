@@ -52,19 +52,15 @@ process_tree <- function(tree, compact_history=FALSE) {
         	mutate(across(c("site", "when"), as.numeric))
 	}
 
-    ancestry <- get.tree(tree)$edge |>
-        as_tibble(.name_repair = "minimal") |>
-        magrittr::set_colnames(c("parent", "node"))
-
-    states <- get.data(tree) |> select(node, states) |> rename(state = states)
-
-    lengths <- tibble(
-		length = get.tree(tree)$edge.length,
-		node = seq_along(get.tree(tree)$edge.length)
+    ancestry <- tibble(
+		parent = get.tree(tree)$edge[, 1],
+		node = get.tree(tree)$edge[, 2],
+		length = get.tree(tree)$edge.length
 	)
 
-    full_join(ancestry, lengths, by = "node") |>
-		full_join(states, by = "node") |>
+	states <- get.data(tree) |> select(node, states) |> rename(state = states)
+
+    full_join(ancestry, states, by = "node") |>
         nest_join(history, by = "node") |>
         rename(name = node)
 }
