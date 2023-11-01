@@ -7,94 +7,105 @@ import Pkg; Pkg.activate("../../../..")
 using gcdyn, JLD2
 import JSON
 
-# Shorthand for extracting node data from the JSON `nodes` objects
-get_node_data(json_tree, node_name, field) = filter(d -> d["name"] == node_name, json_tree["nodes"])[1][field]
+# Shorthand for finding the node matching a given name
+get_node(json_tree, node_name) = filter(d -> d["name"] == node_name, json_tree)[1]
 
-# Methods named `↓` are used to parse Newick into TreeNode objects.
-# Inspired by https://www.jamesporter.me/2013/11/27/how-to-succeed-at-parsing.html
-# Requires that node labels exist only on leaves and are integers
+# Create the tree structure.
+# We will need to fill in the states later
+function create_treenode(json_tree)
+    # For now, specify the event type to be root, but we will correct this after the structure is built.
+    # Also for now, specify the state to be -1, but this will be populated after *all* trees are built.
+    nodes = Dict(node["name"] => TreeNode(node["name"], :root, (isnothing(node["length"]) ? 0 : node["length"]), -1, []) for node in json_tree)
 
-# Create a leaf node. We will have to fill in the state and adjust `t` to be `length + up.length`
-↓(name::Int, length::Real) = TreeNode(name, :sampled_survival, length, -1, [])
+    for json_node in json_tree
+        if !isnothing(json_node["parent"])
+            node = nodes[json_node["name"]]
+            parent = nodes[json_node["parent"]]
 
-# Create an ancestral node. We will have to fill in the name and state and adjust `t`
-↓(children::Tuple{TreeNode, TreeNode}, length::Real) = TreeNode(-1, :birth, length, -1, collect(children))
-
-function parse_treejson(json_trees)
-    trees = map(json_trees) do json_tree
-        # Fancy trick to parse Newick directly into TreeNode objects
-        subtrees = replace(json_tree["newick"], ":" => "↓") |> Meta.parse |> eval
-
-		# BEAST doesn't infer the length of the branch leading to the first birth event;
-		# this means `tree` is really a tuple of the two root-most subtrees.
-		# For the replay experiment, though, we trick BEAST into "knowing" the root sequence
-		# by inducing a birth event very close to time 0, so that one of the root-most subtrees
-		# is the root sequence. We don't include that in the final tree though.
-		# Thus, here, we just need to add a root event node before the other subtree.
-		first_child = (length(LeafTraversal(subtrees[1])) == 1) ? subtrees[2] : subtrees[1]
-        root = TreeNode(0, :root, 0, -1, [first_child])
-
-        # Fill in the names of ancestral nodes
-        for node in PostOrderTraversal(root.children[1])
-            if node.up.event != :root
-                node.up.name = get_node_data(json_tree, node.name, "parent")
-            end
+            push!(parent.children, node)
+            node.up = parent
         end
-
-        # Correct `node.t` to be time since root, not branch length,
-        # and fill in the sequences (into temporary storage, since the node state will be the corresponding affinity)
-        for node in PreOrderTraversal(root.children[1])
-            node.t = node.t + node.up.t
-            node.info[:sequence] = get_node_data(json_tree, node.name, "state")
-        end
-
-		root_sequence = (length(LeafTraversal(subtrees[1])) == 1) ? get_node_data(json_tree, subtrees[1].name, "state") : get_node_data(json_tree, subtrees[2].name, "state")
-        root.info[:sequence] = root_sequence
-
-        # Add mutation events per the history
-        # Remember that the history describes mutation leading TO this node
-        present_time = maximum(leaf.t for leaf in LeafTraversal(root))
-
-        for node in PreOrderTraversal(root.children[1])
-            history = get_node_data(json_tree, node.name, "history")
-
-            for mutation in history
-                mutation["when"] = present_time - mutation["when"]
-            end
-
-            sort!(history, by = mutation -> mutation["when"], rev = true)
-
-            current_node = node
-
-            for mutation in history
-                index = mutation["site"]
-                current_sequence = current_node.info[:sequence]
-
-                mutation_time = mutation["when"]
-
-                @assert current_node.up.t < mutation_time < current_node.t
-                @assert string(current_sequence[index]) == mutation["to_base"]
-
-                new_sequence = current_sequence[1:index-1] * mutation["from_base"] * current_sequence[index+1:end]
-
-                parent = current_node.up
-                filter!(child -> child != current_node, parent.children)
-                # Removing current_node.up is done in the TreeNode constructor in the next step
-
-                new_node = TreeNode(node.name, :mutation, mutation["when"], -1, [current_node])
-                new_node.info[:sequence] = new_sequence
-
-                push!(parent.children, new_node)
-                new_node.up = parent
-
-                current_node = new_node
-            end
-        end
-
-        root
     end
 
-    # Compute the affinities for all sequences now, since it's fastest if we call the binary once with a batch
+    # BEAST doesn't infer the length of the branch leading to the first birth event;
+    # this means `tree` is really a tuple of the two root-most subtrees.
+    # For the replay experiment, though, we trick BEAST into "knowing" the root sequence
+    # by inducing a birth event very close to time 0, so that one of the root-most subtrees
+    # is the root sequence. We don't include that in the final tree though.
+    # Thus, here, we just need to add a root event node before the other subtree.
+    subtrees = filter(node -> isnothing(node.up), collect(values(nodes)))[1].children
+    first_child = (length(LeafTraversal(subtrees[1])) == 1) ? subtrees[2] : subtrees[1]
+    
+    root = TreeNode(0, :root, 0, -1, [first_child])
+
+    # 1. Correct `node.t` to be time since root, not branch length
+    # 2. Fill in the sequences (into temporary storage, since the node state will be the corresponding affinity)
+    # 3. Correct the node event type
+    for node in PreOrderTraversal(root.children[1])
+        node.t = node.t + node.up.t
+        node.info[:sequence] = get_node(json_tree, node.name)["state"]
+        node.event =
+            if length(node.children) == 0
+                :sampled_survival
+            elseif length(node.children) == 1
+                :mutation
+            elseif length(node.children) == 2
+                :birth
+            else
+                throw(ArgumentError("Unable to determine event type for node $(node.name)"))
+            end
+    end
+
+    root_sequence = (length(LeafTraversal(subtrees[1])) == 1) ? get_node(json_tree, subtrees[1].name)["state"] : get_node(json_tree, subtrees[2].name)["state"]
+    root.info[:sequence] = root_sequence
+
+    root
+end
+
+# Add mutation events per the history
+# Remember that the history describes mutation leading TO this node
+function expand_mutation_history!(root, json_tree)
+    present_time = maximum(leaf.t for leaf in LeafTraversal(root))
+
+    for node in PreOrderTraversal(root.children[1])
+        history = get_node(json_tree, node.name)["history"]
+
+        for mutation in history
+            mutation["when"] = present_time - mutation["when"]
+        end
+
+        sort!(history, by = mutation -> mutation["when"], rev = true)
+
+        current_node = node
+
+        for mutation in history
+            index = mutation["site"]
+            current_sequence = current_node.info[:sequence]
+
+            mutation_time = mutation["when"]
+
+            @assert current_node.up.t < mutation_time < current_node.t
+            @assert string(current_sequence[index]) == mutation["to_base"]
+
+            new_sequence = current_sequence[1:index-1] * mutation["from_base"] * current_sequence[index+1:end]
+
+            parent = current_node.up
+            filter!(child -> child != current_node, parent.children)
+            # Removing current_node.up is done in the TreeNode constructor in the next step
+
+            new_node = TreeNode(node.name, :mutation, mutation["when"], -1, [current_node])
+            new_node.info[:sequence] = new_sequence
+
+            push!(parent.children, new_node)
+            new_node.up = parent
+
+            current_node = new_node
+        end
+    end
+end
+
+# Compute the affinities for all sequences in one go, since it's fastest if we call the binary once with a batch
+function predict_affinities!(trees)
     all_nodes = [node for tree in trees for node in PreOrderTraversal(tree)]
     sequences = [node.info[:sequence] for node in all_nodes]
 
@@ -107,10 +118,21 @@ function parse_treejson(json_trees)
     for (affinity, node) in zip(affinities, all_nodes)
         node.state = affinity
     end
-
-    return trees
 end
 
-json_trees = isempty(ARGS) ? JSON.parse(stdin) : JSON.parse(read(ARGS[1], String))
-trees = parse_treejson(json_trees)
-save_object("trees.jld2", trees)
+function main()
+    json_trees = isempty(ARGS) ? JSON.parse(stdin) : JSON.parse(read(ARGS[1], String))
+
+    trees = map(json_trees) do json_tree
+        root = create_treenode(json_tree)
+		#expand_mutation_history!(root, json_tree)
+
+        root
+    end
+
+    predict_affinities!(trees)
+
+    save_object("trees.jld2", trees)
+end
+
+main()
