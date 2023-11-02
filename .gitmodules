@@ -1,0 +1,3 @@
+[submodule "examples/lib/gcdyn"]
+	path = examples/lib/gcdyn
+	url = git@github.com:matsengrp/gcdyn.git
