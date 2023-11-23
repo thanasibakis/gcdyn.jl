@@ -21,10 +21,12 @@ process beast_to_treejson {
     grep -v "^tree" $history_treesfile | sed '\$d' > temp.history.trees
 
     # Keep the last several trees
-    tail -n 11 $history_treesfile >> temp.history.trees
+    # tail -n 11 $history_treesfile >> temp.history.trees
 
-    beast-to-treejson --compact-history temp.history.trees > trees.json
-    """
+    # beast-to-treejson --compact-history temp.history.trees > trees.json
+    
+	beast-to-treejson --compact-history $history_treesfile > trees.json
+	"""
 }
 
 process treejson_to_julia {

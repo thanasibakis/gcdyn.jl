@@ -2,7 +2,7 @@
 
 # Run this program as though it were invoked with `julia --project`
 # to find the project in the `examples` directory
-@everywhere pushfirst!(LOAD_PATH, "@.")
+pushfirst!(LOAD_PATH, "@.")
 import Pkg; Pkg.activate()
 
 using gcdyn, JLD2
@@ -126,7 +126,7 @@ function main()
 
     trees = map(json_trees) do json_tree
         root = create_treenode(json_tree)
-		#expand_mutation_history!(root, json_tree)
+		expand_mutation_history!(root, json_tree)
 
         root
     end
