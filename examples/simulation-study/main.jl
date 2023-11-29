@@ -2,49 +2,27 @@ println("Loading packages...")
 
 using gcdyn, CSV, DataFrames, Turing, StatsPlots
 
-@model function Model(trees::Vector{TreeNode}, truth::AbstractBranchingProcess)
-    xscale  ~ Gamma(2, 1)
-    xshift  ~ Normal(5, 1)
-    yscale  ~ Gamma(2, 1)
-    yshift  ~ Gamma(1, 1)
-    μ       ~ LogNormal(0, 0.5)
-    γ       ~ LogNormal(0, 0.5)
-    logit_p ~ Normal(0, 1.8)
-    logit_δ ~ Normal(1.4, 1.4)
-
-    p = gcdyn.expit(logit_p)  # roughly Uniform(0, 1)
-    δ = gcdyn.expit(logit_p)  # roughly Beta(3, 1)
-
-    sampled_model = SigmoidalBirthRateBranchingProcess(
-        xscale, xshift, yscale, yshift, μ, γ, truth.state_space, random_walk_transition_matrix(truth.state_space, p; δ=δ), truth.ρ, truth.σ, truth.present_time
-    )
-
-    Turing.@addlogprob! loglikelihood(sampled_model, trees; reltol=1e-3, abstol=1e-3)
-end
-
 function main()
-    println("Setting up model...")
-
+	println("Setting up model...")
     transition_p = 0.3
     transition_δ = 0.8
     truth = SigmoidalBirthRateBranchingProcess(1, 5, 1.5, 1, 1.3, 1.3, [2, 4, 6, 8], random_walk_transition_matrix([2, 4, 6, 8], transition_p; δ=transition_δ), 1, 0, 3)
 
-    println("Sampling from prior...")
-
-    prior_samples = sample(Model(rand_tree(truth, 1, truth.state_space[1]), truth), Prior(), 100) |> DataFrame
+	println("Sampling from prior...")
+    prior_samples = sample(Model(Vector{TreeNode}(undef, 0), truth.state_space, truth.present_time), Prior(), 100) |> DataFrame
     prior_samples.p = gcdyn.expit.(prior_samples[:, :logit_p])
     prior_samples.δ = gcdyn.expit.(prior_samples[:, :logit_δ])
 
-    println("Sampling from posterior...")
-
+	println("Sampling from posterior...")
     num_treesets = 100
+	num_trees_per_set = 15
     dfs = Vector{DataFrame}(undef, num_treesets)
 
     Threads.@threads for i in 1:num_treesets
-        trees = rand_tree(truth, 15, truth.state_space[1]);
+        treeset = rand_tree(truth, num_trees_per_set, truth.state_space[1]);
 
         dfs[i] = sample(
-            Model(trees, truth),
+            Model(treeset, truth.state_space, truth.present_time),
             MH(
                 :xscale => x -> LogNormal(log(x), 0.2),
                 :xshift => x -> Normal(x, 0.7),
@@ -62,13 +40,11 @@ function main()
     end
 
     println("Exporting samples...")
-    
     posterior_samples = vcat(dfs...)
     CSV.write("posterior-samples.csv", posterior_samples)
 
-    println("Visualizing...")
-
-    medians = combine(
+	println("Visualizing...")
+	medians = combine(
         groupby(posterior_samples, :run),
         :xscale => median => :xscale,
         :xshift => median => :xshift,
@@ -183,8 +159,31 @@ function main()
             println(file, string(param), ": ", mean(coverage))
         end
     end
-    
-    println("Done!")
+
+	println("Done!")
+end
+
+@model function Model(trees::Vector{TreeNode}, state_space, present_time)
+    xscale  ~ Gamma(2, 1)
+    xshift  ~ Normal(5, 1)
+    yscale  ~ Gamma(2, 1)
+    yshift  ~ Gamma(1, 1)
+    μ       ~ LogNormal(0, 0.5)
+    γ       ~ LogNormal(0, 0.5)
+    logit_p ~ Normal(0, 1.8)
+    logit_δ ~ Normal(1.4, 1.4)
+
+    p = gcdyn.expit(logit_p)  # roughly Uniform(0, 1)
+    δ = gcdyn.expit(logit_p)  # roughly Beta(3, 1)
+
+    sampled_model = SigmoidalBirthRateBranchingProcess(
+        xscale, xshift, yscale, yshift, μ, γ, state_space, random_walk_transition_matrix(state_space, p; δ=δ), 1, 0, present_time
+    )
+
+    # Only compute loglikelihood if we're not sampling from the prior
+    if DynamicPPL.leafcontext(__context__) !== Turing.PriorContext()
+        Turing.@addlogprob! loglikelihood(sampled_model, trees; reltol=1e-3, abstol=1e-3)
+    end
 end
 
 main()

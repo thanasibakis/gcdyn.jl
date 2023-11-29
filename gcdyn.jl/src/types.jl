@@ -82,7 +82,7 @@ struct ConstantRateBranchingProcess <: AbstractBranchingProcess
     λ::Float64
     μ::Float64
     γ::Float64
-    state_space::Vector{Int}
+    state_space::Vector{Float64}
     transition_matrix::Matrix{Float64}
     ρ::Float64
     σ::Float64
@@ -143,7 +143,7 @@ struct SigmoidalBirthRateBranchingProcess <: AbstractBranchingProcess
     yshift::Float64
     μ::Float64
     γ::Float64
-    state_space::Vector{Int}
+    state_space::Vector{Float64}
     transition_matrix::Matrix{Float64}
     ρ::Float64
     σ::Float64
@@ -163,9 +163,9 @@ struct SigmoidalBirthRateBranchingProcess <: AbstractBranchingProcess
         elseif any(transition_matrix .< 0) || any(transition_matrix .> 1)
             throw(ArgumentError("The transition matrix must contain only values between 0 and 1."))
         elseif any(sum(transition_matrix, dims=2) .!= 1)
-            throw(ArgumentError("The transition matrix must contain only rows that sum to 1."))
+           throw(ArgumentError("The transition matrix must contain only rows that sum to 1."))
         elseif any(!=(0), transition_matrix[i,i] for i in minimum(axes(transition_matrix))) && length(state_space) > 1
-            throw(ArgumentError("The transition matrix must contain only zeros on the diagonal."))
+           throw(ArgumentError("The transition matrix must contain only zeros on the diagonal."))
         end
 
         return new(xscale, xshift, yscale, yshift, μ, γ, state_space, transition_matrix, ρ, σ, present_time)
