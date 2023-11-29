@@ -1,0 +1,6 @@
+*.json
+*.jld2
+
+.nextflow
+.nextflow.log*
+work
