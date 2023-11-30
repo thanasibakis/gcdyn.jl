@@ -78,12 +78,12 @@ If `transition_matrix` is omitted, specifies uniform transition probabilities to
 
 See also [`uniform_transition_matrix`](@ref), [`random_walk_transition_matrix`](@ref).
 """
-struct ConstantRateBranchingProcess <: AbstractBranchingProcess
-    λ::Float64
-    μ::Float64
-    γ::Float64
-    state_space::Vector{Float64}
-    transition_matrix::Matrix{Float64}
+struct ConstantRateBranchingProcess{R₁ <: Real, R₂ <: Real, R₃ <: Real, S <: AbstractVector{T} where T <: Real, M <: AbstractMatrix{R} where R <: Real} <: AbstractBranchingProcess
+    λ::R₁
+    μ::R₂
+    γ::R₃
+    state_space::S
+    transition_matrix::M
     ρ::Float64
     σ::Float64
     present_time::Float64
@@ -109,7 +109,7 @@ struct ConstantRateBranchingProcess <: AbstractBranchingProcess
             throw(ArgumentError("The transition matrix must contain only zeros on the diagonal."))
         end
 
-        return new(λ, μ, γ, state_space, transition_matrix, ρ, σ, present_time)
+        return new{typeof(λ), typeof(μ), typeof(γ), typeof(state_space), typeof(transition_matrix)}(λ, μ, γ, state_space, transition_matrix, ρ, σ, present_time)
     end
 end
 
@@ -136,15 +136,15 @@ If `transition_matrix` is omitted, specifies uniform transition probabilities to
 
 See also [`uniform_transition_matrix`](@ref), [`random_walk_transition_matrix`](@ref).
 """
-struct SigmoidalBirthRateBranchingProcess <: AbstractBranchingProcess
-    xscale::Float64
-    xshift::Float64
-    yscale::Float64
-    yshift::Float64
-    μ::Float64
-    γ::Float64
-    state_space::Vector{Float64}
-    transition_matrix::Matrix{Float64}
+struct SigmoidalBirthRateBranchingProcess{R₁ <: Real, R₂ <: Real, R₃ <: Real, R₄ <: Real, R₅ <: Real, R₆ <: Real, S <: AbstractVector{T} where T <: Real, M <: AbstractMatrix{R} where R <: Real} <: AbstractBranchingProcess
+    xscale::R₁
+    xshift::R₂
+    yscale::R₃
+    yshift::R₄
+    μ::R₅
+    γ::R₆
+    state_space::S
+    transition_matrix::M
     ρ::Float64
     σ::Float64
     present_time::Float64
@@ -168,7 +168,7 @@ struct SigmoidalBirthRateBranchingProcess <: AbstractBranchingProcess
            throw(ArgumentError("The transition matrix must contain only zeros on the diagonal."))
         end
 
-        return new(xscale, xshift, yscale, yshift, μ, γ, state_space, transition_matrix, ρ, σ, present_time)
+        return new{typeof(xscale), typeof(xshift), typeof(yscale), typeof(yshift), typeof(μ), typeof(γ), typeof(state_space), typeof(transition_matrix)}(xscale, xshift, yscale, yshift, μ, γ, state_space, transition_matrix, ρ, σ, present_time)
     end
 end
 
@@ -209,7 +209,7 @@ function random_walk_transition_matrix(state_space, p; δ=1)
     end
 
     n = length(state_space)
-    transition_matrix = zeros(n, n)
+    transition_matrix = zeros(typeof(p), n, n)
 
     for i in 1:n
         if i == 1

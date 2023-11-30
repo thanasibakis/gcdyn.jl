@@ -77,10 +77,13 @@ function StatsAPI.loglikelihood(
     ρ, σ = model.ρ, model.σ
     present_time = model.present_time
 
-    p_start = Dict{TreeNode, Vector{Float64}}()
-    p_end = Dict{TreeNode, Vector{Float64}}()
-    q_start = Dict{TreeNode, Float64}()
-    q_end = Dict{TreeNode, Float64}()
+    # We may be using autodiff, so figure out what type the likelikihood value will be
+    T = typeof(λ(model, model.state_space[1]))
+
+    p_start = Dict{TreeNode, Vector{T}}()
+    p_end = Dict{TreeNode, Vector{T}}()
+    q_start = Dict{TreeNode, T}()
+    q_end = Dict{TreeNode, T}()
 
     for leaf in LeafTraversal(tree)
         # Be sure to specify the iip=true of the ODEProblem for type stability
