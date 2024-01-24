@@ -1,129 +1,137 @@
 println("Loading packages...")
-using CSV, gcdyn, CategoricalArrays, DataFrames, Distributions, JLD2, JSON, StatsPlots, Turing
+using CSV, gcdyn, DataFrames, Distributions, JLD2, JSON, StatsPlots, Turing
 
 function main()
 	println("Reading trees...")
     germinal_centers = Vector{Vector{TreeNode}}()
 
-    for file in readdir("output/jld2/")
+    #for file in readdir("output/jld2/")
+	for file in readdir("output/jld2/")[1:2]
         trees = load_object(joinpath("output/jld2/", file))
         push!(germinal_centers, trees)
     end
 
 	println("Binning states...")
 	all_trees = (tree for gc in germinal_centers for tree in gc)
-	bin_states!(all_trees)
+	bin_mapping = discretize_states!(all_trees, 5)
 
-	state_space = unique(node.state for tree in all_trees for node in PostOrderTraversal(tree)) |> sort
-	present_time = maximum(leaf.t for tree in all_trees for leaf in LeafTraversal(tree))
-
-	println("Sampling from prior...")
-    prior_samples = sample(Model(missing, state_space, missing, present_time), Prior(), 100) |> DataFrame
-
-	for i in 1:1 # 1:5
-		println("[Treeset", i, "]")
-		treeset = collect(sample(gc) for gc in germinal_centers)
-
-		println("Sampling from posterior...")
-
-		# BAD transition matrix
-		transition_matrix = zeros(length(state_space), length(state_space))
-		for tree in treeset[1:2]
-			for node in PostOrderTraversal(tree)
-				if node.event == :mutation
-					j = findfirst(state_space .== node.state)
-					i = findfirst(state_space .== node.up.state)
-					transition_matrix[i, j] += 1
-				end
+	function get_discretization(affinity)
+		for (bin, value) in bin_mapping
+			if bin[1] <= affinity < bin[2]
+				return value
 			end
 		end
-		transition_matrix ./= sum(transition_matrix, dims=2)
 
-		# Initial values
-
-		posterior_samples = sample(
-			Model(treeset, state_space, transition_matrix, present_time),
-			Gibbs(
-				MH(:xscale => x -> LogNormal(log(x), 0.2)),
-				MH(:xshift => x -> Normal(x, 0.7)),
-				MH(:yscale => x -> LogNormal(log(x), 0.2)),
-				MH(:yshift => x -> LogNormal(log(x), 0.2)),
-				MH(:μ => x -> LogNormal(log(x), 0.2)),
-				MH(:γ => x -> LogNormal(log(x), 0.2))
-			),
-			1 # 5000
-		) |> DataFrame
-
-		println("Exporting samples...")
-		CSV.write("posterior-samples-$i.csv", posterior_samples)
-
-		println("Visualizing...")
-		
-		for (name, param) in zip(names(posterior_samples), eachcol(posterior_samples))
-			plot(param; dpi=300)
-			png("posterior-samples-$i-$name.png")
+		if all(bin[2] <= affinity for bin in keys(bin_mapping))
+			return maximum(values(bin_mapping))
+		elseif all(affinity < bin[1] for bin in keys(bin_mapping))
+			return minimum(values(bin_mapping))
+		else
+			error("Affinity $affinity not in any bin!")
 		end
-
-		plot(xlims=(-10, 10), ylims=(-6, 6), dpi=300)
-		for row in eachrow(prior_samples)
-			plot!(x -> gcdyn.sigmoid(x, row.xscale, row.xshift, row.yscale, row.yshift); alpha=0.1, color="grey", width=2, label=nothing)
-		end
-		for row in eachrow(posterior_samples[4500:5:end, :])
-			plot!(x -> gcdyn.sigmoid(x, row.xscale, row.xshift, row.yscale, row.yshift); alpha=0.1, color="blue", width=2, label=nothing)
-		end
-		title!("Birth rate")
-		png("birth-rate-samples-treeset-$i.png")
 	end
+	
+	state_space = values(bin_mapping) |> collect |> sort
+
+	println("Performing inference.")
+
+	treeset = collect(sample(gc) for gc in germinal_centers)
+
+	println("Estimating transition matrix...")
+	sequences = [node.info[:sequence] for tree in treeset for node in PostOrderTraversal(tree)]
+	mutated_affinities = pipeline(`bin/simulate-s5f-mutations`; stdin=IOBuffer(join(sequences, "\n"))) |>
+		(command -> read(command, String)) |>
+		strip |>
+		(text -> split(text, "\n")) |>
+		(rows -> split.(rstrip.(rows, ';'), ";"))
+
+	# original_affinities = [node.state for tree in treeset for node in PostOrderTraversal(tree)]
+
+	transition_matrix = zeros(length(state_space), length(state_space))
+	duration_times = zeros(length(state_space))
+
+	for mutations in mutated_affinities
+		for mutation in mutations
+			from_affinity, duration, to_affinity = parse.(Float64, split(mutation, ':'))
+
+			for mutation in mutations
+				i = findfirst(state_space .== get_discretization(from_affinity))
+				j = findfirst(state_space .== get_discretization(to_affinity))
+				
+				transition_matrix[i, j] += 1
+				duration_times[i] += duration
+			end
+		end
+	end
+
+	transition_matrix ./= duration_times
+	
+	println("Estimated transition matrix:")
+	println(transition_matrix, "\n")
+
+	println("Sampling from posterior...")
+	present_time = maximum([node.t for tree in treeset for node in PostOrderTraversal(tree)])
+	model = Model(treeset, state_space, transition_matrix, present_time)
+	posterior_samples = sample(
+		model,
+		Gibbs(
+			# MH(:xscale => x -> LogNormal(log(x), 0.2)),
+			# MH(:xshift => x -> Normal(x, 0.7)),
+			# MH(:yscale => x -> LogNormal(log(x), 0.2)),
+			# MH(:yshift => x -> LogNormal(log(x), 0.2)),
+			MH(:λ => x -> LogNormal(log(x), 0.2)),
+			MH(:μ => x -> LogNormal(log(x), 0.2)),
+			MH(:γ => x -> LogNormal(log(x), 0.2))
+		),
+		1 # 5000
+	) |> DataFrame
 
 	println("Done!")
 end
 
-function bin_states!(trees; visualize=true)
-	all_nodes = [node for tree in trees for node in PostOrderTraversal(tree)]
-
-    # The bins are evenly spaced quantiles for the affinities in (-2, inf), including the min and max
-	states = [node.state for node in all_nodes]
-	num_bins = 5
-	cutoffs = quantile(
-		filter(x -> x >= -2, states),
-		collect(0:(1/(num_bins-1)):1)
-	)
-	pushfirst!(cutoffs, minimum(states))
-
-	binned_states = convert.(
-        Float64,
-        cut(states, cutoffs; extend=true, labels=(from, to, i; leftclosed, rightclosed) -> to)
-    )
-	
-	for (node, binned_state) in zip(all_nodes, binned_states)
-		node.state = binned_state
-	end
-
-    if visualize
-        ENV["GKSwstype"] = "100" # operate plotting in headless mode
-	    histogram(states; normalize=:pdf, fill="grey", alpha=0.2)
-	    histogram!(binned_states; normalize=:pdf)
-	    png("binned-states.png")
-    end
-end
-
 @model function Model(trees, state_space, transition_matrix, present_time)
-    xscale  ~ Gamma(2, 1)
-    xshift  ~ Normal(0, 1)
-    yscale  ~ Gamma(1, 1)
-    yshift  ~ Gamma(1, 0.5)
-    μ       ~ LogNormal(0, 0.1)
-    γ       ~ LogNormal(0, 0.1)
+    # xscale  ~ Gamma(2, 1)
+    # xshift  ~ Normal(0, 1)
+    # yscale  ~ Gamma(1, 1)
+    # yshift  ~ Gamma(1, 0.5)
+	λ		~ LogNormal(0, 1)
+    μ       ~ LogNormal(0, 1)
+    γ       ~ LogNormal(0, 1)
 
     # Only compute loglikelihood if we're not sampling from the prior
-    if DynamicPPL.getsampler(__context__) != DynamicPPL.SampleFromPrior()
-		sampled_model = SigmoidalBirthRateBranchingProcess(
-			xscale, xshift, yscale, yshift, μ, γ, state_space, transition_matrix, 1, 0, present_time
-		)
+    # if DynamicPPL.getsampler(__context__) != DynamicPPL.SampleFromPrior()
+	if DynamicPPL.leafcontext(__context__) !== Turing.PriorContext()
+		# sampled_model = SigmoidalBirthRateBranchingProcess(
+		# 	xscale, xshift, yscale, yshift, μ, γ, state_space, transition_matrix, 1, 0, present_time
+		# )
+		sampled_model = ConstantRateBranchingProcess(λ, μ, γ, state_space, transition_matrix, 1, 0, present_time)
 
         Turing.@addlogprob! loglikelihood(sampled_model, trees; reltol=1e-3, abstol=1e-3)
     end
 end
 
-main()
+# julia> transition_matrix
+# 5×5 Matrix{Float64}:
+#  0.0       0.75817    0.0686275  0.163399   0.00980392
+#  0.734854  0.0        0.213471   0.0381326  0.0135424
+#  0.582357  0.350093   0.0        0.0441086  0.0234423
+#  0.570198  0.176713   0.195432   0.0        0.0576563
+#  0.414557  0.0779272  0.125791   0.381725   0.0
 
+# julia> mle = optimize(model, MLE(), Optim.Options(iterations=10_000, allow_f_increases=true))
+# ┌ Warning: Optimization did not converge! You may need to correct your model or adjust the Optim parameters.
+# └ @ TuringOptimExt ~/.julia/packages/Turing/UCuzt/ext/TuringOptimExt.jl:241
+# ModeResult with maximized lp of -Inf
+# [0.8213822990414615, 0.5510818348258846, 3.6581944935508055]
+
+# julia> mle = optimize(model, MLE(), Optim.Options(iterations=10_000, allow_f_increases=true))
+# ┌ Warning: Optimization did not converge! You may need to correct your model or adjust the Optim parameters.
+# └ @ TuringOptimExt ~/.julia/packages/Turing/UCuzt/ext/TuringOptimExt.jl:241
+# ModeResult with maximized lp of -Inf
+# [1.1175977920799343, 1.418080181668995, 0.7143853228312714]
+
+# julia> mle = optimize(model, MLE(), Optim.Options(iterations=10_000, allow_f_increases=true))
+# ┌ Warning: Optimization did not converge! You may need to correct your model or adjust the Optim parameters.
+# └ @ TuringOptimExt ~/.julia/packages/Turing/UCuzt/ext/TuringOptimExt.jl:241
+# ModeResult with maximized lp of -Inf
+# [0.6045182824674427, 4.802343391692815, 1.1565297809861894]

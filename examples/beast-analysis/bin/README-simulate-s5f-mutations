@@ -1,0 +1,10 @@
+## Documentation: `simulate-s5f-mutations`
+
+Reads a list of sequences (separated by newlines) from stdin or a file passed as an argument, and runs a mutation process on each sequence for a fixed amount of time.
+On one line per sequence, the details of each mutation are printed in the form "fromKD:duration:toKD".
+Semicolons separate each mutation.
+
+### Requirements
+
+Tested on Python 3.9.
+Requires that `lib/gcdyn` is installed from the repository root directory.

@@ -144,42 +144,6 @@ process import_trees_to_julia {
 		root
 	end
 
-	function bin_states!(trees)
-		all_nodes = [node for tree in trees for node in PostOrderTraversal(tree)]
-
-		# Create bins from evenly spaced quantiles, then discretize states to the medians of their bins
-		states = DataFrame(state=[node.state for node in all_nodes])
-		num_bins = 5
-		cutoffs = quantile(states.state, 0:(1/num_bins):1)
-		states.bin = cut(states.state, cutoffs; extend=true)
-		binned_states = transform(groupby(states, :bin), :state => median => :binned_state).binned_state
-		
-		for (node, binned_state) in zip(all_nodes, binned_states)
-			node.state = binned_state
-		end
-
-		# Visualize
-		ENV["GKSwstype"] = "100" # operate plotting in headless mode
-		histogram(states.state; normalize=:pdf, fill="grey", alpha=0.2)
-		histogram!(binned_states; normalize=:pdf)
-		png("binned-states.png")
-
-		nothing
-	end
-
-	function prune_same_bin_mutations!(tree)
-		# If a mutation resulted in an state of the same bin as the parent,
-		# that isn't a valid type change in the CTMC, so we prune it
-
-		for node in PostOrderTraversal(tree)
-			if node.event == :mutation && node.state == node.up.state
-				filter!(child -> child != node, node.up.children)
-				push!(node.up.children, node.children[1])
-				node.children[1].up = node.up
-			end
-		end
-	end
-
 	json_trees = JSON.parse(read("$treejson_file", String))
 	trees = map(create_treenode, json_trees)
 	bin_states!(trees)

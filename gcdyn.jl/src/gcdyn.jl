@@ -2,6 +2,8 @@ module gcdyn
 
 using
     AbstractTrees,
+    CategoricalArrays,
+    DataFrames,
     Distributions,
     LinearAlgebra,
     OrdinaryDiffEq,
@@ -15,6 +17,7 @@ export
     TreeNode,
     uniform_transition_matrix,
     random_walk_transition_matrix,
+    discretize_states!,
     LeafTraversal,
     PostOrderTraversal,
     PreOrderTraversal,

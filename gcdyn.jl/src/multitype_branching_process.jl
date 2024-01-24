@@ -387,3 +387,50 @@ function sample_child!(parent::TreeNode, model::AbstractBranchingProcess)
 
     return child
 end
+
+"""
+```julia
+discretize_states(trees)
+```
+
+Replaces a continuous-valued state attribute of all nodes in `trees` with a discretized version.
+
+`state_space_size` bins are created from evenly spaced quantiles of the state distribution over all trees, and states
+are discretized to the medians of their bins.
+Optionally but by default, if the discretization process results in a mutation event with the same state as its parent,
+the mutation event is pruned from the tree.
+"""
+function discretize_states!(trees, state_space_size; prune_self_loops = true)
+    all_nodes = [node for tree in trees for node in PostOrderTraversal(tree)]
+
+    # Create bins from evenly spaced quantiles, then discretize states to the medians of their bins
+    states = DataFrame(state=[node.state for node in all_nodes])
+    cutoffs = quantile(states.state, 0:(1/state_space_size):1)
+    states.bin = cut(states.state, cutoffs; extend=true)
+    bin_map = transform(groupby(states, :bin), :state => median => :binned_state)
+    binned_states = bin_map.binned_state
+    
+    for (node, binned_state) in zip(all_nodes, binned_states)
+        node.state = binned_state
+    end
+
+    if prune_self_loops
+        for tree in trees
+            # If a mutation resulted in an state of the same bin as the parent,
+            # that isn't a valid type change in the CTMC, so we prune it
+
+            for node in PostOrderTraversal(tree)
+                if node.event == :mutation && node.state == node.up.state
+                    filter!(child -> child != node, node.up.children)
+                    push!(node.up.children, node.children[1])
+                    node.children[1].up = node.up
+                end
+            end
+        end
+    end
+
+    bin_map = select(bin_map, Not(:state)) |> unique
+    parse_interval(row) = parse.(Float64, split(convert(String, row.bin)[2:end-1], ", "))
+
+    return Dict(parse_interval(row) => row.binned_state for row in eachrow(bin_map))
+end
