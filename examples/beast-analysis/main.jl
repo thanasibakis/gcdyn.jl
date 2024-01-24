@@ -45,8 +45,6 @@ function main()
 		(text -> split(text, "\n")) |>
 		(rows -> split.(rstrip.(rows, ';'), ";"))
 
-	# original_affinities = [node.state for tree in treeset for node in PostOrderTraversal(tree)]
-
 	transition_matrix = zeros(length(state_space), length(state_space))
 	duration_times = zeros(length(state_space))
 
@@ -54,17 +52,19 @@ function main()
 		for mutation in mutations
 			from_affinity, duration, to_affinity = parse.(Float64, split(mutation, ':'))
 
-			for mutation in mutations
-				i = findfirst(state_space .== get_discretization(from_affinity))
-				j = findfirst(state_space .== get_discretization(to_affinity))
-				
+			i = findfirst(state_space .== get_discretization(from_affinity))
+			j = findfirst(state_space .== get_discretization(to_affinity))
+			
+			if i != j
 				transition_matrix[i, j] += 1
-				duration_times[i] += duration
 			end
+
+			duration_times[i] += duration
 		end
 	end
 
 	transition_matrix ./= duration_times
+	transition_matrix[diagind(transition_matrix)] = -sum.(eachrow(transition_matrix))
 	
 	println("Estimated transition matrix:")
 	println(transition_matrix, "\n")
