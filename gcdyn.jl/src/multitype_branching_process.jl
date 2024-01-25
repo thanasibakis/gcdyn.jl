@@ -45,6 +45,41 @@ function γ(model::AbstractBranchingProcess, state)
     return model.γ
 end
 
+function γ(model::VaryingTypeChangeRateBranchingProcess, state)
+    i = findfirst_equals(model.state_space, state)
+
+    return model.δ * -model.Q[i, i]
+end
+
+"""
+```julia
+γ(model::AbstractBranchingProcess, from_state, to_state)
+```
+
+Evaluates the `model`'s rate of type change from `from_state` to `to_state`.
+"""
+function γ(model::AbstractBranchingProcess, from_state, to_state)
+    if from_state == to_state
+        return 0
+    end
+
+    i = findfirst_equals(model.state_space, from_state)
+    j = findfirst_equals(model.state_space, to_state)
+
+    return model.γ * model.transition_matrix[i, j]
+end
+
+function γ(model::VaryingTypeChangeRateBranchingProcess, from_state, to_state)
+    if from_state == to_state
+        return 0
+    end
+
+    i = findfirst_equals(model.state_space, from_state)
+    j = findfirst_equals(model.state_space, to_state)
+
+    return model.δ * model.Q[i, j]
+end
+
 # To allow us to broadcast the rate parameter functions over states
 Base.broadcastable(model::AbstractBranchingProcess) = Ref(model)
 
@@ -122,15 +157,9 @@ function StatsAPI.loglikelihood(
                 λ(model, event.up.state) * q_start[event.children[1]] * q_start[event.children[2]]
             )
         elseif event.event == :mutation
-            mutation_prob = model.transition_matrix[
-                findfirst_equals(model.state_space, event.up.state),
-                findfirst_equals(model.state_space, event.state)
-            ]
-
             p_end[event] = p_start[event.children[1]]
             q_end[event] = (
-                γ(model, event.up.state)
-                * mutation_prob
+                γ(model, event.up.state, event.state)
                 * q_start[event.children[1]]
             )
         else
@@ -186,17 +215,31 @@ See equation (1) of this paper:
 
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
-function dp_dt!(dp, p, model, t)
+function dp_dt!(dp, p, model::AbstractBranchingProcess, t)
     for (i, state) in enumerate(model.state_space)
         λₓ = λ(model, state)
         μₓ = μ(model, state)
         γₓ = γ(model, state)
 
         dp[i] = (
-            -(γₓ + λₓ + μₓ) * p[i]
+            -(λₓ + μₓ + γₓ) * p[i]
             + μₓ * (1 - model.σ)
             + λₓ * p[i]^2
             + γₓ * sum(model.transition_matrix[i, j] * p[j] for j in 1:length(model.state_space))
+        )
+    end
+end
+
+function dp_dt!(dp, p, model::VaryingTypeChangeRateBranchingProcess, t)
+    for (i, state) in enumerate(model.state_space)
+        λₓ = λ(model, state)
+        μₓ = μ(model, state)
+
+        dp[i] = (
+            -(λₓ + μₓ) * p[i]
+            + μₓ * (1 - model.σ)
+            + λₓ * p[i]^2
+            + model.δ * sum(model.Q[i, j] * p[j] for j in 1:length(model.state_space))
         )
     end
 end
@@ -206,7 +249,7 @@ See equations (1) and (2) of this paper:
 
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
-function dpq_dt!(dpq, pq, args, t)    
+function dpq_dt!(dpq, pq, args, t)
     p, q_i = view(pq, 1:lastindex(pq)-1), pq[end]
     model, parent_state = args
 
@@ -215,7 +258,7 @@ function dpq_dt!(dpq, pq, args, t)
     γₓ = γ(model, parent_state)
 
     p_i = p[findfirst_equals(model.state_space, parent_state)]
-    dq_i = -(γₓ + λₓ + μₓ) * q_i + 2 * λₓ * q_i * p_i
+    dq_i = -(λₓ + μₓ + γₓ) * q_i + 2 * λₓ * q_i * p_i
 
     # Need to pass a view instead of a slice, to pass by reference instead of value
     dp = view(dpq, 1:lastindex(dpq)-1)

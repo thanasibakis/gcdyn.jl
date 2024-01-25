@@ -180,6 +180,50 @@ end
 
 """
 ```julia
+VaryingTypeChangeRateBranchingProcess(xscale, xshift, yscale, yshift, μ, δ, Q, state_space, ρ, σ, present_time)
+```
+
+Constructs a multitype branching process with the given parameters.
+
+Similar to [`SigmoidalBirthRateBranchingProcess`](@ref), but with a reparameterization regarding mutations.
+`δ` is a scaling parameter for the known mutation rate matrix `Q`, which replaces the constant mutation rate and transition probability matrix.
+"""
+struct VaryingTypeChangeRateBranchingProcess{R₁ <: Real, R₂ <: Real, R₃ <: Real, R₄ <: Real, R₅ <: Real, R₆ <: Real, S <: AbstractVector{T} where T <: Real, M <: AbstractMatrix{R} where R <: Real} <: AbstractBranchingProcess
+    xscale::R₁
+    xshift::R₂
+    yscale::R₃
+    yshift::R₄
+    μ::R₅
+    δ::R₆
+    Q::M
+    state_space::S
+    ρ::Float64
+    σ::Float64
+    present_time::Float64
+
+    function VaryingTypeChangeRateBranchingProcess(xscale, xshift, yscale, yshift, μ, δ, Q, state_space, ρ, σ, present_time)
+        if ρ < 0 || ρ > 1
+            throw(ArgumentError("ρ must be between 0 and 1"))
+        elseif σ < 0 || σ > 1
+            throw(ArgumentError("σ must be between 0 and 1"))
+        elseif present_time < 0
+            throw(ArgumentError("Time must be positive"))
+        elseif length(state_space) != size(Q, 1)
+            throw(DimensionMismatch("The number of states in the state space must match the number of rows in the rate matrix."))
+        elseif length(state_space) != size(Q, 2)
+            throw(DimensionMismatch("The number of states in the state space must match the number of columns in the rate matrix."))
+        elseif any(sum(transition_matrix, dims=2) .!= 0)
+           throw(ArgumentError("The transition matrix must contain only rows that sum to 0."))
+        elseif any(>(0), transition_matrix[i,i] for i in minimum(axes(transition_matrix))) && length(state_space) > 1
+           throw(ArgumentError("The transition matrix must contain only negative or zero values on the diagonal."))
+        end
+
+        return new{typeof(xscale), typeof(xshift), typeof(yscale), typeof(yshift), typeof(μ), typeof(δ), typeof(Q), typeof(state_space)}(xscale, xshift, yscale, yshift, μ, δ, Q, state_space, ρ, σ, present_time)
+    end
+end
+
+"""
+```julia
 uniform_transition_matrix(state_space)
 ```
 
