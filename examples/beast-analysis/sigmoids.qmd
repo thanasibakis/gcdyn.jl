@@ -1,0 +1,210 @@
+---
+title: Estimating sigmoids
+format:
+    pdf:
+        fig-dpi: 300
+fig-height: 4
+highlight-style: github
+monofont: Fira Code
+---
+
+```{r}
+#| include: false
+
+library(tidyverse)
+library(patchwork)
+```
+
+```{r}
+sigmoid <- function(x, theta) {
+    theta[3] / (1 + exp(-theta[1] * (x - theta[2]))) + theta[4]
+}
+
+set.seed(10)
+```
+
+\pagebreak
+
+## Uniform x
+
+```{r}
+theta <- c(15, 0.5, 2, 0)
+
+n <- 20
+x <- rbeta(n, 1, 1)
+y <- rnorm(n, sigmoid(x, theta), 0.2)
+
+initial <- c(2, 0, 1, 0)
+
+result <- optim(initial,
+    \(theta) sum((y - sigmoid(x, theta))^2),
+    lower = c(0, -Inf, 0, 0),
+    upper = Inf,
+    method = "L-BFGS-B"
+)
+```
+
+```{r}
+#| echo: false
+
+ggplot() +
+    stat_function(
+        aes(color = "Truth"),
+        fun = sigmoid,
+        args = list(theta = theta),
+        linewidth = 1
+    ) +
+    stat_function(
+        aes(color = "Estimate"),
+        fun = sigmoid,
+        args = list(theta = result$par),
+        linewidth = 1
+    ) +
+    stat_function(
+        aes(color = "Initial"),
+        fun = sigmoid,
+        args = list(theta = initial),
+        linewidth = 1,
+        alpha = 0.3
+    ) +
+    geom_point(aes(x, y), size = 2) +
+    xlim(0, 1)
+```
+
+## Skewed x
+
+```{r}
+theta <- c(15, 0.5, 2, 0)
+
+n <- 20
+x <- rbeta(n, 6, 2)
+y <- rnorm(n, sigmoid(x, theta), 0.2)
+
+initial <- c(2, 0, 1, 0)
+
+result <- optim(initial,
+    \(theta) sum((y - sigmoid(x, theta))^2),
+    lower = c(0, -Inf, 0, 0),
+    upper = Inf,
+    method = "L-BFGS-B"
+)
+```
+
+```{r}
+#| echo: false
+
+ggplot() +
+    stat_function(
+        aes(color = "Truth"),
+        fun = sigmoid,
+        args = list(theta = theta),
+        linewidth = 1
+    ) +
+    stat_function(
+        aes(color = "Estimate"),
+        fun = sigmoid,
+        args = list(theta = result$par),
+        linewidth = 1
+    ) +
+    stat_function(
+        aes(color = "Initial"),
+        fun = sigmoid,
+        args = list(theta = initial),
+        linewidth = 1,
+        alpha = 0.3
+    ) +
+    geom_point(aes(x, y), size = 2) +
+    xlim(0, 1)
+```
+
+## Uniform x (binned)
+
+```{r}
+theta <- c(15, 0.5, 2, 0)
+
+n <- 20
+x <- sample(c(0.25, 0.5, 0.75), size = n, replace = TRUE)
+y <- rnorm(n, sigmoid(x, theta), 0.2)
+
+initial <- c(2, 0, 1, 0)
+
+result <- optim(initial,
+    \(theta) sum((y - sigmoid(x, theta))^2),
+    lower = c(0, -Inf, 0, 0),
+    upper = Inf,
+    method = "L-BFGS-B"
+)
+```
+
+```{r}
+#| echo: false
+
+ggplot() +
+    stat_function(
+        aes(color = "Truth"),
+        fun = sigmoid,
+        args = list(theta = theta),
+        linewidth = 1
+    ) +
+    stat_function(
+        aes(color = "Estimate"),
+        fun = sigmoid,
+        args = list(theta = result$par),
+        linewidth = 1
+    ) +
+    stat_function(
+        aes(color = "Initial"),
+        fun = sigmoid,
+        args = list(theta = initial),
+        linewidth = 1,
+        alpha = 0.3
+    ) +
+    geom_point(aes(x, y), size = 2) +
+    xlim(0, 1)
+```
+
+## Skewed x (binned)
+
+```{r}
+theta <- c(15, 0.5, 2, 0)
+
+n <- 20
+x <- sample(c(0.25, 0.5, 0.75), size = n, replace = TRUE, prob = c(0.15, 0.35, 0.5))
+y <- rnorm(n, sigmoid(x, theta), 0.2)
+
+initial <- c(2, 0, 1, 0)
+
+result <- optim(initial,
+    \(theta) sum((y - sigmoid(x, theta))^2),
+    lower = c(0, -Inf, 0, 0),
+    upper = Inf,
+    method = "L-BFGS-B"
+)
+```
+
+```{r}
+#| echo: false
+
+ggplot() +
+    stat_function(
+        aes(color = "Truth"),
+        fun = sigmoid,
+        args = list(theta = theta),
+        linewidth = 1
+    ) +
+    stat_function(
+        aes(color = "Estimate"),
+        fun = sigmoid,
+        args = list(theta = result$par),
+        linewidth = 1
+    ) +
+    stat_function(
+        aes(color = "Initial"),
+        fun = sigmoid,
+        args = list(theta = initial),
+        linewidth = 1,
+        alpha = 0.3
+    ) +
+    geom_point(aes(x, y), size = 2) +
+    xlim(0, 1)
+```
