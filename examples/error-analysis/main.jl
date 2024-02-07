@@ -1,19 +1,19 @@
 using gcdyn, Turing, StatsPlots
 
-@model function CorrectedModel(trees::Vector{TreeNode}, truth::AbstractBranchingProcess)
+@model function CorrectedModel(trees, truth)
     λ ~ LogNormal(1.5, 1)
     μ ~ LogNormal(0, 0.5)
 
-    sampled_model = ConstantRateBranchingProcess(λ, μ, truth.γ, truth.state_space, truth.ρ, truth.σ, truth.present_time)
+    sampled_model = FixedTypeChangeRateBranchingProcess(λ, μ, truth.γ, truth.ρ, truth.σ, truth.state_space, truth.present_time)
 
     Turing.@addlogprob! sum(gcdyn.stadler_appx_loglikelhood(sampled_model, tree) for tree in trees)
 end
 
-@model function OriginalModel(trees::Vector{TreeNode}, truth::AbstractBranchingProcess)
+@model function OriginalModel(trees, truth)
     λ ~ LogNormal(1.5, 1)
     μ ~ LogNormal(0, 0.5)
 
-    sampled_model = ConstantRateBranchingProcess(λ, μ, truth.γ, truth.state_space, truth.ρ, truth.σ, truth.present_time)
+    sampled_model = FixedTypeChangeRateBranchingProcess(λ, μ, truth.γ, truth.ρ, truth.σ, truth.state_space, truth.present_time)
 
     Turing.@addlogprob! sum(gcdyn.stadler_appx_unconditioned_loglikelhood(sampled_model, tree) for tree in trees)
 end
@@ -81,7 +81,7 @@ function visualize_original(chns, truth)
         end
 
         plt = histogram(medians_original; alpha=0.7, label="Original", normalize=:pdf, fill="grey")
-        vline!([truth.λ]; label="Truth", linewidth=4, color="orange")
+        vline!([truth.λ_yshift]; label="Truth", linewidth=4, color="orange")
         xlims!(0, 3)
         title!("$n trees", titlefontsize=10)
 
@@ -101,13 +101,9 @@ function visualize_original(chns, truth)
     end
 
     plot(λ_plts...; layout=(1, 4), thickness_scaling=0.75, dpi=300, size=(1000, 300), plot_title="Birth rate sampling distributions", plot_titlefontsize=12)
-    #xlabel!("Posterior median")
-    #ylabel!("Density")
     png("birth-rate-errors-original-only.png")
 
     plot(μ_plts...; layout=(1, 4), thickness_scaling=0.75, dpi=300, size=(1000, 300), plot_title="Death rate sampling distributions", plot_titlefontsize=12)
-    #xlabel!("Posterior median")
-    #ylabel!("Density")
     png("death-rate-errors-original-only.png")
 end
 
@@ -128,7 +124,7 @@ function visualize_both(chns, truth)
 
         plt = histogram(medians_original; alpha=0.7, label="Original", normalize=:pdf, fill="grey")
         histogram!(medians_corrected; alpha=0.7, label="Corrected", normalize=:pdf, fill="lightblue")
-        vline!([truth.λ]; label="Truth", linewidth=4, color="orange")
+        vline!([truth.λ_yshift]; label="Truth", linewidth=4, color="orange")
         xlims!(0, 3)
         title!("$n trees", titlefontsize=10)
 
@@ -152,18 +148,14 @@ function visualize_both(chns, truth)
     end
 
     plot(λ_plts...; layout=(1, 4), thickness_scaling=0.75, dpi=300, size=(1000, 300), plot_title="Birth rate sampling distributions", plot_titlefontsize=12)
-    #xlabel!("Posterior median")
-    #ylabel!("Density")
     png("birth-rate-errors.png")
 
     plot(μ_plts...; layout=(1, 4), thickness_scaling=0.75, dpi=300, size=(1000, 300), plot_title="Death rate sampling distributions", plot_titlefontsize=12)
-    #xlabel!("Posterior median")
-    #ylabel!("Density")
     png("death-rate-errors.png")
 end
 
 function main()
-    truth = ConstantRateBranchingProcess(1.8, 1, 0, 1:2, 1, 0, 2)
+    truth = FixedTypeChangeRateBranchingProcess(1.8, 1, 0, 1, 0, 1:2, 2)
     chns = run_simulations(truth)
     visualize_original(chns, truth)
     visualize_both(chns, truth)

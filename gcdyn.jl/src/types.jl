@@ -3,7 +3,7 @@
 # this file should contain only types and be `include`d before other files.
 
 "The possible events that can occur at a node in a [`TreeNode`](@ref)."
-const EVENTS = (:root, :birth, :sampled_death, :unsampled_death, :mutation, :sampled_survival, :unsampled_survival)
+const EVENTS = (:root, :birth, :sampled_death, :unsampled_death, :type_change, :sampled_survival, :unsampled_survival)
 
 """
 ```julia
@@ -59,166 +59,134 @@ AbstractBranchingProcess
 ```
 Abstract supertype for branching processes.
 
-See also [`ConstantRateBranchingProcess`](@ref), [`SigmoidalBirthRateBranchingProcess`](@ref).
+See also [`FixedTypeChangeRateBranchingProcess`](@ref), [`VaryingTypeChangeRateBranchingProcess`](@ref).
 """
 abstract type AbstractBranchingProcess end
 
 """
 ```julia
-ConstantRateBranchingProcess(λ, μ, γ, state_space, [transition_matrix,] ρ, σ, present_time)
+FixedTypeChangeRateBranchingProcess(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, γ, [Π,] ρ, σ, state_space, present_time)
 ```
 
 Constructs a multitype branching process with the given parameters.
 
-Rate parameters are notated as `λ` (birth rate), `μ` (death rate), and `γ` (mutation rate).
+A parameterized sigmoid curve (with `λ_xscale`, `λ_xshift`, `λ_yscale`, and `λ_yshift`) maps states to birth rates.
+Other rate parameters are notated as `μ` (death rate), and `γ` (type change rate).
 Sampling probabilities are notated as `ρ` (survival sampling probability) and `σ` (death sampling probability).
 Ensure that `present_time > 0`, since the process is defined to start at time `0`.
 
-If `transition_matrix` is omitted, specifies uniform transition probabilities to all states.
+If a transition matrix `Π` is omitted, specifies uniform transition probabilities to all states.
 
 See also [`uniform_transition_matrix`](@ref), [`random_walk_transition_matrix`](@ref).
 """
-struct ConstantRateBranchingProcess{R₁ <: Real, R₂ <: Real, R₃ <: Real, S <: AbstractVector{T} where T <: Real, M <: AbstractMatrix{R} where R <: Real} <: AbstractBranchingProcess
-    λ::R₁
-    μ::R₂
-    γ::R₃
-    state_space::S
-    transition_matrix::M
-    ρ::Float64
-    σ::Float64
-    present_time::Float64
-
-    function ConstantRateBranchingProcess(λ, μ, γ, state_space, transition_matrix, ρ, σ, present_time)
-        if λ < 0 || μ < 0 || γ < 0
-            throw(ArgumentError("Rate parameters must be positive"))
-        elseif ρ < 0 || ρ > 1
-            throw(ArgumentError("ρ must be between 0 and 1"))
-        elseif σ < 0 || σ > 1
-            throw(ArgumentError("σ must be between 0 and 1"))
-        elseif present_time < 0
-            throw(ArgumentError("Time must be positive"))
-        elseif length(state_space) != size(transition_matrix, 1)
-            throw(DimensionMismatch("The number of states in the state space must match the number of rows in the transition matrix."))
-        elseif length(state_space) != size(transition_matrix, 2)
-            throw(DimensionMismatch("The number of states in the state space must match the number of columns in the transition matrix."))
-        elseif any(transition_matrix .< 0) || any(transition_matrix .> 1)
-            throw(ArgumentError("The transition matrix must contain only values between 0 and 1."))
-        elseif any(sum(transition_matrix, dims=2) .!= 1)
-            throw(ArgumentError("The transition matrix must contain only rows that sum to 1."))
-        elseif any(!=(0), transition_matrix[i,i] for i in minimum(axes(transition_matrix))) && length(state_space) > 1
-            throw(ArgumentError("The transition matrix must contain only zeros on the diagonal."))
-        end
-
-        return new{typeof(λ), typeof(μ), typeof(γ), typeof(state_space), typeof(transition_matrix)}(λ, μ, γ, state_space, transition_matrix, ρ, σ, present_time)
-    end
-end
-
-function ConstantRateBranchingProcess(λ, μ, γ, state_space, ρ, σ, present_time)
-    n = length(state_space)
-    transition_matrix = (ones(n, n) - I) / (n - 1)
-
-    return ConstantRateBranchingProcess(λ, μ, γ, state_space, transition_matrix, ρ, σ, present_time)
-end
-
-"""
-```julia
-SigmoidalBirthRateBranchingProcess(xscale, xshift, yscale, yshift, μ, γ, state_space, [transition_matrix,] ρ, σ, present_time)
-```
-
-Constructs a multitype branching process with the given parameters.
-
-A parameterized sigmoid curve (with `xscale`, `xshift`, `yscale`, and `yshift`) maps states to birth rates.
-Other rate parameters are notated as `μ` (death rate), and `γ` (mutation rate).
-Sampling probabilities are notated as `ρ` (survival sampling probability) and `σ` (death sampling probability).
-Ensure that `present_time > 0`, since the process is defined to start at time `0`.
-
-If `transition_matrix` is omitted, specifies uniform transition probabilities to all states.
-
-See also [`uniform_transition_matrix`](@ref), [`random_walk_transition_matrix`](@ref).
-"""
-struct SigmoidalBirthRateBranchingProcess{R₁ <: Real, R₂ <: Real, R₃ <: Real, R₄ <: Real, R₅ <: Real, R₆ <: Real, S <: AbstractVector{T} where T <: Real, M <: AbstractMatrix{R} where R <: Real} <: AbstractBranchingProcess
-    xscale::R₁
-    xshift::R₂
-    yscale::R₃
-    yshift::R₄
+struct FixedTypeChangeRateBranchingProcess{R₁ <: Real, R₂ <: Real, R₃ <: Real, R₄ <: Real, R₅ <: Real, R₆ <: Real, M <: AbstractMatrix{R} where R <: Real, S <: AbstractVector{T} where T <: Real} <: AbstractBranchingProcess
+    λ_xscale::R₁
+    λ_xshift::R₂
+    λ_yscale::R₃
+    λ_yshift::R₄
     μ::R₅
     γ::R₆
-    state_space::S
-    transition_matrix::M
+    Π::M
     ρ::Float64
     σ::Float64
+    state_space::S
     present_time::Float64
 
-    function SigmoidalBirthRateBranchingProcess(xscale, xshift, yscale, yshift, μ, γ, state_space, transition_matrix, ρ, σ, present_time)
+    function FixedTypeChangeRateBranchingProcess(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, γ, Π, ρ, σ, state_space, present_time)
         if ρ < 0 || ρ > 1
             throw(ArgumentError("ρ must be between 0 and 1"))
         elseif σ < 0 || σ > 1
             throw(ArgumentError("σ must be between 0 and 1"))
         elseif present_time < 0
             throw(ArgumentError("Time must be positive"))
-        elseif length(state_space) != size(transition_matrix, 1)
+        elseif length(state_space) != size(Π, 1)
             throw(DimensionMismatch("The number of states in the state space must match the number of rows in the transition matrix."))
-        elseif length(state_space) != size(transition_matrix, 2)
+        elseif length(state_space) != size(Π, 2)
             throw(DimensionMismatch("The number of states in the state space must match the number of columns in the transition matrix."))
-        elseif any(transition_matrix .< 0) || any(transition_matrix .> 1)
+        elseif any(Π .< 0) || any(Π .> 1)
             throw(ArgumentError("The transition matrix must contain only values between 0 and 1."))
-        elseif any(sum(transition_matrix, dims=2) .!= 1)
-           throw(ArgumentError("The transition matrix must contain only rows that sum to 1."))
-        elseif any(!=(0), transition_matrix[i,i] for i in minimum(axes(transition_matrix))) && length(state_space) > 1
-           throw(ArgumentError("The transition matrix must contain only zeros on the diagonal."))
+        elseif any(sum(Π, dims=2) .!= 1)
+           throw(ArgumentError("The transition probability matrix must contain only rows that sum to 1."))
+        elseif any(!=(0), Π[i,i] for i in minimum(axes(Π))) && length(state_space) > 1
+           throw(ArgumentError("The transition probability matrix must contain only zeros on the diagonal."))
         end
 
-        return new{typeof(xscale), typeof(xshift), typeof(yscale), typeof(yshift), typeof(μ), typeof(γ), typeof(state_space), typeof(transition_matrix)}(xscale, xshift, yscale, yshift, μ, γ, state_space, transition_matrix, ρ, σ, present_time)
+        return new{typeof(λ_xscale), typeof(λ_xshift), typeof(λ_yscale), typeof(λ_yshift), typeof(μ), typeof(γ), typeof(Π), typeof(state_space),}(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, γ, Π, ρ, σ, state_space, present_time)
     end
 end
 
-function SigmoidalBirthRateBranchingProcess(xscale, xshift, yscale, yshift, μ, γ, state_space, ρ, σ, present_time)
-    transition_matrix = uniform_transition_matrix(state_space)
+function FixedTypeChangeRateBranchingProcess(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, γ, ρ, σ, state_space, present_time)
+    Π = uniform_transition_matrix(state_space)
 
-    return SigmoidalBirthRateBranchingProcess(xscale, xshift, yscale, yshift, μ, γ, state_space, transition_matrix, ρ, σ, present_time)
+    return FixedTypeChangeRateBranchingProcess(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, γ, Π, ρ, σ, state_space, present_time)
 end
 
 """
 ```julia
-VaryingTypeChangeRateBranchingProcess(xscale, xshift, yscale, yshift, μ, δ, Q, state_space, ρ, σ, present_time)
+FixedTypeChangeRateBranchingProcess(λ, μ, γ, [transition_matrix,] ρ, σ, state_space, present_time)
 ```
 
 Constructs a multitype branching process with the given parameters.
 
-Similar to [`SigmoidalBirthRateBranchingProcess`](@ref), but with a reparameterization regarding mutations.
-`δ` is a scaling parameter for the known mutation rate matrix `Q`, which replaces the constant mutation rate and transition probability matrix.
+Rate parameters are notated as `λ` (birth rate), `μ` (death rate), and `γ` (type change rate).
+Sampling probabilities are notated as `ρ` (survival sampling probability) and `σ` (death sampling probability).
+Ensure that `present_time > 0`, since the process is defined to start at time `0`.
+
+If a transition matrix `Π` is omitted, specifies uniform transition probabilities to all states.
+
+See also [`uniform_transition_matrix`](@ref), [`random_walk_transition_matrix`](@ref).
 """
-struct VaryingTypeChangeRateBranchingProcess{R₁ <: Real, R₂ <: Real, R₃ <: Real, R₄ <: Real, R₅ <: Real, R₆ <: Real, S <: AbstractVector{T} where T <: Real, M <: AbstractMatrix{R} where R <: Real} <: AbstractBranchingProcess
-    xscale::R₁
-    xshift::R₂
-    yscale::R₃
-    yshift::R₄
+function FixedTypeChangeRateBranchingProcess(λ, μ, γ, Π, ρ, σ, state_space, present_time)
+    return FixedTypeChangeRateBranchingProcess(0, 0, 0, λ, μ, γ, Π, ρ, σ, state_space, present_time)
+end
+
+function FixedTypeChangeRateBranchingProcess(λ, μ, γ, ρ, σ, state_space, present_time)
+    Π = uniform_transition_matrix(state_space)
+
+    return FixedTypeChangeRateBranchingProcess(λ, μ, γ, Π, ρ, σ, state_space, present_time)
+end
+
+"""
+```julia
+VaryingTypeChangeRateBranchingProcess(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, σ, state_space, present_time)
+```
+
+Constructs a multitype branching process with the given parameters.
+
+Similar to [`FixedTypeChangeRateBranchingProcess`](@ref), but with a reparameterization regarding type changes.
+`δ` is a scaling parameter for the known type change rate matrix `Γ`, which replaces the constant type change rate and transition probability matrix.
+"""
+struct VaryingTypeChangeRateBranchingProcess{R₁ <: Real, R₂ <: Real, R₃ <: Real, R₄ <: Real, R₅ <: Real, R₆ <: Real, M <: AbstractMatrix{R} where R <: Real, S <: AbstractVector{T} where T <: Real} <: AbstractBranchingProcess
+    λ_xscale::R₁
+    λ_xshift::R₂
+    λ_yscale::R₃
+    λ_yshift::R₄
     μ::R₅
     δ::R₆
-    Q::M
-    state_space::S
+    Γ::M
     ρ::Float64
     σ::Float64
+    state_space::S
     present_time::Float64
 
-    function VaryingTypeChangeRateBranchingProcess(xscale, xshift, yscale, yshift, μ, δ, Q, state_space, ρ, σ, present_time)
+    function VaryingTypeChangeRateBranchingProcess(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, σ, state_space, present_time)
         if ρ < 0 || ρ > 1
             throw(ArgumentError("ρ must be between 0 and 1"))
         elseif σ < 0 || σ > 1
             throw(ArgumentError("σ must be between 0 and 1"))
         elseif present_time < 0
             throw(ArgumentError("Time must be positive"))
-        elseif length(state_space) != size(Q, 1)
+        elseif length(state_space) != size(Γ, 1)
             throw(DimensionMismatch("The number of states in the state space must match the number of rows in the rate matrix."))
-        elseif length(state_space) != size(Q, 2)
+        elseif length(state_space) != size(Γ, 2)
             throw(DimensionMismatch("The number of states in the state space must match the number of columns in the rate matrix."))
-        elseif any(sum(transition_matrix, dims=2) .!= 0)
-           throw(ArgumentError("The transition matrix must contain only rows that sum to 0."))
-        elseif any(>(0), transition_matrix[i,i] for i in minimum(axes(transition_matrix))) && length(state_space) > 1
-           throw(ArgumentError("The transition matrix must contain only negative or zero values on the diagonal."))
+        elseif any(sum(Γ, dims=2) .!= 0)
+           throw(ArgumentError("The transition rate matrix must contain only rows that sum to 0."))
+        elseif any(>(0), Γ[i,i] for i in minimum(axes(Γ))) && length(state_space) > 1
+           throw(ArgumentError("The transition rate matrix must contain only negative or zero values on the diagonal."))
         end
 
-        return new{typeof(xscale), typeof(xshift), typeof(yscale), typeof(yshift), typeof(μ), typeof(δ), typeof(Q), typeof(state_space)}(xscale, xshift, yscale, yshift, μ, δ, Q, state_space, ρ, σ, present_time)
+        return new{typeof(λ_xscale), typeof(λ_xshift), typeof(λ_yscale), typeof(λ_yshift), typeof(μ), typeof(δ), typeof(Γ), typeof(state_space)}(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, σ, state_space, present_time)
     end
 end
 

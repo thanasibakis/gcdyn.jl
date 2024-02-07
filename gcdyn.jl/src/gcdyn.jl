@@ -12,8 +12,8 @@ using
 
 export
     AbstractBranchingProcess,
-    ConstantRateBranchingProcess,
-    SigmoidalBirthRateBranchingProcess,
+    FixedTypeChangeRateBranchingProcess,
+    VaryingTypeChangeRateBranchingProcess,
     TreeNode,
     uniform_transition_matrix,
     random_walk_transition_matrix,
