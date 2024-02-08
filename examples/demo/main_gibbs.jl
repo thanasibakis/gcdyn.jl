@@ -22,8 +22,8 @@ end
 function main()
     println("Setting up model...")
 
-    Γ = [-4 2 1 1; 1 -4 2 1; 2 1 -4 1; 1 2 1 -4]
-    truth = VaryingTypeChangeRateBranchingProcess(1, 5, 1.5, 1, 1.3, 0.25, Γ, 1, 0, [2, 4, 6, 8], 3)
+    Γ = [-1 0.5 0.25 0.25; 2 -4 1 1; 2 2 -5 1; 0.125 0.125 0.25 -0.5]
+    truth = VaryingTypeChangeRateBranchingProcess(1, 5, 1.5, 1, 1.3, 1, Γ, 1, 0, [2, 4, 6, 8], 3)
     trees = rand_tree(truth, 15, truth.state_space[1])
 
     model = Model(trees, truth.Γ, truth.state_space, truth.present_time)
@@ -39,11 +39,9 @@ function main()
     end
 
     println("Sampling from prior...")
-
     prior_samples = sample(model, Prior(), 100) |> DataFrame
 
     println("Sampling from posterior...")
-
     posterior_samples = sample(
         model,
         Gibbs(
@@ -58,7 +56,6 @@ function main()
     ) |> DataFrame
 
     println("Exporting samples...")
-
     CSV.write("posterior-samples.csv", posterior_samples)
 
     println("Visualizing...")
@@ -71,7 +68,6 @@ function main()
 
     plot!(x -> gcdyn.sigmoid(x, truth.λ_xscale, truth.λ_xshift, truth.λ_yscale, truth.λ_yshift); color="#1A4F87", width=5, label="Truth")
     title!("Birth rate (prior)")
-
     png("birth-rate-prior-samples.png")
 
     plot(xlims=(0, 10), ylims=(0, 6), dpi=300)
@@ -82,21 +78,18 @@ function main()
 
     plot!(x -> gcdyn.sigmoid(x, truth.λ_xscale, truth.λ_xshift, truth.λ_yscale, truth.λ_yshift); color="#1A4F87", width=5, label="Truth")
     title!("Birth rate (posterior)")
-
     png("birth-rate-posterior-samples.png")
 
     plot(LogNormal(0, 0.5); xlims=(0, 3), label="Prior", fill=(0, 0.5), color="grey", width=0, dpi=300)
     histogram!(posterior_samples[:, :μ]; normalize=:pdf, label="Posterior", fill="lightblue", alpha=0.7)
     vline!([truth.μ]; label="Truth", color="#1A4F87", width=6)
     title!("Death rate")
-
     png("death-rate.png")
 
     plot(LogNormal(0, 0.5); xlims=(0, 4), label="Prior", fill=(0, 0.5), color="grey", width=0, dpi=300)
     histogram!(posterior_samples[:, :δ]; normalize=:pdf, label="Posterior", fill="lightblue", alpha=0.7)
-    vline!([truth.γ]; label="Truth", color="#1A4F87", width=6)
+    vline!([truth.δ]; label="Truth", color="#1A4F87", width=6)
     title!("Type change rate scalar")
-
     png("type-change-rate-scalar.png")
 
     print("Done!")    
