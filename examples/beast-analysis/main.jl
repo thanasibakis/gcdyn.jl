@@ -1,5 +1,5 @@
 println("Loading packages...")
-using CSV, gcdyn, DataFrames, Distributions, JLD2, JSON, StatsPlots, Turing
+using CSV, gcdyn, DataFrames, Distributions, JLD2, JSON, LinearAlgebra, StatsPlots, Turing
 
 function main()
 	println("Reading trees...")
@@ -11,9 +11,9 @@ function main()
         push!(germinal_centers, trees)
     end
 
-	println("Binning states...")
-	all_trees = (tree for gc in germinal_centers for tree in gc)
-	bin_mapping = discretize_states!(all_trees, 5)
+	println("Determining state bins...")
+	bin_mapping = get_bin_mapping()
+	state_space = values(bin_mapping) |> collect |> sort
 
 	function get_discretization(affinity)
 		for (bin, value) in bin_mapping
@@ -31,13 +31,8 @@ function main()
 		end
 	end
 	
-	state_space = values(bin_mapping) |> collect |> sort
-
-	println("Performing inference.")
-
-	treeset = collect(sample(gc) for gc in germinal_centers)
-
 	println("Estimating transition matrix...")
+	treeset = collect(sample(gc) for gc in germinal_centers)
 	sequences = [node.info[:sequence] for tree in treeset for node in PostOrderTraversal(tree)]
 	mutated_affinities = pipeline(`bin/simulate-s5f-mutations`; stdin=IOBuffer(join(sequences, "\n"))) |>
 		(command -> read(command, String)) |>
@@ -87,6 +82,26 @@ function main()
 	) |> DataFrame
 
 	println("Done!")
+end
+
+function get_bin_mapping()	
+	STATE_SPACE_SIZE = 5
+
+	# We will use the 10x sequences to determine the state bins
+	affinities = CSV.read("../../lib/gcreplay/analysis/output/10x/data.csv", DataFrame).delta_bind_CGG
+	
+	# Create bins from evenly spaced quantiles, then discretize states to the medians of their bins
+	cutoffs = quantile(affinities, 0:(1/STATE_SPACE_SIZE):1)
+	bin_table = DataFrame(
+		state=affinities,
+		bin=cut(affinities, cutoffs; extend=true)
+	)
+	bin_table = transform(groupby(bin_table, :bin), :state => median => :binned_state)
+	bin_table = select(bin_table, Not(:state)) |> unique
+	
+	parse_interval(row) = parse.(Float64, split(convert(String, row.bin)[2:end-1], ", "))
+	
+	Dict(parse_interval(row) => row.binned_state for row in eachrow(bin_table))
 end
 
 @model function Model(trees, state_space, transition_matrix, present_time)

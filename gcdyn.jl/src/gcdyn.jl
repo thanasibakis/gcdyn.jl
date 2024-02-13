@@ -2,7 +2,6 @@ module gcdyn
 
 using
     AbstractTrees,
-    CategoricalArrays,
     DataFrames,
     Distributions,
     LinearAlgebra,
@@ -21,7 +20,9 @@ export
     LeafTraversal,
     PostOrderTraversal,
     PreOrderTraversal,
-
+    λ,
+    μ,
+    γ,
     loglikelihood,
     rand_tree
 
