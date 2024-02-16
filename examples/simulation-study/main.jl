@@ -23,8 +23,7 @@ using gcdyn, CSV, DataFrames, Random, Turing
         λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, 1, 0, state_space, present_time
     )
 
-    # TODO: remove the ismissing check once Turing is patched
-    if DynamicPPL.leafcontext(__context__) !== Turing.PriorContext() && !ismissing(trees)
+    if DynamicPPL.leafcontext(__context__) !== Turing.PriorContext()
         Turing.@addlogprob! loglikelihood(sampled_model, trees)
     end
 end
