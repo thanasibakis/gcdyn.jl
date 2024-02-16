@@ -1,8 +1,0 @@
-95% Coverage proportions
-
-λ_xscale: 0.92
-λ_xshift: 0.94
-λ_yscale: 0.94
-λ_yshift: 0.94
-μ: 0.91
-δ: 0.86
