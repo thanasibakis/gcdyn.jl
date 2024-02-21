@@ -40,7 +40,7 @@ function γ(model::FixedTypeChangeRateBranchingProcess, state)
 end
 
 function γ(model::VaryingTypeChangeRateBranchingProcess, state)
-    i = findfirst_equals(model.state_space, state)
+    i = findfirst(==(state), model.state_space)
 
     return model.δ * -model.Γ[i, i]
 end
@@ -57,8 +57,8 @@ function γ(model::FixedTypeChangeRateBranchingProcess, from_state, to_state)
         return 0
     end
 
-    i = findfirst_equals(model.state_space, from_state)
-    j = findfirst_equals(model.state_space, to_state)
+    i = findfirst(==(from_state), model.state_space)
+    j = findfirst(==(to_state), model.state_space)
 
     return model.γ * model.Π[i, j]
 end
@@ -68,8 +68,8 @@ function γ(model::VaryingTypeChangeRateBranchingProcess, from_state, to_state)
         return 0
     end
 
-    i = findfirst_equals(model.state_space, from_state)
-    j = findfirst_equals(model.state_space, to_state)
+    i = findfirst(==(from_state), model.state_space)
+    j = findfirst(==(to_state), model.state_space)
 
     return model.δ * model.Γ[i, j]
 end
@@ -189,7 +189,7 @@ function StatsAPI.loglikelihood(
         abstol = abstol
     )
 
-    p_i = p.u[end][findfirst_equals(model.state_space, tree.state)]
+    p_i = p.u[end][findfirst(==(tree.state), model.state_space)]
     result -= log(1 - p_i)
 
     return result
@@ -251,32 +251,13 @@ function dpq_dt!(dpq, pq, args, t)
     μₓ = μ(model, parent_state)
     γₓ = γ(model, parent_state)
 
-    p_i = p[findfirst_equals(model.state_space, parent_state)]
+    p_i = p[findfirst(==(parent_state), model.state_space)]
     dq_i = -(λₓ + μₓ + γₓ) * q_i + 2 * λₓ * q_i * p_i
 
     # Need to pass a view instead of a slice, to pass by reference instead of value
     dp = view(dpq, 1:lastindex(dpq)-1)
     dp_dt!(dp, p, model, t)
     dpq[end] = dq_i
-end
-
-"""
-```julia
-findfirst_equals(x, c)
-```
-
-Like `findfirst(x .== c)`, but avoids making memory allocations.
-
-See also [`findfirst`](@ref).
-"""
-function findfirst_equals(x, c)
-    for i in 1:length(x)
-        if x[i] == c
-            return i
-        end
-    end
-
-    return -1
 end
 
 """
@@ -378,7 +359,7 @@ function mutate!(node::TreeNode, model::FixedTypeChangeRateBranchingProcess)
         throw(ArgumentError("The state of the node must be in the state space of the mutator."))
     end
 
-    transition_probs = model.transition_matrix[findfirst_equals(model.state_space, node.state), :]
+    transition_probs = model.transition_matrix[findfirst(==(node.state), model.state_space), :]
     node.state = sample(model.state_space, Weights(transition_probs))
 end
 
@@ -387,7 +368,7 @@ function mutate!(node::TreeNode, model::VaryingTypeChangeRateBranchingProcess)
         throw(ArgumentError("The state of the node must be in the state space of the mutator."))
     end
 
-    i = findfirst_equals(model.state_space, node.state)
+    i = findfirst(==(node.state), model.state_space)
     transition_probs = model.Γ[i, :] ./ -model.Γ[i, i]
     transition_probs[i] = 0
     node.state = sample(model.state_space, Weights(transition_probs))
