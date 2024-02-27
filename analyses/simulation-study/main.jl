@@ -34,17 +34,10 @@ function main()
     Γ = [-1 0.5 0.25 0.25; 2 -4 1 1; 2 2 -5 1; 0.125 0.125 0.25 -0.5]
     truth = VaryingTypeChangeRateBranchingProcess(1, 5, 1.5, 1, 1.3, 1, Γ, 1, 0, [2, 4, 6, 8], 3)
 
-	# println("Sampling from prior...")
-    # prior_samples = sample(Model(missing, truth.Γ, truth.state_space, truth.present_time), Prior(), 100) |> DataFrame
-
 	println("Sampling from posterior...")
     num_treesets = 100
 	num_trees_per_set = 15
     dfs = Vector{DataFrame}(undef, num_treesets)
-
-    # Let's export each run to a separate CSV file in case our program is OOM killed
-    tmp_dir = "tmp-" * randstring(10)
-    mkpath(tmp_dir)
 
     Threads.@threads for i in 1:num_treesets
         treeset = rand_tree(truth, num_trees_per_set, truth.state_space[1]);
@@ -56,13 +49,11 @@ function main()
         ) |> DataFrame
 
         dfs[i].run .= i
-        CSV.write("$tmp_dir/posterior-samples-$i.csv", dfs[i])
     end
 
     println("Exporting samples...")
     posterior_samples = vcat(dfs...)
     CSV.write("posterior-samples.csv", posterior_samples)
-    rm(tmp_dir, recursive=true)
 
 	println("Done!")
 end
