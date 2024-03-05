@@ -105,7 +105,7 @@ struct FixedTypeChangeRateBranchingProcess{R₁ <: Real, R₂ <: Real, R₃ <: R
             throw(DimensionMismatch("The number of states in the state space must match the number of columns in the transition matrix."))
         elseif any(Π .< 0) || any(Π .> 1)
             throw(ArgumentError("The transition matrix must contain only values between 0 and 1."))
-        elseif any(sum(Π, dims=2) .!= 1)
+        elseif any(≉(1; atol=1e-10), sum(Π, dims=2))
            throw(ArgumentError("The transition probability matrix must contain only rows that sum to 1."))
         elseif any(!=(0), Π[i,i] for i in minimum(axes(Π))) && length(state_space) > 1
            throw(ArgumentError("The transition probability matrix must contain only zeros on the diagonal."))
@@ -180,7 +180,7 @@ struct VaryingTypeChangeRateBranchingProcess{R₁ <: Real, R₂ <: Real, R₃ <:
             throw(DimensionMismatch("The number of states in the state space must match the number of rows in the rate matrix."))
         elseif length(state_space) != size(Γ, 2)
             throw(DimensionMismatch("The number of states in the state space must match the number of columns in the rate matrix."))
-        elseif any(sum(Γ, dims=2) .!= 0)
+        elseif any(≉(0; atol=1e-10), sum(Γ, dims=2))
            throw(ArgumentError("The transition rate matrix must contain only rows that sum to 0."))
         elseif any(>(0), Γ[i,i] for i in minimum(axes(Γ))) && length(state_space) > 1
            throw(ArgumentError("The transition rate matrix must contain only negative or zero values on the diagonal."))
