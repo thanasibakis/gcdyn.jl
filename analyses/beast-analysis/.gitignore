@@ -1,6 +1,5 @@
 .nextflow/
 data/
-output/
 work/
 
 .nextflow.log*

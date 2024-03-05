@@ -8,7 +8,7 @@ workflow {
 }
 
 process beast_to_treejson {
-    publishDir "output/json/", saveAs: { "${id}." + it }
+    publishDir "data/json/", saveAs: { "${id}." + it }
 
     input:
     tuple val(id), path(history_treesfile)
@@ -25,7 +25,7 @@ process beast_to_treejson {
 }
 
 process treejson_to_julia {
-    publishDir "output/jld2/", saveAs: { "${id}." + it }
+    publishDir "data/jld2/", saveAs: { "${id}." + it }
 
     input:
     tuple val(id), path(treejson_file)
