@@ -1,15 +1,6 @@
 library(tidyverse)
 
-# Get the list of all files in the directory and subdirectories
-all_files <- dir(path = ".", full.names = TRUE, recursive = TRUE)
-
-# Filter the list to include only CSV files in directories starting with "tmp-"
-csv_files <- grep("tmp-.*/.*\\.csv$", all_files, value = TRUE)
-
-# Read all the CSV files into a single data frame, updating the run column to be unique
-posterior_samples <- lapply(csv_files, read_csv) |>
-	bind_rows(.id = "run") |>
-	mutate(run = as.numeric(run))
+posterior_samples <- read_csv("posterior-samples.csv")
 
 prior_samples <- tibble(
 	λ_xscale = rlnorm(1000, 0.5, 0.75),
