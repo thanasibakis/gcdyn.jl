@@ -46,7 +46,9 @@ function main()
 	treeset = [germinal_centers[2][1]]
 	present_time = maximum([node.t for tree in treeset for node in PostOrderTraversal(tree)])
 
-	model = Model(treeset, tc_rate_matrix, state_space, present_time)
+	ρ = mean(length(LeafTraversal(tree)) / 1000 for tree in treeset)
+
+	model = Model(treeset, tc_rate_matrix, ρ, state_space, present_time)
 	posterior_samples = sample(
 		model,
 		Gibbs(
@@ -60,13 +62,13 @@ function main()
 	println("Done!")
 end
 
-@model function Model(trees, Γ, state_space, present_time)
-	λ		~ LogNormal(0, 1)
-    μ       ~ LogNormal(0, 1)
-    δ       ~ LogNormal(0, 1)
+@model function Model(trees, Γ, ρ, state_space, present_time)
+	λ		~ LogNormal(0, 1.2)
+    μ       ~ LogNormal(0, 1.2)
+    δ       ~ LogNormal(0, 1.2)
 
 	if DynamicPPL.leafcontext(__context__) !== Turing.PriorContext()
-		sampled_model = VaryingTypeChangeRateBranchingProcess(0, 0, 0, λ, μ, δ, Γ, 1, 0, state_space, present_time)
+		sampled_model = VaryingTypeChangeRateBranchingProcess(0, 0, 0, λ, μ, δ, Γ, ρ, 0, state_space, present_time)
         
 		Turing.@addlogprob! loglikelihood(sampled_model, trees; reltol=1e-3, abstol=1e-3)
     end
