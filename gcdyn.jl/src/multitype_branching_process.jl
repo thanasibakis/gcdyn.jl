@@ -42,6 +42,10 @@ end
 function γ(model::VaryingTypeChangeRateBranchingProcess, state)
     i = findfirst(==(state), model.state_space)
 
+    if isnothing(i)
+        throw(ArgumentError("The state must be in the state space of the model."))
+    end
+
     return model.δ * -model.Γ[i, i]
 end
 
@@ -60,6 +64,10 @@ function γ(model::FixedTypeChangeRateBranchingProcess, from_state, to_state)
     i = findfirst(==(from_state), model.state_space)
     j = findfirst(==(to_state), model.state_space)
 
+    if isnothing(i) || isnothing(j)
+        throw(ArgumentError("The states must be in the state space of the model."))
+    end
+
     return model.γ * model.Π[i, j]
 end
 
@@ -70,6 +78,10 @@ function γ(model::VaryingTypeChangeRateBranchingProcess, from_state, to_state)
 
     i = findfirst(==(from_state), model.state_space)
     j = findfirst(==(to_state), model.state_space)
+
+    if isnothing(i) || isnothing(j)
+        throw(ArgumentError("The states must be in the state space of the model."))
+    end
 
     return model.δ * model.Γ[i, j]
 end
@@ -105,6 +117,8 @@ function StatsAPI.loglikelihood(
     q_start = Dict{TreeNode, T}()
     q_end = Dict{TreeNode, T}()
 
+    # If σ>0, leaves may be at non-present times, so it's incorrect to initialize
+    # p to be 1-ρ for all leaf times
     for leaf in LeafTraversal(tree)
         # Be sure to specify the iip=true of the ODEProblem for type stability
         # and fewer memory allocations
@@ -142,6 +156,11 @@ function StatsAPI.loglikelihood(
                 λ(model, event.up.state) * q_start[event.children[1]] * q_start[event.children[2]]
             )
         elseif event.event == :type_change
+            if event.state == event.up.state
+                @warn "Self-loop encountered at a type change event in the tree. Density will evaluate to zero."
+                return -Inf
+            end
+
             p_end[event] = p_start[event.children[1]]
             q_end[event] = (
                 γ(model, event.up.state, event.state)
@@ -426,7 +445,7 @@ Replaces the state attribute of all nodes in `tree` with the result of the calla
 Optionally but by default, if the map results in a type change event with the same state as its parent,
 the type change event is pruned from the tree.
 """
-function map_states!(tree, mapping; prune_self_loops = true)
+function map_states!(mapping, tree; prune_self_loops = true)
     for node in PreOrderTraversal(tree)
         node.state = mapping(node.state)
 

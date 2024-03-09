@@ -24,7 +24,8 @@ export
     μ,
     γ,
     loglikelihood,
-    rand_tree
+    rand_tree,
+    map_states!
 
 include("types.jl")
 include("treenode.jl")

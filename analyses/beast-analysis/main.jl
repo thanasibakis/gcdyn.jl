@@ -23,28 +23,30 @@ function main()
 	println("Reading trees...")
     germinal_centers = Vector{Vector{TreeNode}}()
 
-    #for file in readdir("data/jld2/")
-	for file in readdir("data/jld2/")[1:2]
+	#for file in readdir("data/jld2/")
+    for file in readdir("data/jld2/")[1:2]
         trees = load_object(joinpath("data/jld2/", file))
         push!(germinal_centers, trees)
     end
 
 	for gc in germinal_centers
 		for tree in gc
+			# This is my bad, I changed the event name after exporting JLD2 trees
 			for node in PostOrderTraversal(tree)
-				node.state = get_discretization(node.state, discretization_table)
-
-				# This is my bad, I changed the event name after export JLD2 trees
 				if node.event == :mutation
 					node.event = :type_change
 				end
+			end
+
+			map_states!(tree) do state
+				get_discretization(state, discretization_table)
 			end
 		end
 	end
 
 	println("Sampling from posterior...")
 	treeset = [germinal_centers[2][1]]
-	present_time = maximum([node.t for tree in treeset for node in PostOrderTraversal(tree)])
+	present_time = maximum([node.t for tree in treeset for node in LeafTraversal(tree)])
 
 	ρ = mean(length(LeafTraversal(tree)) / 1000 for tree in treeset)
 
@@ -58,6 +60,8 @@ function main()
 		),
 		10
 	) |> DataFrame
+
+	display(posterior_samples)
 
 	println("Done!")
 end
