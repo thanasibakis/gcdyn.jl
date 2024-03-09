@@ -19,11 +19,11 @@ using gcdyn, CSV, DataFrames, Turing, StatsPlots
     μ        = exp(log_μ * 0.5)
     δ        = exp(log_δ * 0.5)
 
-    sampled_model = VaryingTypeChangeRateBranchingProcess(
-        λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, 1, 0, state_space, present_time
-    )
-
     if DynamicPPL.leafcontext(__context__) !== Turing.PriorContext()
+        sampled_model = VaryingTypeChangeRateBranchingProcess(
+            λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, 1, 0, state_space, present_time
+        )
+
         Turing.@addlogprob! loglikelihood(sampled_model, trees)
     end
 end
