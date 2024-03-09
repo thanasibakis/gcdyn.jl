@@ -1,4 +1,4 @@
-using gcdyn, AbstractTrees, StatsBase, Test
+using gcdyn, StatsBase, Test
 
 function test_rand_tree(n, λ, μ, present_time)
     # Assumes ρ = 1. σ should not matter
@@ -27,7 +27,7 @@ function test_fully_observed_likelihoods(n, λ, μ, γ, state_space, present_tim
     @test naive_ll ≈ appx_ll atol=1e-1
 end
 
-function test_stadler_likelihoods(n, λ, μ, present_time)
+function test_no_extinction_likelihoods(n, λ, μ, present_time)
     model = FixedTypeChangeRateBranchingProcess(λ, μ, 0, 1, 0, 1:2, present_time)
     trees = rand_tree(model, n, 1)
 
@@ -38,6 +38,6 @@ end
 
 @testset "gcdyn" begin
     test_rand_tree(10000, 2.5, 1.1, 2)
-    test_fully_observed_likelihoods(1000, 2.5, 1.1, 0, 1:3, 1)
-    test_stadler_likelihoods(1000, 2.5, 1.1, 1)
+    test_fully_observed_likelihoods(1000, 2.5, 1.1, 1.1, 1:3, 3)
+    test_no_extinction_likelihoods(1000, 2.5, 1.1, 3)
 end
