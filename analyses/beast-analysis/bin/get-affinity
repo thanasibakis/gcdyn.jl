@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+
+import fileinput
+from pathlib import Path
+
+from gcdyn import gpmap
+from experiments import replay
+
+dms = replay.dms(Path(__file__).parent / "support" / "final_variant_scores.csv")
+gp_map = gpmap.AdditiveGPMap(dms["affinity"], nonsense_phenotype=dms["affinity"].min().min())
+
+for line in fileinput.input():
+    sequence = line.strip()
+    print(gp_map(sequence))

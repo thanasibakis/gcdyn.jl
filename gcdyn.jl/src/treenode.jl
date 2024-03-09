@@ -142,4 +142,3 @@ function Base.length(t::TreeTraversal)
 
     return count
 end
-

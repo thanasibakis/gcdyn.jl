@@ -2,6 +2,7 @@ module gcdyn
 
 using
     AbstractTrees,
+    DataFrames,
     Distributions,
     LinearAlgebra,
     OrdinaryDiffEq,
@@ -10,17 +11,21 @@ using
 
 export
     AbstractBranchingProcess,
-    ConstantRateBranchingProcess,
-    SigmoidalBirthRateBranchingProcess,
+    FixedTypeChangeRateBranchingProcess,
+    VaryingTypeChangeRateBranchingProcess,
     TreeNode,
     uniform_transition_matrix,
     random_walk_transition_matrix,
+    discretize_states!,
     LeafTraversal,
     PostOrderTraversal,
     PreOrderTraversal,
-
+    λ,
+    μ,
+    γ,
     loglikelihood,
-    rand_tree
+    rand_tree,
+    map_states!
 
 include("types.jl")
 include("treenode.jl")

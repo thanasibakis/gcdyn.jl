@@ -9,8 +9,6 @@ Compute the log-likelihood of the given model under the assumption that the give
 """
 function naive_loglikelihood(model::AbstractBranchingProcess, tree::TreeNode)
     result = 0.0
-    ρ = model.ρ
-    state_space, transition_matrix = model.state_space, model.transition_matrix
 
     for node in PostOrderTraversal(tree.children[1])
         λₓ, μₓ, γₓ = λ(model, node.up.state), μ(model, node.up.state), γ(model, node.up.state)
@@ -20,14 +18,13 @@ function naive_loglikelihood(model::AbstractBranchingProcess, tree::TreeNode)
             result += logpdf(Exponential(1 / Λₓ), node.t - node.up.t) + log(λₓ / Λₓ)
         elseif node.event == :sampled_death
             result += logpdf(Exponential(1 / Λₓ), node.t - node.up.t) + log(μₓ / Λₓ)
-        elseif node.event == :mutation
-            mutation_prob = transition_matrix[findfirst(state_space .== node.up.state), findfirst(state_space .== node.state)]
-
-            result += logpdf(Exponential(1 / Λₓ), node.t - node.up.t) + log(γₓ / Λₓ) + log(mutation_prob)
+        elseif node.event == :type_change
+            transition_rate = γ(model, node.up.state, node.state)
+            result += logpdf(Exponential(1 / Λₓ), node.t - node.up.t) + log(transition_rate) - log(Λₓ)
         elseif node.event == :sampled_survival
-            result += log(1 - cdf(Exponential(1 / Λₓ), node.t - node.up.t)) + log(ρ)
+            result += log(1 - cdf(Exponential(1 / Λₓ), node.t - node.up.t)) + log(model.ρ)
         elseif node.event == :unsampled_survival
-            result += log(1 - cdf(Exponential(1 / Λₓ), node.t - node.up.t)) + log(1 - ρ)
+            result += log(1 - cdf(Exponential(1 / Λₓ), node.t - node.up.t)) + log(1 - model.ρ)
         else
             throw(ArgumentError("Tree contains incompatible event $(node.event)"))
         end
@@ -48,7 +45,6 @@ Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Bi
 function stadler_appx_loglikelhood(model::AbstractBranchingProcess, tree::TreeNode)
     result = 0
     ρ, σ, present_time = model.ρ, model.σ, model.present_time
-    state_space, transition_matrix = model.state_space, model.transition_matrix
 
     for node in PostOrderTraversal(tree.children[1])
         λₓ, μₓ, γₓ = λ(model, node.up.state), μ(model, node.up.state), γ(model, node.up.state)
@@ -70,10 +66,9 @@ function stadler_appx_loglikelhood(model::AbstractBranchingProcess, tree::TreeNo
             result += log(λₓ)
         elseif node.event == :sampled_death
             result += log(σ) + log(μₓ)
-        elseif node.event == :mutation
-            mutation_prob = transition_matrix[findfirst(state_space .== node.up.state), findfirst(state_space .== node.state)]
-
-            result += log(γₓ) + log(mutation_prob)
+        elseif node.event == :type_change
+            transition_rate = γ(model, node.up.state, node.state)
+            result += log(transition_rate)
         elseif node.event == :sampled_survival
             result += log(ρ)
         else
@@ -120,7 +115,6 @@ Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Bi
 function stadler_appx_unconditioned_loglikelhood(model::AbstractBranchingProcess, tree::TreeNode)
     result = 0
     ρ, σ, present_time = model.ρ, model.σ, model.present_time
-    state_space, transition_matrix = model.state_space, model.transition_matrix
 
     for node in PostOrderTraversal(tree.children[1])
         λₓ, μₓ, γₓ = λ(model, node.up.state), μ(model, node.up.state), γ(model, node.up.state)
@@ -143,10 +137,9 @@ function stadler_appx_unconditioned_loglikelhood(model::AbstractBranchingProcess
             result += log(λₓ)
         elseif node.event == :sampled_death
             result += log(σ) + log(μₓ)
-        elseif node.event == :mutation
-            mutation_prob = transition_matrix[findfirst(state_space .== node.up.state), findfirst(state_space .== node.state)]
-
-            result += log(γₓ) + log(mutation_prob)
+        elseif node.event == :type_change
+            transition_rate = γ(model, node.up.state, node.state)
+            result += log(transition_rate)
         elseif node.event == :sampled_survival
             result += log(ρ)
         else

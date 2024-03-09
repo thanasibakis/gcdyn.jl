@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+
+import fileinput
+import warnings
+from pathlib import Path
+
+from gcdyn import bdms, gpmap, mutators, poisson
+from experiments import replay
+
+dms = replay.dms(Path(__file__).parent / "support" / "final_variant_scores.csv")
+gp_map = gpmap.AdditiveGPMap(dms["affinity"], nonsense_phenotype=dms["affinity"].min().min())
+
+mutator = mutators.SequencePhenotypeMutator(
+	mutators.ContextMutator(
+		mutability=replay.mutability(),
+		substitution=replay.substitution()
+	),
+	gp_map
+)
+
+with warnings.catch_warnings():
+	# Safe to ignore divide by zero warnings
+	warnings.simplefilter("ignore")
+
+	for line in fileinput.input():
+		sequence = line.strip()
+
+		node = bdms.TreeNode()
+		node.sequence = sequence
+		node.x = gp_map(sequence)
+		node.chain_2_start_idx = replay.CHAIN_2_START_IDX
+
+		node.evolve(
+			t = 10,
+			birth_response=poisson.ConstantResponse(0),
+			death_response=poisson.ConstantResponse(0),
+			mutation_response=poisson.ConstantResponse(1),
+			verbose=False
+		)
+
+		transitions = []
+
+		while len(node.children) > 0:
+			node = node.children[0]
+			transitions.append(f"{node.up.x}:{node.t - node.up.t}:{node.x}")
+
+		print(";".join(transitions))

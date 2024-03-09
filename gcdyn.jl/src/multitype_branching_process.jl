@@ -13,14 +13,8 @@ sigmoid(x, xscale, xshift, yscale, yshift) = yscale * expit(xscale * (x - xshift
 
 Evaluates the `model`'s birth rate function at the given `state`.
 """
-function λ(::AbstractBranchingProcess, state) end
-
-function λ(model::ConstantRateBranchingProcess, state)
-    return model.λ
-end
-
-function λ(model::SigmoidalBirthRateBranchingProcess, state)
-    return sigmoid(state, model.xscale, model.xshift, model.yscale, model.yshift)
+function λ(model::AbstractBranchingProcess, state)
+    return sigmoid(state, model.λ_xscale, model.λ_xshift, model.λ_yscale, model.λ_yshift)
 end
 
 """
@@ -41,8 +35,55 @@ end
 
 Evaluates the `model`'s type change rate function at the given `state`.
 """
-function γ(model::AbstractBranchingProcess, state)
+function γ(model::FixedTypeChangeRateBranchingProcess, state)
     return model.γ
+end
+
+function γ(model::VaryingTypeChangeRateBranchingProcess, state)
+    i = findfirst(==(state), model.state_space)
+
+    if isnothing(i)
+        throw(ArgumentError("The state must be in the state space of the model."))
+    end
+
+    return model.δ * -model.Γ[i, i]
+end
+
+"""
+```julia
+γ(model::AbstractBranchingProcess, from_state, to_state)
+```
+
+Evaluates the `model`'s rate of type change from `from_state` to `to_state`.
+"""
+function γ(model::FixedTypeChangeRateBranchingProcess, from_state, to_state)
+    if from_state == to_state
+        return 0
+    end
+
+    i = findfirst(==(from_state), model.state_space)
+    j = findfirst(==(to_state), model.state_space)
+
+    if isnothing(i) || isnothing(j)
+        throw(ArgumentError("The states must be in the state space of the model."))
+    end
+
+    return model.γ * model.Π[i, j]
+end
+
+function γ(model::VaryingTypeChangeRateBranchingProcess, from_state, to_state)
+    if from_state == to_state
+        return 0
+    end
+
+    i = findfirst(==(from_state), model.state_space)
+    j = findfirst(==(to_state), model.state_space)
+
+    if isnothing(i) || isnothing(j)
+        throw(ArgumentError("The states must be in the state space of the model."))
+    end
+
+    return model.δ * model.Γ[i, j]
 end
 
 # To allow us to broadcast the rate parameter functions over states
@@ -51,7 +92,7 @@ Base.broadcastable(model::AbstractBranchingProcess) = Ref(model)
 """
 ```julia
 loglikelihood(model::AbstractBranchingProcess, tree::TreeNode; kw...)
-loglikelihood(model::AbstractBranchingProcess, trees::AbstractVector{TreeNode}; kw...)
+loglikelihood(model::AbstractBranchingProcess, trees; kw...)
 ```
 
 A slight deviation from StatsAPI, as observations are not stored in the model object, so they must be passed as an argument.
@@ -60,28 +101,24 @@ Keyword arguments `reltol` and `abstol` are passed to the ODE solver.
 """
 function StatsAPI.loglikelihood(
     model::AbstractBranchingProcess,
-    trees::AbstractVector{TreeNode};
-    reltol = 1e-6,
-    abstol = 1e-6
-)
-    return sum(loglikelihood(model, tree; reltol=reltol, abstol=abstol) for tree in trees)
-end
-
-function StatsAPI.loglikelihood(
-    model::AbstractBranchingProcess,
     tree::TreeNode;
-    reltol = 1e-6,
-    abstol = 1e-6
+    reltol = 1e-3,
+    abstol = 1e-3
 )
 
     ρ, σ = model.ρ, model.σ
     present_time = model.present_time
 
-    p_start = Dict{TreeNode, Vector{Float64}}()
-    p_end = Dict{TreeNode, Vector{Float64}}()
-    q_start = Dict{TreeNode, Float64}()
-    q_end = Dict{TreeNode, Float64}()
+    # We may be using autodiff, so figure out what type the likelikihood value will be
+    T = typeof(λ(model, model.state_space[1]))
 
+    p_start = Dict{TreeNode, Vector{T}}()
+    p_end = Dict{TreeNode, Vector{T}}()
+    q_start = Dict{TreeNode, T}()
+    q_end = Dict{TreeNode, T}()
+
+    # If σ>0, leaves may be at non-present times, so it's incorrect to initialize
+    # p to be 1-ρ for all leaf times
     for leaf in LeafTraversal(tree)
         # Be sure to specify the iip=true of the ODEProblem for type stability
         # and fewer memory allocations
@@ -118,16 +155,15 @@ function StatsAPI.loglikelihood(
             q_end[event] = (
                 λ(model, event.up.state) * q_start[event.children[1]] * q_start[event.children[2]]
             )
-        elseif event.event == :mutation
-            mutation_prob = model.transition_matrix[
-                findfirst_equals(model.state_space, event.up.state),
-                findfirst_equals(model.state_space, event.state)
-            ]
+        elseif event.event == :type_change
+            if event.state == event.up.state
+                @warn "Self-loop encountered at a type change event in the tree. Density will evaluate to zero."
+                return -Inf
+            end
 
             p_end[event] = p_start[event.children[1]]
             q_end[event] = (
-                γ(model, event.up.state)
-                * mutation_prob
+                γ(model, event.up.state, event.state)
                 * q_start[event.children[1]]
             )
         else
@@ -172,10 +208,19 @@ function StatsAPI.loglikelihood(
         abstol = abstol
     )
 
-    p_i = p.u[end][findfirst_equals(model.state_space, tree.state)]
+    p_i = p.u[end][findfirst(==(tree.state), model.state_space)]
     result -= log(1 - p_i)
 
     return result
+end
+
+function StatsAPI.loglikelihood(
+    model::AbstractBranchingProcess,
+    trees;
+    reltol = 1e-3,
+    abstol = 1e-3
+)
+    return sum(loglikelihood(model, tree; reltol=reltol, abstol=abstol) for tree in trees)
 end
 
 """
@@ -183,17 +228,31 @@ See equation (1) of this paper:
 
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
-function dp_dt!(dp, p, model, t)
+function dp_dt!(dp, p, model::FixedTypeChangeRateBranchingProcess, t)
     for (i, state) in enumerate(model.state_space)
         λₓ = λ(model, state)
         μₓ = μ(model, state)
         γₓ = γ(model, state)
 
         dp[i] = (
-            -(γₓ + λₓ + μₓ) * p[i]
+            -(λₓ + μₓ + γₓ) * p[i]
             + μₓ * (1 - model.σ)
             + λₓ * p[i]^2
-            + γₓ * sum(model.transition_matrix[i, j] * p[j] for j in 1:length(model.state_space))
+            + γₓ * sum(model.Π[i, j] * p[j] for j in 1:length(model.state_space))
+        )
+    end
+end
+
+function dp_dt!(dp, p, model::VaryingTypeChangeRateBranchingProcess, t)
+    for (i, state) in enumerate(model.state_space)
+        λₓ = λ(model, state)
+        μₓ = μ(model, state)
+
+        dp[i] = (
+            -(λₓ + μₓ) * p[i]
+            + μₓ * (1 - model.σ)
+            + λₓ * p[i]^2
+            + model.δ * sum(model.Γ[i, j] * p[j] for j in 1:length(model.state_space))
         )
     end
 end
@@ -203,7 +262,7 @@ See equations (1) and (2) of this paper:
 
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
-function dpq_dt!(dpq, pq, args, t)    
+function dpq_dt!(dpq, pq, args, t)
     p, q_i = view(pq, 1:lastindex(pq)-1), pq[end]
     model, parent_state = args
 
@@ -211,8 +270,8 @@ function dpq_dt!(dpq, pq, args, t)
     μₓ = μ(model, parent_state)
     γₓ = γ(model, parent_state)
 
-    p_i = p[findfirst_equals(model.state_space, parent_state)]
-    dq_i = -(γₓ + λₓ + μₓ) * q_i + 2 * λₓ * q_i * p_i
+    p_i = p[findfirst(==(parent_state), model.state_space)]
+    dq_i = -(λₓ + μₓ + γₓ) * q_i + 2 * λₓ * q_i * p_i
 
     # Need to pass a view instead of a slice, to pass by reference instead of value
     dp = view(dpq, 1:lastindex(dpq)-1)
@@ -222,27 +281,7 @@ end
 
 """
 ```julia
-findfirst_equals(x, c)
-```
-
-Like `findfirst(x .== c)`, but avoids making memory allocations.
-
-See also [`findfirst`](@ref).
-"""
-function findfirst_equals(x, c)
-    for i in 1:length(x)
-        if x[i] == c
-            return i
-        end
-    end
-
-    return -1
-end
-
-"""
-```julia
-rand_tree(model, init_state; reject_stubs=true)
-rand_tree(model, n, init_state; reject_stubs=true)
+rand_tree(model, [n,] init_state; reject_stubs=true)
 ```
 
 Generate `n` random trees from the given model (optional parameter, default is `1`), each starting at the given initial state.
@@ -256,9 +295,9 @@ See also [`TreeNode`](@ref), [`sample_child!`](@ref), [`mutate!`](@ref).
 """
 function rand_tree(
     model::AbstractBranchingProcess,
-    n::Int,
-    init_state::Real;
-    reject_stubs::Bool=true
+    n,
+    init_state;
+    reject_stubs=true
 )
     trees = Vector{TreeNode}(undef, n)
 
@@ -271,8 +310,8 @@ end
 
 function rand_tree(
     model::AbstractBranchingProcess,
-    init_state::Real;
-    reject_stubs::Bool=true
+    init_state;
+    reject_stubs=true
 )
     root = TreeNode(init_state)
     needs_children = [root]
@@ -285,7 +324,7 @@ function rand_tree(
         if child.event == :birth
             push!(needs_children, child)
             push!(needs_children, child)
-        elseif child.event == :mutation
+        elseif child.event == :type_change
             push!(needs_children, child)
         end
     end
@@ -332,14 +371,25 @@ end
 mutate!(node, model)
 ```
 
-Change the state of the given node according to the transition probabilities in the given model.
+Change the state of the given node according to the transition probabilities or rates in the given model.
 """
-function mutate!(node::TreeNode, model::AbstractBranchingProcess)
+function mutate!(node::TreeNode, model::FixedTypeChangeRateBranchingProcess)
     if node.state ∉ model.state_space
         throw(ArgumentError("The state of the node must be in the state space of the mutator."))
     end
 
-    transition_probs = model.transition_matrix[findfirst_equals(model.state_space, node.state), :]
+    transition_probs = model.transition_matrix[findfirst(==(node.state), model.state_space), :]
+    node.state = sample(model.state_space, Weights(transition_probs))
+end
+
+function mutate!(node::TreeNode, model::VaryingTypeChangeRateBranchingProcess)
+    if node.state ∉ model.state_space
+        throw(ArgumentError("The state of the node must be in the state space of the mutator."))
+    end
+
+    i = findfirst(==(node.state), model.state_space)
+    transition_probs = model.Γ[i, :] ./ -model.Γ[i, i]
+    transition_probs[i] = 0
     node.state = sample(model.state_space, Weights(transition_probs))
 end
 
@@ -366,7 +416,7 @@ function sample_child!(parent::TreeNode, model::AbstractBranchingProcess)
         event = sample([:sampled_survival, :unsampled_survival], Weights([model.ρ, 1 - model.ρ]))
         child = TreeNode(event, model.present_time, parent.state)
     else
-        event = sample([:birth, :unsampled_death, :mutation], Weights([λₓ, μₓ, γₓ]))
+        event = sample([:birth, :unsampled_death, :type_change], Weights([λₓ, μₓ, γₓ]))
 
         if event == :unsampled_death && rand() < model.σ
             event = :sampled_death
@@ -374,7 +424,7 @@ function sample_child!(parent::TreeNode, model::AbstractBranchingProcess)
 
         child = TreeNode(event, parent.t + waiting_time, parent.state)
 
-        if event == :mutation
+        if event == :type_change
             mutate!(child, model)
         end
     end
@@ -383,4 +433,28 @@ function sample_child!(parent::TreeNode, model::AbstractBranchingProcess)
     child.up = parent
 
     return child
+end
+
+"""
+```julia
+map_states(tree, mapping; prune_self_loops = true)
+```
+
+Replaces the state attribute of all nodes in `tree` with the result of the callable `mapping` applied to the state values.
+
+Optionally but by default, if the map results in a type change event with the same state as its parent,
+the type change event is pruned from the tree.
+"""
+function map_states!(mapping, tree; prune_self_loops = true)
+    for node in PreOrderTraversal(tree)
+        node.state = mapping(node.state)
+
+        # If a type change resulted in an state of the same bin as the parent,
+        # that isn't a valid type change in the CTMC, so we prune it
+        if prune_self_loops && node.event == :type_change && node.state == node.up.state
+            filter!(child -> child != node, node.up.children)
+            push!(node.up.children, node.children[1])
+            node.children[1].up = node.up
+        end
+    end
 end
