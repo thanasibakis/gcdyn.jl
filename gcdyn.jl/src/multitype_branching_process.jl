@@ -114,8 +114,8 @@ function StatsAPI.loglikelihood(
 
     p_start = Dict{TreeNode, Vector{T}}()
     p_end = Dict{TreeNode, Vector{T}}()
-    q_start = Dict{TreeNode, T}()
-    q_end = Dict{TreeNode, T}()
+    logq_start = Dict{TreeNode, T}()
+    logq_end = Dict{TreeNode, T}()
 
     # If σ>0, leaves may be at non-present times, so it's incorrect to initialize
     # p to be 1-ρ for all leaf times
@@ -146,15 +146,18 @@ function StatsAPI.loglikelihood(
 
         if event.event == :sampled_survival
             # event already has p_end
-            q_end[event] = ρ
+            logq_end[event] = log(ρ)
         elseif event.event == :sampled_death
             # event already has p_end
-            q_end[event] = μ(model, event.up.state) * σ
+            logq_end[event] = log(μ(model, event.up.state)) + log(σ)
         elseif event.event == :birth
             p_end[event] = p_start[event.children[1]]
-            q_end[event] = (
-                λ(model, event.up.state) * q_start[event.children[1]] * q_start[event.children[2]]
+            logq_end[event] = (
+                log(λ(model, event.up.state))
+                + logq_start[event.children[1]]
+                + logq_start[event.children[2]]
             )
+        
         elseif event.event == :type_change
             if event.state == event.up.state
                 @warn "Self-loop encountered at a type change event in the tree. Density will evaluate to zero."
@@ -162,34 +165,34 @@ function StatsAPI.loglikelihood(
             end
 
             p_end[event] = p_start[event.children[1]]
-            q_end[event] = (
-                γ(model, event.up.state, event.state)
-                * q_start[event.children[1]]
+            logq_end[event] = (
+                log(γ(model, event.up.state, event.state))
+                + logq_start[event.children[1]]
             )
         else
             throw(ArgumentError("Unknown event type $(event.event)"))
         end
 
-        pq = solve(
+        p_logq = solve(
             ODEProblem{true}(
-                dpq_dt!,
-                [p_end[event]; q_end[event]],
+                dp_logq_dt!,
+                [p_end[event]; logq_end[event]],
                 (t_end, t_start),
                 (model, event.up.state)
             ),
             Tsit5();
-            isoutofdomain = (pq, args, t) -> any(x -> x < 0, pq),
+            isoutofdomain = (p_logq, args, t) -> any(x -> x < 0 || x > 1, p_logq[1:end-1]),
             save_everystep = false,
             save_start = false,
             reltol = reltol,
             abstol = abstol
         )
 
-        p_start[event] = pq.u[end][1:end-1]
-        q_start[event] = pq.u[end][end]
+        p_start[event] = p_logq.u[end][1:end-1]
+        logq_start[event] = p_logq.u[end][end]
     end
 
-    result = log(q_start[tree.children[1]])
+    result = logq_start[tree.children[1]]
 
     # Non-extinction probability
 
@@ -257,13 +260,8 @@ function dp_dt!(dp, p, model::VaryingTypeChangeRateBranchingProcess, t)
     end
 end
 
-"""
-See equations (1) and (2) of this paper:
-
-Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
-"""
-function dpq_dt!(dpq, pq, args, t)
-    p, q_i = view(pq, 1:lastindex(pq)-1), pq[end]
+function dp_logq_dt!(dp_logq, p_logq, args, t)
+    p, logq_i = view(p_logq, 1:lastindex(p_logq)-1), p_logq[end]
     model, parent_state = args
 
     λₓ = λ(model, parent_state)
@@ -271,12 +269,12 @@ function dpq_dt!(dpq, pq, args, t)
     γₓ = γ(model, parent_state)
 
     p_i = p[findfirst(==(parent_state), model.state_space)]
-    dq_i = -(λₓ + μₓ + γₓ) * q_i + 2 * λₓ * q_i * p_i
+    dlogq_i = -(λₓ + μₓ + γₓ) + 2 * λₓ * p_i
 
     # Need to pass a view instead of a slice, to pass by reference instead of value
-    dp = view(dpq, 1:lastindex(dpq)-1)
+    dp = view(dp_logq, 1:lastindex(dp_logq)-1)
     dp_dt!(dp, p, model, t)
-    dpq[end] = dq_i
+    dp_logq[end] = dlogq_i
 end
 
 """
@@ -378,7 +376,7 @@ function mutate!(node::TreeNode, model::FixedTypeChangeRateBranchingProcess)
         throw(ArgumentError("The state of the node must be in the state space of the mutator."))
     end
 
-    transition_probs = model.transition_matrix[findfirst(==(node.state), model.state_space), :]
+    transition_probs = model.Π[findfirst(==(node.state), model.state_space), :]
     node.state = sample(model.state_space, Weights(transition_probs))
 end
 
