@@ -31,7 +31,7 @@ function get_discretization(affinity, discretization_table)
 	end
 end
 
-function compute_rate_matrix(starting_sequences, state_space)
+function compute_rate_matrix(starting_sequences, discretization_table, state_space)
 	type_change_history = let
 		command = pipeline(`bin/simulate-s5f-mutations`; stdin=IOBuffer(join(starting_sequences, "\n")))
 		output = read(command, String) |> strip
