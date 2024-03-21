@@ -16,7 +16,6 @@ export
     TreeNode,
     uniform_transition_matrix,
     random_walk_transition_matrix,
-    discretize_states!,
     LeafTraversal,
     PostOrderTraversal,
     PreOrderTraversal,
@@ -25,7 +24,7 @@ export
     γ,
     loglikelihood,
     rand_tree,
-    map_states!
+    map_types!
 
 include("types.jl")
 include("treenode.jl")
