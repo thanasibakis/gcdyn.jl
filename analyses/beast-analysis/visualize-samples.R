@@ -12,9 +12,9 @@ sigmoid <- function(x, t1, t2, t3, t4) {
 samples_filename <- commandArgs(trailingOnly = TRUE)[1]
 basename <- samples_filename |>
 	str_replace(".csv", "") |>
-	str_replace("samples-", "")
+	str_replace("out/samples-", "")
 
-prior_samples <- read_csv("samples-prior.csv") |>
+prior_samples <- read_csv("out/samples-prior.csv") |>
 	mutate(
 		λ_xscale = exp(log_λ_xscale_base * 0.75 + 0.5),
 		λ_yscale = exp(log_λ_yscale_base * 0.75 + 0.5),
@@ -70,7 +70,7 @@ bind_rows(prior_q, posterior_q) |>
 	theme(legend.position = "bottom") +
 	facet_wrap(vars(Dist))
 
-ggsave(glue("sigmoids-{basename}.png"), width = 15, height = 9, dpi=300)
+ggsave(glue("out/sigmoids-{basename}.png"), width = 15, height = 9, dpi=300)
 
 # Plot histograms
 
@@ -90,5 +90,5 @@ ggplot() +
 	theme(legend.position = "bottom") +
 	labs(title = "Posterior histograms")
 
-ggsave(glue("histograms-{basename}.png"), width = 18, height = 12, dpi = 300)
+ggsave(glue("out/histograms-{basename}.png"), width = 18, height = 12, dpi = 300)
 

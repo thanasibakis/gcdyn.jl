@@ -51,14 +51,6 @@ function main()
 		trees::Vector{TreeNode} = load_object(file)
 
 		for tree in trees
-			# TODO: This is my bad, I changed the event name after exporting JLD2 trees
-			for node in PostOrderTraversal(tree)
-				if node.event == :mutation
-					node.event = :type_change
-				end
-			end
-
-			# This part is fine, don't remove in the above TODO
 			map_states!(tree) do state
 				get_discretization(state, discretization_table)
 			end
@@ -69,7 +61,8 @@ function main()
 
 	println("Sampling from prior...")
 	prior_samples = sample(Model(nothing, tc_rate_matrix, nothing, state_space, nothing), Prior(), 100) |> DataFrame
-	CSV.write("samples-prior.csv", prior_samples)
+	mkpath("out")
+	CSV.write("out/samples-prior.csv", prior_samples)
 
 	Threads.@threads for i in eachindex(germinal_centers)
 		name = "posterior-$i"
@@ -81,7 +74,7 @@ function main()
 
 		model = Model(treeset, tc_rate_matrix, ρ, state_space, present_time)
 		posterior_samples = sample(model, NUTS(), 5000) |> DataFrame
-		CSV.write("samples-$name.csv", posterior_samples)
+		CSV.write("out/samples-$name.csv", posterior_samples)
 	end
 
 	println("Done!")
