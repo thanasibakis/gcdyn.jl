@@ -2635,7 +2635,7 @@ version = "0.43.0+0"
 
 [[deps.gcdyn]]
 deps = ["AbstractTrees", "CategoricalArrays", "DataFrames", "Distributions", "LinearAlgebra", "OrdinaryDiffEq", "StatsAPI", "StatsBase"]
-path = "gcdyn.jl"
+path = "package"
 uuid = "a07aac68-cc84-4f07-aa24-bb38e7c3d1ae"
 version = "0.1.0"
 
