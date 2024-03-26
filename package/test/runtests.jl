@@ -1,4 +1,5 @@
 using gcdyn, StatsBase, Test
+import Random
 
 function test_rand_tree(n, λ, μ, present_time)
     # Assumes ρ = 1. σ should not matter
@@ -50,6 +51,8 @@ function test_full_ode_likelihoods(n, λ_xscale, λ_xshift, λ_yscale, λ_yshift
 end
 
 @testset "gcdyn" begin
+    Random.seed!(2)
+
     test_rand_tree(10000, 2.5, 1.1, 2)
     test_fully_observed_likelihoods(50, 2.5, 1.1, 1.1, 1:3, 3)
     test_no_extinction_likelihoods(50, 2.5, 1.1, 3)
