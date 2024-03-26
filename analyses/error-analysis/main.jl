@@ -4,18 +4,18 @@ using gcdyn, Turing, StatsPlots
     λ ~ LogNormal(1.5, 1)
     μ ~ LogNormal(0, 0.5)
 
-    sampled_model = FixedTypeChangeRateBranchingProcess(λ, μ, truth.γ, truth.ρ, truth.σ, truth.state_space, truth.present_time)
+    sampled_model = FixedTypeChangeRateBranchingProcess(λ, μ, truth.γ, truth.ρ, truth.σ, truth.type_space, truth.present_time)
 
-    Turing.@addlogprob! sum(gcdyn.stadler_appx_loglikelhood(sampled_model, tree) for tree in trees)
+    Turing.@addlogprob! sum(gcdyn.stadler_appx_loglikelihood(sampled_model, tree) for tree in trees)
 end
 
 @model function OriginalModel(trees, truth)
     λ ~ LogNormal(1.5, 1)
     μ ~ LogNormal(0, 0.5)
 
-    sampled_model = FixedTypeChangeRateBranchingProcess(λ, μ, truth.γ, truth.ρ, truth.σ, truth.state_space, truth.present_time)
+    sampled_model = FixedTypeChangeRateBranchingProcess(λ, μ, truth.γ, truth.ρ, truth.σ, truth.type_space, truth.present_time)
 
-    Turing.@addlogprob! sum(gcdyn.stadler_appx_unconditioned_loglikelhood(sampled_model, tree) for tree in trees)
+    Turing.@addlogprob! sum(gcdyn.stadler_appx_unconditioned_loglikelihood(sampled_model, tree) for tree in trees)
 end
 
 function run_simulations(truth)
@@ -43,7 +43,7 @@ function run_simulations(truth)
 
     for (num_trees, chns_dict) in chns
         Threads.@threads for i in 1:NUM_TREESETS
-            trees = rand_tree(truth, num_trees, truth.state_space[1])
+            trees = rand_tree(truth, num_trees, truth.type_space[1])
 
             chns_dict[:corrected][i] = sample(
                 CorrectedModel(trees, truth),
