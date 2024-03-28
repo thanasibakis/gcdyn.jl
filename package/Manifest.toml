@@ -1,8 +1,8 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.1"
+julia_version = "1.10.2"
 manifest_format = "2.0"
-project_hash = "d98ec12213c8fb828899a709dddcfe51a1b5c2bd"
+project_hash = "07e953d97b83c2b4af4e5a271949d6ea9d377214"
 
 [[deps.ADTypes]]
 git-tree-sha1 = "41c37aa88889c171f1300ceac1313c06e891d245"
@@ -636,6 +636,12 @@ version = "0.1.1"
 deps = ["Artifacts", "Libdl"]
 uuid = "c8ffd9c3-330d-5841-b78e-0817d7145fa1"
 version = "2.28.2+1"
+
+[[deps.Memoize]]
+deps = ["MacroTools"]
+git-tree-sha1 = "2b1dfcba103de714d31c033b5dacc2e4a12c7caa"
+uuid = "c03570c3-d221-55d1-a50c-7939bbd78826"
+version = "0.4.4"
 
 [[deps.Missings]]
 deps = ["DataAPI"]

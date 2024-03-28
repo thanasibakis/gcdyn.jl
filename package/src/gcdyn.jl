@@ -5,6 +5,7 @@ using
     DataFrames,
     Distributions,
     LinearAlgebra,
+    Memoize,
     OrdinaryDiffEq,
     StatsAPI,
     StatsBase

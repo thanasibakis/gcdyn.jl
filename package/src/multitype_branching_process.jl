@@ -8,6 +8,17 @@ sigmoid(x, xscale, xshift, yscale, yshift) = yscale * expit(xscale * (x - xshift
 
 """
 ```julia
+type_space_index(model::AbstractBranchingProcess, type)
+```
+
+Returns the index of `type` in the given `model`'s type space, or `nothing` if not found.
+"""
+@memoize function type_space_index(model::AbstractBranchingProcess, type)
+    return findfirst(==(type), model.type_space)
+end
+
+"""
+```julia
 λ(model::AbstractBranchingProcess, type)
 ```
 
@@ -40,7 +51,7 @@ function γ(model::FixedTypeChangeRateBranchingProcess, type)
 end
 
 function γ(model::VaryingTypeChangeRateBranchingProcess, type)
-    i = findfirst(==(type), model.type_space)
+    i = type_space_index(model, type)
 
     if isnothing(i)
         throw(ArgumentError("The type must be in the type space of the model."))
@@ -61,8 +72,8 @@ function γ(model::FixedTypeChangeRateBranchingProcess, from_type, to_type)
         return 0
     end
 
-    i = findfirst(==(from_type), model.type_space)
-    j = findfirst(==(to_type), model.type_space)
+    i = type_space_index(model, from_type)
+    j = type_space_index(model, to_type)
 
     if isnothing(i) || isnothing(j)
         throw(ArgumentError("The types must be in the type space of the model."))
@@ -76,8 +87,8 @@ function γ(model::VaryingTypeChangeRateBranchingProcess, from_type, to_type)
         return 0
     end
 
-    i = findfirst(==(from_type), model.type_space)
-    j = findfirst(==(to_type), model.type_space)
+    i = type_space_index(model, from_type)
+    j = type_space_index(model, to_type)
 
     if isnothing(i) || isnothing(j)
         throw(ArgumentError("The types must be in the type space of the model."))
@@ -120,12 +131,10 @@ function StatsAPI.loglikelihood(
             (0, model.present_time),
             model
         ),
-        Tsit5();
+        Rosenbrock23();
         # isoutofdomain for SecondOrderODEProblem passes p::RecursiveArrayTools.ArrayPartition
         # so p.x[1] is p and p.x[2] is integral_p
         isoutofdomain = (p, _, t) -> any(x -> x < 0 || x > 1, p.x[1]),
-        # save_everystep = false,
-        # save_start = false,
         reltol = reltol,
         abstol = abstol
     )
@@ -140,7 +149,7 @@ function StatsAPI.loglikelihood(
         # OrdinaryDiffEq needs to solve in the increasing time direction, so I need to invert
         t = model.present_time - t
 
-        i = findfirst(==(type), model.type_space)
+        i = type_space_index(model, type)
         
         # Also a RecursiveArrayTools.ArrayPartition
         return p_solution(t; idxs=i)
@@ -156,7 +165,7 @@ function StatsAPI.loglikelihood(
         # OrdinaryDiffEq needs to solve in the increasing time direction, so I need to invert
         t_start, t_end = model.present_time - t_start, model.present_time - t_end
 
-        i = findfirst(==(type), model.type_space)
+        i = type_space_index(model, type)
         
         # Also a RecursiveArrayTools.ArrayPartition
         l, u = p_solution([t_start, t_end]; idxs=NUM_TYPES+i)
@@ -207,7 +216,7 @@ function StatsAPI.loglikelihood(
         )
     end
 
-    # Compute the non-extinction probability of the whole tree
+    # Compute the extinction probability of the whole tree
     pₓ = p(0, tree.type)
 
     # Condition likelihood on non-extinction
@@ -356,7 +365,7 @@ function mutate!(node::TreeNode, model::FixedTypeChangeRateBranchingProcess)
         throw(ArgumentError("The type of the node must be in the type space of the mutator."))
     end
 
-    transition_probs = model.Π[findfirst(==(node.type), model.type_space), :]
+    transition_probs = model.Π[type_space_index(model, node.type), :]
     node.type = sample(model.type_space, Weights(transition_probs))
 end
 
@@ -365,7 +374,7 @@ function mutate!(node::TreeNode, model::VaryingTypeChangeRateBranchingProcess)
         throw(ArgumentError("The type of the node must be in the type space of the mutator."))
     end
 
-    i = findfirst(==(node.type), model.type_space)
+    i = type_space_index(model, node.type)
     transition_probs = model.Γ[i, :] ./ -model.Γ[i, i]
     transition_probs[i] = 0
     node.type = sample(model.type_space, Weights(transition_probs))

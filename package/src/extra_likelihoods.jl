@@ -266,7 +266,7 @@ function natural_ode_loglikelihood(
         abstol = abstol
     )
 
-    p_i = p.u[end][findfirst(==(tree.type), model.type_space)]
+    p_i = p.u[end][type_space_index(model, tree.type)]
     result -= log(1 - p_i)
 
     return result
@@ -285,7 +285,7 @@ function dpq_dt!(dpq, pq, args, t)
     μₓ = μ(model, parent_state)
     γₓ = γ(model, parent_state)
 
-    p_i = p[findfirst(==(parent_state), model.type_space)]
+    p_i = p[type_space_index(model, parent_state)]
     dq_i = -(λₓ + μₓ + γₓ) * q_i + 2 * λₓ * q_i * p_i
 
     # Need to pass a view instead of a slice, to pass by reference instead of value
