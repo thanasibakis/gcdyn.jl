@@ -1,6 +1,7 @@
 println("Loading packages...")
 
-using gcdyn, CSV, DataFrames, Turing, StatsPlots
+using gcdyn, CSV, DataFrames, Optim, Turing
+import Random
 
 @model function Model(trees, Γ, type_space, present_time)
     # Keep priors on the same scale for NUTS
@@ -29,6 +30,8 @@ using gcdyn, CSV, DataFrames, Turing, StatsPlots
 end
 
 function main()
+    Random.seed!(1)
+
     println("Setting up model...")
 
     Γ = [-1 0.5 0.25 0.25; 2 -4 1 1; 2 2 -5 1; 0.125 0.125 0.25 -0.5]
@@ -50,55 +53,58 @@ function main()
     println("Sampling from prior...")
     prior_samples = sample(model, Prior(), 100) |> DataFrame
 
+    println("Computing initial MCMC state...")
+    max_a_posteriori = optimize(model, MAP())
+
     println("Sampling from posterior...")
-    posterior_samples = sample(model, NUTS(), 5000) |> DataFrame
+    posterior_samples = sample(model, NUTS(), 1000, init_params=max_a_posteriori) |> DataFrame
 
     println("Exporting samples...")
     CSV.write("posterior-samples.csv", posterior_samples)
 
-    println("Visualizing...")
+    # println("Visualizing...")
 
-    plot(xlims=(0, 10), ylims=(0, 6), dpi=300)
+    # plot(xlims=(0, 10), ylims=(0, 6), dpi=300)
 
-    for row in eachrow(prior_samples)
-        λ_xscale = exp(row.log_λ_xscale * 0.75 + 0.5)
-        λ_xshift = row.λ_xshift⁻ + 5
-        λ_yscale = exp(row.log_λ_yscale * 0.75 + 0.5)
-        λ_yshift = exp(row.log_λ_yshift * 1.2 - 0.5)
-        plot!(x -> gcdyn.sigmoid(x, λ_xscale, λ_xshift, λ_yscale, λ_yshift); alpha=0.1, color="grey", width=2, label=nothing)
-    end
+    # for row in eachrow(prior_samples)
+    #     λ_xscale = exp(row.log_λ_xscale * 0.75 + 0.5)
+    #     λ_xshift = row.λ_xshift⁻ + 5
+    #     λ_yscale = exp(row.log_λ_yscale * 0.75 + 0.5)
+    #     λ_yshift = exp(row.log_λ_yshift * 1.2 - 0.5)
+    #     plot!(x -> gcdyn.sigmoid(x, λ_xscale, λ_xshift, λ_yscale, λ_yshift); alpha=0.1, color="grey", width=2, label=nothing)
+    # end
 
-    plot!(x -> gcdyn.sigmoid(x, truth.λ_xscale, truth.λ_xshift, truth.λ_yscale, truth.λ_yshift); color="#1A4F87", width=5, label="Truth")
-    title!("Birth rate (prior)")
-    png("birth-rate-prior-samples.png")
+    # plot!(x -> gcdyn.sigmoid(x, truth.λ_xscale, truth.λ_xshift, truth.λ_yscale, truth.λ_yshift); color="#1A4F87", width=5, label="Truth")
+    # title!("Birth rate (prior)")
+    # png("birth-rate-prior-samples.png")
 
-    plot(xlims=(0, 10), ylims=(0, 6), dpi=300)
+    # plot(xlims=(0, 10), ylims=(0, 6), dpi=300)
 
-    for row in eachrow(posterior_samples[4500:5:end, :])
-        λ_xscale = exp(row.log_λ_xscale * 0.75 + 0.5)
-        λ_xshift = row.λ_xshift⁻ + 5
-        λ_yscale = exp(row.log_λ_yscale * 0.75 + 0.5)
-        λ_yshift = exp(row.log_λ_yshift * 1.2 - 0.5)
-        plot!(x -> gcdyn.sigmoid(x, λ_xscale, λ_xshift, λ_yscale, λ_yshift); alpha=0.1, color="grey", width=2, label=nothing)
-    end
+    # for row in eachrow(posterior_samples[4500:5:end, :])
+    #     λ_xscale = exp(row.log_λ_xscale * 0.75 + 0.5)
+    #     λ_xshift = row.λ_xshift⁻ + 5
+    #     λ_yscale = exp(row.log_λ_yscale * 0.75 + 0.5)
+    #     λ_yshift = exp(row.log_λ_yshift * 1.2 - 0.5)
+    #     plot!(x -> gcdyn.sigmoid(x, λ_xscale, λ_xshift, λ_yscale, λ_yshift); alpha=0.1, color="grey", width=2, label=nothing)
+    # end
 
-    plot!(x -> gcdyn.sigmoid(x, truth.λ_xscale, truth.λ_xshift, truth.λ_yscale, truth.λ_yshift); color="#1A4F87", width=5, label="Truth")
-    title!("Birth rate (posterior)")
-    png("birth-rate-posterior-samples.png")
+    # plot!(x -> gcdyn.sigmoid(x, truth.λ_xscale, truth.λ_xshift, truth.λ_yscale, truth.λ_yshift); color="#1A4F87", width=5, label="Truth")
+    # title!("Birth rate (posterior)")
+    # png("birth-rate-posterior-samples.png")
 
-    μ = exp.(posterior_samples[:, :log_μ] * 0.5)
-    plot(LogNormal(0, 0.5); xlims=(0, 3), label="Prior", fill=(0, 0.5), color="grey", width=0, dpi=300)
-    histogram!(μ; normalize=:pdf, label="Posterior", fill="lightblue", alpha=0.7)
-    vline!([truth.μ]; label="Truth", color="#1A4F87", width=6)
-    title!("Death rate")
-    png("death-rate.png")
+    # μ = exp.(posterior_samples[:, :log_μ] * 0.5)
+    # plot(LogNormal(0, 0.5); xlims=(0, 3), label="Prior", fill=(0, 0.5), color="grey", width=0, dpi=300)
+    # histogram!(μ; normalize=:pdf, label="Posterior", fill="lightblue", alpha=0.7)
+    # vline!([truth.μ]; label="Truth", color="#1A4F87", width=6)
+    # title!("Death rate")
+    # png("death-rate.png")
 
-    δ = exp.(posterior_samples[:, :log_δ] * 0.5)
-    plot(LogNormal(0, 0.5); xlims=(0, 4), label="Prior", fill=(0, 0.5), color="grey", width=0, dpi=300)
-    histogram!(δ; normalize=:pdf, label="Posterior", fill="lightblue", alpha=0.7)
-    vline!([truth.δ]; label="Truth", color="#1A4F87", width=6)
-    title!("Type change rate scalar")
-    png("type-change-rate-scalar.png")
+    # δ = exp.(posterior_samples[:, :log_δ] * 0.5)
+    # plot(LogNormal(0, 0.5); xlims=(0, 4), label="Prior", fill=(0, 0.5), color="grey", width=0, dpi=300)
+    # histogram!(δ; normalize=:pdf, label="Posterior", fill="lightblue", alpha=0.7)
+    # vline!([truth.δ]; label="Truth", color="#1A4F87", width=6)
+    # title!("Type change rate scalar")
+    # png("type-change-rate-scalar.png")
 
     print("Done!")    
 end
