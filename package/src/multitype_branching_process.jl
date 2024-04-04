@@ -119,8 +119,8 @@ function StatsAPI.loglikelihood(
     # We may be using autodiff, so figure out what type the likelikihood value will be
     T = typeof(λ(model, model.type_space[1]))
 
-    logitp_start = Dict{TreeNode, Vector{T}}()
-    logitp_end = Dict{TreeNode, Vector{T}}()
+    p_start = Dict{TreeNode, Vector{T}}()
+    p_end = Dict{TreeNode, Vector{T}}()
     logq_start = Dict{TreeNode, T}()
     logq_end = Dict{TreeNode, T}()
 
@@ -129,11 +129,10 @@ function StatsAPI.loglikelihood(
     for leaf in LeafTraversal(tree)
         # Be sure to specify the iip=true of the ODEProblem for type stability
         # and fewer memory allocations
-        logitp = solve(
+        p = solve(
             ODEProblem{true}(
-                dlogitp_dt!,
-                # This initial condition `logit(1 - ρ)` is -Inf at ρ=1, so we shift by 1e-6
-                fill(log(1 - model.ρ + 1e-6) - log(model.ρ), size(model.type_space)),
+                dp_dt!,
+                fill(1 - model.ρ, size(model.type_space)),
                 (0, model.present_time - leaf.time),
                 model
             ),
@@ -144,7 +143,7 @@ function StatsAPI.loglikelihood(
             abstol = abstol
         )
 
-        logitp_end[leaf] = logitp.u[end]
+        p_end[leaf] = p.u[end]
     end
 
     for event in PostOrderTraversal(tree.children[1])
@@ -158,7 +157,7 @@ function StatsAPI.loglikelihood(
             # event already has p_end
             logq_end[event] = log(μ(model, event.up.type)) + log(model.σ)
         elseif event.event == :birth
-            logitp_end[event] = logitp_start[event.children[1]]
+            p_end[event] = p_start[event.children[1]]
             logq_end[event] = (
                 log(λ(model, event.up.type))
                 + logq_start[event.children[1]]
@@ -171,7 +170,7 @@ function StatsAPI.loglikelihood(
                 return -Inf
             end
 
-            logitp_end[event] = logitp_start[event.children[1]]
+            p_end[event] = p_start[event.children[1]]
             logq_end[event] = (
                 log(γ(model, event.up.type, event.type))
                 + logq_start[event.children[1]]
@@ -180,10 +179,10 @@ function StatsAPI.loglikelihood(
             throw(ArgumentError("Unknown event type $(event.event)"))
         end
 
-        logitp_logq = solve(
+        p_logq = solve(
             ODEProblem{true}(
-                dlogitp_logq_dt!,
-                [logitp_end[event]; logq_end[event]],
+                dp_logq_dt!,
+                [p_end[event]; logq_end[event]],
                 (t_end, t_start),
                 (model, event.up.type)
             ),
@@ -194,17 +193,17 @@ function StatsAPI.loglikelihood(
             abstol = abstol
         )
 
-        logitp_start[event] = logitp_logq.u[end][1:end-1]
-        logq_start[event] = logitp_logq.u[end][end]
+        p_start[event] = p_logq.u[end][1:end-1]
+        logq_start[event] = p_logq.u[end][end]
     end
 
     result = logq_start[tree.children[1]]
 
     # Compute the non-observation probability of the whole tree
-    logitp = solve(
+    p = solve(
         ODEProblem{true}(
-            dlogitp_dt!,
-            fill(log(1 - model.ρ + 1e-6) - log(model.ρ), size(model.type_space)),
+            dp_dt!,
+            fill(1 - model.ρ, size(model.type_space)),
             (0, model.present_time),
             model
         ),
@@ -216,8 +215,8 @@ function StatsAPI.loglikelihood(
     )
 
     # Condition on observation of at least one lineage
-    logitp_i = logitp.u[end][type_space_index(model, tree.type)]
-    result -= log(1 - expit(logitp_i))
+    p_i = p.u[end][type_space_index(model, tree.type)]
+    result -= log(1 - p_i)
 
     return result
 end
@@ -236,18 +235,17 @@ See equation (1) of this paper:
 
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
-function dlogitp_dt!(dlogitp, logitp, model::AbstractBranchingProcess, t)
+function dp_dt!(dp, p, model::AbstractBranchingProcess, t)
     for (i, type) in enumerate(model.type_space)
         λₓ = λ(model, type)
         μₓ = μ(model, type)
-        γₓ = γ(model, type)
 
-        dlogitp[i] = (
-            -(λₓ + μₓ + γₓ) * (1 + exp(logitp[i]))
-            + μₓ * (1 - model.σ) * (2 + exp(-logitp[i]) + exp(logitp[i]))
-            + λₓ * exp(logitp[i])
+        dp[i] = (
+            -(λₓ + μₓ) * p[i]
+            + μₓ * (1 - model.σ)
+            + λₓ * p[i]^2
             + sum(
-                γ(model, type, to_type) * expit(logitp[j]) * (2 + exp(-logitp[i]) + exp(logitp[i]))
+                γ(model, type, to_type) * p[j]
                 for (j, to_type) in enumerate(model.type_space)
             )
         )
@@ -259,21 +257,21 @@ See equations (1) and (2) of this paper:
 
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
-function dlogitp_logq_dt!(dlogitp_logq, logitp_logq, args, t)
-    logitp = view(logitp_logq, 1:lastindex(logitp_logq)-1)
+function dp_logq_dt!(dp_logq, p_logq, args, t)
+    p = view(p_logq, 1:lastindex(p_logq)-1)
     model, parent_type = args
 
     λₓ = λ(model, parent_type)
     μₓ = μ(model, parent_type)
     γₓ = γ(model, parent_type)
 
-    logitp_i = logitp[type_space_index(model, parent_type)]
-    dlogq_i = -(λₓ + μₓ + γₓ) + 2 * λₓ * expit(logitp_i)
+    p_i = p[type_space_index(model, parent_type)]
+    dlogq_i = -(λₓ + μₓ + γₓ) + 2 * λₓ * p_i
 
     # Need to pass a view instead of a slice, to pass by reference instead of value
-    dlogitp = view(dlogitp_logq, 1:lastindex(dlogitp_logq)-1)
-    dlogitp_dt!(dlogitp, logitp, model, t)
-    dlogitp_logq[end] = dlogq_i
+    dp = view(dp_logq, 1:lastindex(dp_logq)-1)
+    dp_dt!(dp, p, model, t)
+    dp_logq[end] = dlogq_i
 end
 
 """
