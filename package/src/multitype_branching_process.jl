@@ -242,9 +242,10 @@ function dp_dt!(dp, p, model::AbstractBranchingProcess, t)
     for (i, type) in enumerate(model.type_space)
         λₓ = λ(model, type)
         μₓ = μ(model, type)
+        γₓ = γ(model, type)
 
         dp[i] = (
-            -(λₓ + μₓ) * p[i]
+            -(λₓ + μₓ + γₓ) * p[i]
             + μₓ * (1 - model.σ)
             + λₓ * p[i]^2
             + sum(
