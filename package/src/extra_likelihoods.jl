@@ -279,13 +279,13 @@ Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Bi
 """
 function dpq_dt!(dpq, pq, args, t)
     p, q_i = view(pq, 1:lastindex(pq)-1), pq[end]
-    model, parent_state = args
+    model, parent_type = args
 
-    λₓ = λ(model, parent_state)
-    μₓ = μ(model, parent_state)
-    γₓ = γ(model, parent_state)
+    λₓ = λ(model, parent_type)
+    μₓ = μ(model, parent_type)
+    γₓ = γ(model, parent_type)
 
-    p_i = p[type_space_index(model, parent_state)]
+    p_i = p[type_space_index(model, parent_type)]
     dq_i = -(λₓ + μₓ + γₓ) * q_i + 2 * λₓ * q_i * p_i
 
     # Need to pass a view instead of a slice, to pass by reference instead of value
@@ -294,31 +294,22 @@ function dpq_dt!(dpq, pq, args, t)
     dpq[end] = dq_i
 end
 
-function dp_dt!(dp, p, model::FixedTypeChangeRateBranchingProcess, t)
-    for (i, state) in enumerate(model.type_space)
-        λₓ = λ(model, state)
-        μₓ = μ(model, state)
-        γₓ = γ(model, state)
+"""
+See equation (1) of this paper:
+
+Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
+"""
+function dp_dt!(dp, p, model::AbstractBranchingProcess, t)
+    for (i, type) in enumerate(model.type_space)
+        λₓ = λ(model, type)
+        μₓ = μ(model, type)
+        γₓ = γ(model, type)
 
         dp[i] = (
             -(λₓ + μₓ + γₓ) * p[i]
             + μₓ * (1 - model.σ)
             + λₓ * p[i]^2
-            + γₓ * sum(model.Π[i, j] * p[j] for j in 1:length(model.type_space))
-        )
-    end
-end
-
-function dp_dt!(dp, p, model::VaryingTypeChangeRateBranchingProcess, t)
-    for (i, state) in enumerate(model.type_space)
-        λₓ = λ(model, state)
-        μₓ = μ(model, state)
-
-        dp[i] = (
-            -(λₓ + μₓ) * p[i]
-            + μₓ * (1 - model.σ)
-            + λₓ * p[i]^2
-            + model.δ * sum(model.Γ[i, j] * p[j] for j in 1:length(model.type_space))
+            + sum(γ(model, type, to_type) * p[j] for (j, to_type) in enumerate(model.type_space))
         )
     end
 end

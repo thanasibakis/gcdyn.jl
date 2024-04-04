@@ -116,90 +116,62 @@ function StatsAPI.loglikelihood(
     reltol = 1e-3,
     abstol = 1e-3
 )
-    NUM_TYPES = length(model.type_space)
-
     # We may be using autodiff, so figure out what type the likelikihood value will be
     T = typeof(λ(model, model.type_space[1]))
 
-    # Integrate dp/dt up front.
-    # Be sure to specify the iip=true of the ODEProblem for type stability and fewer memory allocations
-    p_solution = solve(
-        SecondOrderODEProblem{true}(
-            dp_dt!,
-            ones(Float64, axes(model.type_space)) .- model.ρ,
-            zeros(Float64, axes(model.type_space)),
-            (0, model.present_time),
-            model
-        ),
-        Rosenbrock23();
-        # isoutofdomain for SecondOrderODEProblem passes p::RecursiveArrayTools.ArrayPartition
-        # so p.x[1] is p and p.x[2] is integral_p
-        isoutofdomain = (p, _, t) -> any(x -> x < 0 || x > 1, p.x[1]),
-        reltol = reltol,
-        abstol = abstol
-    )
-
-    """
-    Returns a vector of ``p_x(t)`` for type x=`type`.
-
-    Here, `t` is time according to `TreeNode`s (root time is 0, time increases toward leaves)
-    and not according to phylogenetics (present time is 0, time increases toward root).
-    """
-    function p(t, type)
-        # OrdinaryDiffEq needs to solve in the increasing time direction, so I need to invert
-        t = model.present_time - t
-
-        i = type_space_index(model, type)
-        
-        # Also a RecursiveArrayTools.ArrayPartition
-        return p_solution(t; idxs=i)
-    end
-
-    """
-    Returns a vector of ``\\int_{t_start}^{t_end} p_x(t) dt`` for type x=`type`.
-
-    Here, `t_start` and `t_end` are times according to `TreeNode`s (root time is 0, time increases toward leaves)
-    and not according to phylogenetics (present time is 0, time increases toward root).
-    """
-    function integral_p(t_start, t_end, type)
-        # OrdinaryDiffEq needs to solve in the increasing time direction, so I need to invert
-        t_start, t_end = model.present_time - t_start, model.present_time - t_end
-
-        i = type_space_index(model, type)
-        
-        # Also a RecursiveArrayTools.ArrayPartition
-        l, u = p_solution([t_start, t_end]; idxs=NUM_TYPES+i)
-
-        return u - l
-    end
-
-    # Compute logq up each branch (from leaves to root) in the tree
+    logitp_start = Dict{TreeNode, Vector{T}}()
+    logitp_end = Dict{TreeNode, Vector{T}}()
     logq_start = Dict{TreeNode, T}()
     logq_end = Dict{TreeNode, T}()
-    
+
+    # If σ>0, leaves may be at non-present times, so it's incorrect to initialize
+    # p to be 1-ρ for all leaf times
+    for leaf in LeafTraversal(tree)
+        # Be sure to specify the iip=true of the ODEProblem for type stability
+        # and fewer memory allocations
+        logitp = solve(
+            ODEProblem{true}(
+                dlogitp_dt!,
+                # This initial condition `logit(1 - ρ)` is -Inf at ρ=1, so we shift by 1e-6
+                fill(log(1 - model.ρ + 1e-6) - log(model.ρ), size(model.type_space)),
+                (0, model.present_time - leaf.time),
+                model
+            ),
+            Tsit5();
+            save_everystep = false,
+            save_start = false,
+            reltol = reltol,
+            abstol = abstol
+        )
+
+        logitp_end[leaf] = logitp.u[end]
+    end
+
     for event in PostOrderTraversal(tree.children[1])
-        parent_type = event.up.type
-        λₓ = λ(model, parent_type)
-        μₓ = μ(model, parent_type)
-        γₓ = γ(model, parent_type)
-        
-        # Determine initial conditions of branch
+        t_start = model.present_time - event.up.time
+        t_end = model.present_time - event.time
+
         if event.event == :sampled_survival
+            # event already has p_end
             logq_end[event] = log(model.ρ)
         elseif event.event == :sampled_death
-            logq_end[event] = log(μₓ) + log(model.σ)
+            # event already has p_end
+            logq_end[event] = log(μ(model, event.up.type)) + log(model.σ)
         elseif event.event == :birth
+            logitp_end[event] = logitp_start[event.children[1]]
             logq_end[event] = (
-                log(λₓ)
+                log(λ(model, event.up.type))
                 + logq_start[event.children[1]]
                 + logq_start[event.children[2]]
             )
+        
         elseif event.event == :type_change
             if event.type == event.up.type
                 @warn "Self-loop encountered at a type change event in the tree. Density will evaluate to zero."
                 return -Inf
             end
 
+            logitp_end[event] = logitp_start[event.children[1]]
             logq_end[event] = (
                 log(γ(model, event.up.type, event.type))
                 + logq_start[event.children[1]]
@@ -208,19 +180,46 @@ function StatsAPI.loglikelihood(
             throw(ArgumentError("Unknown event type $(event.event)"))
         end
 
-        # Integral of dq_dt over this branch (up towards the root)
-        logq_start[event] = (
-            logq_end[event]
-            - (λₓ + μₓ + γₓ) * (event.time - event.up.time)
-            + 2 * λₓ * integral_p(event.time, event.up.time, parent_type)
+        logitp_logq = solve(
+            ODEProblem{true}(
+                dlogitp_logq_dt!,
+                [logitp_end[event]; logq_end[event]],
+                (t_end, t_start),
+                (model, event.up.type)
+            ),
+            Tsit5();
+            save_everystep = false,
+            save_start = false,
+            reltol = reltol,
+            abstol = abstol
         )
+
+        logitp_start[event] = logitp_logq.u[end][1:end-1]
+        logq_start[event] = logitp_logq.u[end][end]
     end
 
-    # Compute the extinction probability of the whole tree
-    pₓ = p(0, tree.type)
+    result = logq_start[tree.children[1]]
 
-    # Condition likelihood on non-extinction
-    return logq_start[tree.children[1]] - log(1 - pₓ)
+    # Compute the non-observation probability of the whole tree
+    logitp = solve(
+        ODEProblem{true}(
+            dlogitp_dt!,
+            fill(log(1 - model.ρ + 1e-6) - log(model.ρ), size(model.type_space)),
+            (0, model.present_time),
+            model
+        ),
+        Tsit5();
+        save_everystep = false,
+        save_start = false,
+        reltol = reltol,
+        abstol = abstol
+    )
+
+    # Condition on observation of at least one lineage
+    logitp_i = logitp.u[end][type_space_index(model, tree.type)]
+    result -= log(1 - expit(logitp_i))
+
+    return result
 end
 
 function StatsAPI.loglikelihood(
@@ -237,33 +236,44 @@ See equation (1) of this paper:
 
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
-function dp_dt!(dp, p, integral_p, model::FixedTypeChangeRateBranchingProcess, t)
+function dlogitp_dt!(dlogitp, logitp, model::AbstractBranchingProcess, t)
     for (i, type) in enumerate(model.type_space)
         λₓ = λ(model, type)
         μₓ = μ(model, type)
         γₓ = γ(model, type)
 
-        dp[i] = (
-            -(λₓ + μₓ + γₓ) * p[i]
-            + μₓ * (1 - model.σ)
-            + λₓ * p[i]^2
-            + γₓ * sum(model.Π[i, j] * p[j] for j in 1:length(model.type_space))
+        dlogitp[i] = (
+            -(λₓ + μₓ + γₓ) * (1 + exp(logitp[i]))
+            + μₓ * (1 - model.σ) * (2 + exp(-logitp[i]) + exp(logitp[i]))
+            + λₓ * exp(logitp[i])
+            + sum(
+                γ(model, type, to_type) * expit(logitp[j]) * (2 + exp(-logitp[i]) + exp(logitp[i]))
+                for (j, to_type) in enumerate(model.type_space)
+            )
         )
     end
 end
 
-function dp_dt!(dp, p, integral_p, model::VaryingTypeChangeRateBranchingProcess, t)
-    for (i, type) in enumerate(model.type_space)
-        λₓ = λ(model, type)
-        μₓ = μ(model, type)
+"""
+See equations (1) and (2) of this paper:
 
-        dp[i] = (
-            -(λₓ + μₓ) * p[i]
-            + μₓ * (1 - model.σ)
-            + λₓ * p[i]^2
-            + model.δ * sum(model.Γ[i, j] * p[j] for j in 1:length(model.type_space))
-        )
-    end
+Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
+"""
+function dlogitp_logq_dt!(dlogitp_logq, logitp_logq, args, t)
+    logitp = view(logitp_logq, 1:lastindex(logitp_logq)-1)
+    model, parent_type = args
+
+    λₓ = λ(model, parent_type)
+    μₓ = μ(model, parent_type)
+    γₓ = γ(model, parent_type)
+
+    logitp_i = logitp[type_space_index(model, parent_type)]
+    dlogq_i = -(λₓ + μₓ + γₓ) + 2 * λₓ * expit(logitp_i)
+
+    # Need to pass a view instead of a slice, to pass by reference instead of value
+    dlogitp = view(dlogitp_logq, 1:lastindex(dlogitp_logq)-1)
+    dlogitp_dt!(dlogitp, logitp, model, t)
+    dlogitp_logq[end] = dlogq_i
 end
 
 """
