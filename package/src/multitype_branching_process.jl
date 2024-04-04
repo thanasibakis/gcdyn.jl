@@ -137,6 +137,7 @@ function StatsAPI.loglikelihood(
                 model
             ),
             Tsit5();
+            isoutofdomain = (p, args, t) -> any(x -> x < 0 || x > 1, p),
             save_everystep = false,
             save_start = false,
             reltol = reltol,
@@ -187,6 +188,7 @@ function StatsAPI.loglikelihood(
                 (model, event.up.type)
             ),
             Tsit5();
+            isoutofdomain = (p_logq, args, t) -> any(x -> x < 0 || x > 1, p_logq[1:end-1]),
             save_everystep = false,
             save_start = false,
             reltol = reltol,
@@ -208,6 +210,7 @@ function StatsAPI.loglikelihood(
             model
         ),
         Tsit5();
+        isoutofdomain = (p, args, t) -> any(x -> x < 0 || x > 1, p),
         save_everystep = false,
         save_start = false,
         reltol = reltol,
