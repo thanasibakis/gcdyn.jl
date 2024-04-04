@@ -238,7 +238,7 @@ See equation (1) of this paper:
 
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
-function dp_dt!(dp, p, model::AbstractBranchingProcess, t)
+function dp_dt!(dp, p, model::FixedTypeChangeRateBranchingProcess, t)
     for (i, type) in enumerate(model.type_space)
         λₓ = λ(model, type)
         μₓ = μ(model, type)
@@ -248,10 +248,23 @@ function dp_dt!(dp, p, model::AbstractBranchingProcess, t)
             -(λₓ + μₓ + γₓ) * p[i]
             + μₓ * (1 - model.σ)
             + λₓ * p[i]^2
-            + sum(
-                γ(model, type, to_type) * p[j]
-                for (j, to_type) in enumerate(model.type_space)
-            )
+            + γₓ * sum(model.Π[i, j] * p[j] for j in 1:length(model.type_space))
+
+            # Don't use γ(model, type, model.type_space[j]) here, it's too slow for the ODE solver
+        )
+    end
+end
+
+function dp_dt!(dp, p, model::VaryingTypeChangeRateBranchingProcess, t)
+    for (i, type) in enumerate(model.type_space)
+        λₓ = λ(model, type)
+        μₓ = μ(model, type)
+
+        dp[i] = (
+            -(λₓ + μₓ) * p[i]
+            + μₓ * (1 - model.σ)
+            + λₓ * p[i]^2
+            + model.δ * sum(model.Γ[i, j] * p[j] for j in 1:length(model.type_space))
         )
     end
 end
