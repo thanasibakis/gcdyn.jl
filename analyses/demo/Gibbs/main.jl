@@ -1,6 +1,6 @@
 println("Loading packages...")
 
-using gcdyn, CSV, DataFrames, Turing, StatsPlots
+using gcdyn, CSV, DataFrames, Optim, Random, Turing
 
 @model function Model(trees, Γ, type_space, present_time)
     λ_xscale  ~ Gamma(2, 1)
@@ -20,6 +20,8 @@ using gcdyn, CSV, DataFrames, Turing, StatsPlots
 end
 
 function main()
+    Random.seed!(1)
+
     println("Setting up model...")
 
     Γ = [-1 0.5 0.25 0.25; 2 -4 1 1; 2 2 -5 1; 0.125 0.125 0.25 -0.5]
@@ -38,8 +40,11 @@ function main()
         println(file, join(num_nodes, ", "))
     end
 
-    println("Sampling from prior...")
-    prior_samples = sample(model, Prior(), 100) |> DataFrame
+    # println("Sampling from prior...")
+    # prior_samples = sample(model, Prior(), 100) |> DataFrame
+
+    println("Computing initial MCMC state...")
+    max_a_posteriori = optimize(model, MAP())
 
     println("Sampling from posterior...")
     posterior_samples = sample(
@@ -52,45 +57,12 @@ function main()
             MH(:μ => x -> LogNormal(log(x), 0.2)),
             MH(:δ => x -> LogNormal(log(x), 0.2)),
         ),
-        5000
+        5000,
+        init_params=max_a_posteriori
     ) |> DataFrame
 
     println("Exporting samples...")
     CSV.write("posterior-samples.csv", posterior_samples)
-
-    println("Visualizing...")
-
-    plot(xlims=(0, 10), ylims=(0, 6), dpi=300)
-
-    for row in eachrow(prior_samples)
-        plot!(x -> gcdyn.sigmoid(x, row.λ_xscale, row.λ_xshift, row.λ_yscale, row.λ_yshift); alpha=0.1, color="grey", width=2, label=nothing)
-    end
-
-    plot!(x -> gcdyn.sigmoid(x, truth.λ_xscale, truth.λ_xshift, truth.λ_yscale, truth.λ_yshift); color="#1A4F87", width=5, label="Truth")
-    title!("Birth rate (prior)")
-    png("birth-rate-prior-samples.png")
-
-    plot(xlims=(0, 10), ylims=(0, 6), dpi=300)
-
-    for row in eachrow(posterior_samples[4500:5:end, :])
-        plot!(x -> gcdyn.sigmoid(x, row.λ_xscale, row.λ_xshift, row.λ_yscale, row.λ_yshift); alpha=0.1, color="grey", width=2, label=nothing)
-    end
-
-    plot!(x -> gcdyn.sigmoid(x, truth.λ_xscale, truth.λ_xshift, truth.λ_yscale, truth.λ_yshift); color="#1A4F87", width=5, label="Truth")
-    title!("Birth rate (posterior)")
-    png("birth-rate-posterior-samples.png")
-
-    plot(LogNormal(0, 0.5); xlims=(0, 3), label="Prior", fill=(0, 0.5), color="grey", width=0, dpi=300)
-    histogram!(posterior_samples[:, :μ]; normalize=:pdf, label="Posterior", fill="lightblue", alpha=0.7)
-    vline!([truth.μ]; label="Truth", color="#1A4F87", width=6)
-    title!("Death rate")
-    png("death-rate.png")
-
-    plot(LogNormal(0, 0.5); xlims=(0, 4), label="Prior", fill=(0, 0.5), color="grey", width=0, dpi=300)
-    histogram!(posterior_samples[:, :δ]; normalize=:pdf, label="Posterior", fill="lightblue", alpha=0.7)
-    vline!([truth.δ]; label="Truth", color="#1A4F87", width=6)
-    title!("Type change rate scalar")
-    png("type-change-rate-scalar.png")
 
     print("Done!")    
 end

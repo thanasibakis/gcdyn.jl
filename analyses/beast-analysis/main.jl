@@ -1,5 +1,5 @@
 println("Loading packages...")
-using CSV, gcdyn, DataFrames, Distributions, JLD2, JSON, LinearAlgebra, Turing
+using CSV, gcdyn, DataFrames, Distributions, JLD2, JSON, LinearAlgebra, Optim, Turing
 
 include("estimate_type_change_rate_matrix.jl")
 
@@ -65,23 +65,14 @@ function main()
 	mkpath("out")
 	CSV.write("out/samples-prior.csv", prior_samples)
 
-	println("Sampling from posterior...")
+	println("Computing initial MCMC state...")
 	present_time = maximum(node.time for tree in treeset for node in LeafTraversal(tree))
-	
 	model = Model(treeset, tc_rate_matrix, type_space, present_time)
-	# posterior_samples = sample(model, NUTS(), 2) |> DataFrame
-	posterior_samples = sample(
-       model,
-       Gibbs(
-           MH(:log_λ_xscale_base => x -> Normal(x, 0.1)),
-           MH(:λ_xshift_base     => x -> Normal(x, 0.1)),
-           MH(:log_λ_yscale_base => x -> Normal(x, 0.1)),
-           MH(:log_λ_yshift_base => x -> Normal(x, 0.1)),
-           MH(:log_μ_base        => x -> Normal(x, 0.1)),
-           MH(:log_δ_base        => x -> Normal(x, 0.1)),
-       ),
-		10000,
-	) |> DataFrame
+
+	max_a_posteriori = optimize(model, MAP())
+
+	println("Sampling from posterior...")
+	posterior_samples = sample(model, NUTS(), 1000, init_params=max_a_posteriori) |> DataFrame
 	CSV.write("out/samples-posterior.csv", posterior_samples)
 
 	println("Done!")
