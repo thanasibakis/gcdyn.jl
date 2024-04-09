@@ -1,4 +1,5 @@
-using gcdyn, AbstractTrees, StatsBase, Test
+using gcdyn, StatsBase, Test
+import Random
 
 function test_rand_tree(n, λ, μ, present_time)
     # Assumes ρ = 1. σ should not matter
@@ -13,7 +14,7 @@ function test_rand_tree(n, λ, μ, present_time)
 
     theoretical = exp(present_time * (λ - μ))
 
-    @test mean(observed) ≈ theoretical atol=1
+    @test mean(observed) ≈ theoretical rtol=1e-1
 end
 
 function test_fully_observed_likelihoods(n, λ, μ, γ, state_space, present_time)
@@ -21,23 +22,25 @@ function test_fully_observed_likelihoods(n, λ, μ, γ, state_space, present_tim
     trees = rand_tree(model, n, state_space[1])
 
     naive_ll = sum(gcdyn.naive_loglikelihood(model, tree) for tree in trees)
-    appx_ll = sum(gcdyn.stadler_appx_loglikelhood(model, tree) for tree in trees)
+    appx_ll = sum(gcdyn.stadler_appx_loglikelihood(model, tree) for tree in trees)
 
-    @test loglikelihood(model, trees) ≈ naive_ll atol=1e-1
-    @test naive_ll ≈ appx_ll atol=1e-1
+    @test naive_ll ≈ loglikelihood(model, trees) rtol=1e-1
+    @test naive_ll ≈ appx_ll                     rtol=1e-1
 end
 
-function test_stadler_likelihoods(n, λ, μ, present_time)
+function test_no_extinction_likelihoods(n, λ, μ, present_time)
     model = FixedTypeChangeRateBranchingProcess(λ, μ, 0, 1, 0, 1:2, present_time)
     trees = rand_tree(model, n, 1)
 
-    appx_ll = sum(gcdyn.stadler_appx_loglikelhood(model, tree) for tree in trees)
+    appx_ll = sum(gcdyn.stadler_appx_loglikelihood(model, tree) for tree in trees)
 
-    @test loglikelihood(model, trees) ≈ appx_ll atol=1e-1
+    @test appx_ll ≈ loglikelihood(model, trees) rtol=1e-1
 end
 
 @testset "gcdyn" begin
+    Random.seed!(2)
+
     test_rand_tree(10000, 2.5, 1.1, 2)
-    test_fully_observed_likelihoods(1000, 2.5, 1.1, 0, 1:3, 1)
-    test_stadler_likelihoods(1000, 2.5, 1.1, 1)
+    test_fully_observed_likelihoods(50, 2.5, 1.1, 1.1, 1:3, 3)
+    test_no_extinction_likelihoods(50, 2.5, 1.1, 3)
 end

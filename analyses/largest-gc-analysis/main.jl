@@ -22,7 +22,7 @@ include("estimate_type_change_rate_matrix.jl")
 
     if DynamicPPL.leafcontext(__context__) !== Turing.PriorContext()
 		for tree in trees
-			ρ = length(LeafTraversal(tree)) / 1000
+			ρ = length(LeafTraversal(tree)) / 1000 # + 0.1
 			sampled_model = VaryingTypeChangeRateBranchingProcess(
 				λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, 0, type_space, present_time
 			)
@@ -60,20 +60,32 @@ function main()
 		tree
 	end
 
+	sort!(treeset; by=tree -> length(LeafTraversal(tree)), rev=true)
+	treeset = treeset[1:23]
+
 	println("Sampling from prior...")
 	prior_samples = sample(Model(nothing, tc_rate_matrix, type_space, nothing), Prior(), 5000) |> DataFrame
 	mkpath("out")
 	CSV.write("out/samples-prior.csv", prior_samples)
 
-	println("Computing initial MCMC state...")
-	present_time = maximum(node.time for tree in treeset for node in LeafTraversal(tree))
-	model = Model(treeset, tc_rate_matrix, type_space, present_time)
+	Threads.@threads for (i, tree) in collect(enumerate(treeset))
+		present_time = maximum(node.time for tree in treeset for node in LeafTraversal(tree))
+		model = Model([tree], tc_rate_matrix, type_space, present_time)
 
-	max_a_posteriori = optimize(model, MAP())
-
-	println("Sampling from posterior...")
-	posterior_samples = sample(model, NUTS(), 1000, init_params=max_a_posteriori) |> DataFrame
-	CSV.write("out/samples-posterior.csv", posterior_samples)
+		posterior_samples = sample(
+			model,
+			Gibbs(
+				MH(:log_λ_xscale_base => x -> Normal(x, 0.1)),
+				MH(:λ_xshift_base     => x -> Normal(x, 0.1)),
+				MH(:log_λ_yscale_base => x -> Normal(x, 0.1)),
+				MH(:log_λ_yshift_base => x -> Normal(x, 0.1)),
+				MH(:log_μ_base        => x -> Normal(x, 0.1)),
+				MH(:log_δ_base        => x -> Normal(x, 0.1)),
+			),
+				10000,
+		) |> DataFrame
+		CSV.write("out/samples-posterior-$i.csv", posterior_samples)
+	end
 
 	println("Done!")
 end

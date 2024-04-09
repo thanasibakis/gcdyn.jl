@@ -1,8 +1,8 @@
 println("Loading packages...")
 
-using gcdyn, CSV, DataFrames, Random, Turing
+using gcdyn, CSV, DataFrames, Optim, Random, Turing
 
-@model function Model(trees, Γ, state_space, present_time)
+@model function Model(trees, Γ, type_space, present_time)
     # Keep priors on the same scale for NUTS
     log_λ_xscale ~ Normal(0, 1)
     λ_xshift⁻    ~ Normal(0, 1)
@@ -19,16 +19,18 @@ using gcdyn, CSV, DataFrames, Random, Turing
     μ        = exp(log_μ * 0.5)
     δ        = exp(log_δ * 0.5)
 
-    sampled_model = VaryingTypeChangeRateBranchingProcess(
-        λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, 1, 0, state_space, present_time
-    )
-
     if DynamicPPL.leafcontext(__context__) !== Turing.PriorContext()
+        sampled_model = VaryingTypeChangeRateBranchingProcess(
+            λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, 1, 0, type_space, present_time
+        )
+
         Turing.@addlogprob! loglikelihood(sampled_model, trees)
     end
 end
 
 function main()
+    Random.seed!(1)
+    
 	println("Setting up model...")
 
     Γ = [-1 0.5 0.25 0.25; 2 -4 1 1; 2 2 -5 1; 0.125 0.125 0.25 -0.5]
@@ -40,12 +42,16 @@ function main()
     dfs = Vector{DataFrame}(undef, num_treesets)
 
     Threads.@threads for i in 1:num_treesets
-        treeset = rand_tree(truth, num_trees_per_set, truth.state_space[1]);
+        treeset = rand_tree(truth, num_trees_per_set, truth.type_space[1]);
+        model = Model(treeset, truth.Γ, truth.type_space, truth.present_time)
+
+        max_a_posteriori = optimize(model, MAP())
 
         dfs[i] = sample(
-            Model(treeset, truth.Γ, truth.state_space, truth.present_time),
+            model,
             NUTS(),
-            5000
+            1000,
+            init_params=max_a_posteriori
         ) |> DataFrame
 
         dfs[i].run .= i

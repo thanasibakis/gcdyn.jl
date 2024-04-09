@@ -2,11 +2,11 @@
 
 ## Setup
 
-The `gcdyn.jl` directory is a Julia package implementing the inferential models.
+The `package` directory is a Julia package implementing the inferential models.
 Scripts in the `analyses` directory assume this is installed as a package.
 This is taken care of if you activate the Julia project at the root directory, using `julia --project`.
 
-## Collection of self-contained analyses with `gcdyn.jl`
+## Collection of self-contained analyses with this package
 
 Note that each analysis in `analyses/` is self-contained, and similarly-named scripts across analyses may have differences.
 
