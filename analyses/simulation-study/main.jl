@@ -45,13 +45,11 @@ function main()
         treeset = rand_tree(truth, num_trees_per_set, truth.type_space[1]);
         model = Model(treeset, truth.Γ, truth.type_space, truth.present_time)
 
-        max_a_posteriori = optimize(model, MAP())
-
         dfs[i] = sample(
             model,
-            NUTS(),
+            NUTS(adtype=AutoForwardDiff(chunksize=6)),
             1000,
-            init_params=max_a_posteriori
+            init_params=optimize(model, MAP(), NelderMead())
         ) |> DataFrame
 
         dfs[i].run .= i

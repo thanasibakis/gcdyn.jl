@@ -74,15 +74,9 @@ function main()
 
 		posterior_samples = sample(
 			model,
-			Gibbs(
-				MH(:log_λ_xscale_base => x -> Normal(x, 0.1)),
-				MH(:λ_xshift_base     => x -> Normal(x, 0.1)),
-				MH(:log_λ_yscale_base => x -> Normal(x, 0.1)),
-				MH(:log_λ_yshift_base => x -> Normal(x, 0.1)),
-				MH(:log_μ_base        => x -> Normal(x, 0.1)),
-				MH(:log_δ_base        => x -> Normal(x, 0.1)),
-			),
-				10000,
+			NUTS(adtype=AutoForwardDiff(chunksize=6)),
+			1000;
+			init_params=optimize(model, MAP(), NelderMead())
 		) |> DataFrame
 		CSV.write("out/samples-posterior-$i.csv", posterior_samples)
 	end
