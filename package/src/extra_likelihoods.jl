@@ -7,7 +7,7 @@ naive_loglikelihood(model, tree)
 
 Compute the log-likelihood of the given model under the assumption that the given tree is fully observed (ie. all nodes are sampled, dead or not).
 """
-function naive_loglikelihood(model::AbstractBranchingProcess, tree::TreeNode)
+function naive_loglikelihood(model::BranchingProcess, tree::TreeNode)
     result = 0.0
 
     for node in PostOrderTraversal(tree.children[1])
@@ -42,7 +42,7 @@ Compute the log-likelihood of the given model under the assumption that all type
 
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
-function stadler_appx_loglikelihood(model::AbstractBranchingProcess, tree::TreeNode)
+function stadler_appx_loglikelihood(model::BranchingProcess, tree::TreeNode)
     result = 0
     ρ, σ, present_time = model.ρ, model.σ, model.present_time
 
@@ -112,7 +112,7 @@ Does not condition on all trees having at least one sampled descendant (ie. [`ra
 
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
-function stadler_appx_unconditioned_loglikelihood(model::AbstractBranchingProcess, tree::TreeNode)
+function stadler_appx_unconditioned_loglikelihood(model::BranchingProcess, tree::TreeNode)
     result = 0
     ρ, σ, present_time = model.ρ, model.σ, model.present_time
 
