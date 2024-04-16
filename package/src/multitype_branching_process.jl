@@ -100,7 +100,8 @@ function StatsAPI.loglikelihood(
     model::BranchingProcess,
     tree::TreeNode;
     reltol = 1e-3,
-    abstol = 1e-3
+    abstol = 1e-3,
+    maxiters = 1e5
 )
     # We may be using autodiff, so figure out what type the likelikihood value will be
     T = typeof(λ(model, model.type_space[1]))
@@ -110,9 +111,13 @@ function StatsAPI.loglikelihood(
     logq_start = Dict{TreeNode, T}()
     logq_end = Dict{TreeNode, T}()
 
-    # If σ>0, leaves may be at non-present times, so it's incorrect to initialize
-    # p to be 1-ρ for all leaf times
     for leaf in LeafTraversal(tree)
+        # If σ>0, leaves may be at non-present times, so it's incorrect to initialize
+        # p to be 1-ρ for all leaf times
+        if leaf.time == model.present_time
+            p_end[leaf] = fill(1 - model.ρ, size(model.type_space))
+        end
+
         # Be sure to specify the iip=true of the ODEProblem for type stability
         # and fewer memory allocations
         p = solve(
@@ -127,8 +132,15 @@ function StatsAPI.loglikelihood(
             save_everystep = false,
             save_start = false,
             reltol = reltol,
-            abstol = abstol
+            abstol = abstol,
+            maxiters = maxiters
         )
+
+        if !SciMLBase.successful_retcode(p)
+            @warn "Leaf initial condition could not be solved. Exit code $(p.retcode). The integration timespan was $(model.present_time - leaf.time). Density will evaluate to zero."
+
+            return -Inf
+        end
 
         p_end[leaf] = p.u[end]
     end
@@ -181,6 +193,11 @@ function StatsAPI.loglikelihood(
             abstol = abstol
         )
 
+        if !SciMLBase.successful_retcode(p_logq)
+            @warn "Density of branch could not be solved. Exit code $(p_logq.retcode). The integration timespan was $(t_start - t_end). Density of tree will evaluate to zero."
+            return -Inf
+        end
+
         p_start[event] = p_logq.u[end][1:end-1]
         logq_start[event] = p_logq.u[end][end]
     end
@@ -202,6 +219,11 @@ function StatsAPI.loglikelihood(
         reltol = reltol,
         abstol = abstol
     )
+
+    if !SciMLBase.successful_retcode(p)
+        @warn "Non-observation probability of tree could not be solved. Exit code $(p.retcode). The integration timespan was $(model.present_time). Density will evaluate to zero."
+        return -Inf
+    end
 
     # Condition on observation of at least one lineage
     p_i = p.u[end][type_space_index(model, tree.type)]
