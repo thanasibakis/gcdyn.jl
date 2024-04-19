@@ -68,18 +68,24 @@ Base.IteratorEltype(::Type{<:TreeIterator{TreeNode}}) = Base.HasEltype()
 Base.eltype(::Type{<:TreeIterator{TreeNode}}) = TreeNode
 
 """
+An abstract type for branching processes.
+
+See also [`BranchingProcess`](@ref).
+"""
+abstract type AbstractBranchingProcess end
+
+# To allow us to broadcast the rate parameter functions over types
+Base.broadcastable(model::AbstractBranchingProcess) = Ref(model)
+
+"""
 ```julia
-BranchingProcess(λ, μ, γ, ρ, σ, type_space, present_time)
-BranchingProcess(λ, μ, δ, Γ, ρ, σ, type_space, present_time)
-BranchingProcess(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, γ, ρ, σ, type_space, present_time)
-BranchingProcess(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, σ, type_space, present_time)
+SigmoidalBranchingProcess(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, γ, ρ, σ, type_space, present_time)
+SigmoidalBranchingProcess(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, σ, type_space, present_time)
 ```
 
 Constructs a multitype branching process with the given parameters.
 
 A parameterized sigmoid curve (with `λ_xscale`, `λ_xshift`, `λ_yscale`, and `λ_yshift`) maps types to birth rates.
-Alternatively, a single birth rate `λ` can be provided for all types.
-
 The death rate parameter is notated as `μ`.
 
 `Γ` is the type change rate matrix, and `δ` is a scaling parameter for this matrix.
@@ -88,20 +94,20 @@ Alternatively, a single type change rate `γ` can be provided for all types, in 
 Sampling probabilities are notated as `ρ` (survival sampling probability) and `σ` (death sampling probability).
 Ensure that `present_time > 0`, since the process is defined to start at time `0`.
 """
-struct BranchingProcess{R₁ <: Real, R₂ <: Real, R₃ <: Real, R₄ <: Real, R₅ <: Real, R₆ <: Real, M <: AbstractMatrix{R} where R <: Real, S <: AbstractVector{T} where T <: Real}
-    λ_xscale::R₁
-    λ_xshift::R₂
-    λ_yscale::R₃
-    λ_yshift::R₄
-    μ::R₅
-    δ::R₆
+struct SigmoidalBranchingProcess{R <: Real, M <: AbstractMatrix{<:Real}, S <: AbstractVector{<:Real}} <: AbstractBranchingProcess
+    λ_xscale::R
+    λ_xshift::R
+    λ_yscale::R
+    λ_yshift::R
+    μ::R
+    δ::R
     Γ::M
     ρ::Float64
     σ::Float64
     type_space::S
     present_time::Float64
 
-    function BranchingProcess(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, σ, type_space, present_time)
+    function SigmoidalBranchingProcess(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, σ, type_space, present_time)
         if ρ < 0 || ρ > 1
             throw(ArgumentError("ρ must be between 0 and 1"))
         elseif σ < 0 || σ > 1
@@ -118,25 +124,71 @@ struct BranchingProcess{R₁ <: Real, R₂ <: Real, R₃ <: Real, R₄ <: Real, 
            throw(ArgumentError("The transition rate matrix must contain only negative or zero values on the diagonal."))
         end
 
-        return new{typeof(λ_xscale), typeof(λ_xshift), typeof(λ_yscale), typeof(λ_yshift), typeof(μ), typeof(δ), typeof(Γ), typeof(type_space)}(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, σ, type_space, present_time)
+        return new{typeof(μ), typeof(Γ), typeof(type_space)}(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, σ, type_space, present_time)
     end
 end
 
-function BranchingProcess(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, γ, ρ, σ, type_space, present_time)
+function SigmoidalBranchingProcess(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, γ, ρ, σ, type_space, present_time)
     n = length(type_space)
     Γ = ones(n, n) / (n-1) * γ
     Γ[diagind(Γ)] .= -γ
     
-    return BranchingProcess(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, 1, Γ, ρ, σ, type_space, present_time)
+    return SigmoidalBranchingProcess(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, 1, Γ, ρ, σ, type_space, present_time)
 end
 
-function BranchingProcess(λ, μ, δ, Γ, ρ, σ, type_space, present_time)
-    return BranchingProcess(0, 0, 0, λ, μ, δ, Γ, ρ, σ, type_space, present_time)
+"""
+```julia
+ConstantBranchingProcess(λ, μ, γ, ρ, σ, type_space, present_time)
+ConstantBranchingProcess(λ, μ, δ, Γ, ρ, σ, type_space, present_time)
+```
+
+Constructs a multitype branching process with the given parameters.
+
+A single birth rate `λ` is provided for all types.
+The death rate parameter is notated as `μ`.
+
+`Γ` is the type change rate matrix, and `δ` is a scaling parameter for this matrix.
+Alternatively, a single type change rate `γ` can be provided for all types, in which case the model will assume uniform transitions between types.
+
+Sampling probabilities are notated as `ρ` (survival sampling probability) and `σ` (death sampling probability).
+Ensure that `present_time > 0`, since the process is defined to start at time `0`.
+
+"""
+struct ConstantBranchingProcess{R <: Real, M <: AbstractMatrix{<:Real}, S <: AbstractVector{<:Real}} <: AbstractBranchingProcess
+    λ::R
+    μ::R
+    δ::R
+    Γ::M
+    ρ::Float64
+    σ::Float64
+    type_space::S
+    present_time::Float64
+
+    function ConstantBranchingProcess(λ, μ, δ, Γ, ρ, σ, type_space, present_time)
+        if ρ < 0 || ρ > 1
+            throw(ArgumentError("ρ must be between 0 and 1"))
+        elseif σ < 0 || σ > 1
+            throw(ArgumentError("σ must be between 0 and 1"))
+        elseif present_time < 0
+            throw(ArgumentError("Time must be positive"))
+        elseif length(type_space) != size(Γ, 1)
+            throw(DimensionMismatch("The number of types in the type space must match the number of rows in the rate matrix."))
+        elseif length(type_space) != size(Γ, 2)
+            throw(DimensionMismatch("The number of types in the type space must match the number of columns in the rate matrix."))
+        elseif any(≉(0; atol=1e-10), sum(Γ, dims=2))
+           throw(ArgumentError("The transition rate matrix must contain only rows that sum to 0."))
+        elseif any(>(0), Γ[i,i] for i in minimum(axes(Γ))) && length(type_space) > 1
+           throw(ArgumentError("The transition rate matrix must contain only negative or zero values on the diagonal."))
+        end
+
+        return new{typeof(λ), typeof(Γ), typeof(type_space)}(λ, μ, δ, Γ, ρ, σ, type_space, present_time)
+    end
 end
 
-function BranchingProcess(λ, μ, γ, ρ, σ, type_space, present_time)
-    return BranchingProcess(0, 0, 0, λ, μ, γ, ρ, σ, type_space, present_time)
-end
+function ConstantBranchingProcess(λ, μ, γ, ρ, σ, type_space, present_time)
+    n = length(type_space)
+    Γ = ones(n, n) / (n-1) * γ
+    Γ[diagind(Γ)] .= -γ
 
-# To allow us to broadcast the rate parameter functions over types
-Base.broadcastable(model::BranchingProcess) = Ref(model)
+    return ConstantBranchingProcess(λ, μ, 1, Γ, ρ, σ, type_space, present_time)
+end

@@ -8,38 +8,38 @@ sigmoid(x, xscale, xshift, yscale, yshift) = yscale * expit(xscale * (x - xshift
 
 """
 ```julia
-type_space_index(model::BranchingProcess, type)
+type_space_index(model::AbstractBranchingProcess, type)
 ```
 
 Returns the index of `type` in the given `model`'s type space, or `nothing` if not found.
 """
-@memoize function type_space_index(model::BranchingProcess, type)
+@memoize function type_space_index(model::AbstractBranchingProcess, type)
     return findfirst(==(type), model.type_space)
 end
 
 """
 ```julia
-λ(model::BranchingProcess, type)
+λ(model::AbstractBranchingProcess, type)
 ```
 
 Evaluates the `model`'s birth rate function at the given `type`.
 """
-function λ(model::BranchingProcess, type)
-    if isnothing(type_space_index(model, type))
-        throw(ArgumentError("The type must be in the type space of the model."))
-    end
+function λ(model::ConstantBranchingProcess, type)
+    return model.λ
+end
 
+function λ(model::SigmoidalBranchingProcess, type)
     return sigmoid(type, model.λ_xscale, model.λ_xshift, model.λ_yscale, model.λ_yshift)
 end
 
 """
 ```julia
-μ(model::BranchingProcess, type)
+μ(model::AbstractBranchingProcess, type)
 ```
 
 Evaluates the `model`'s death rate function at the given `type`.
 """
-function μ(model::BranchingProcess, type)
+function μ(model::AbstractBranchingProcess, type)
     if isnothing(type_space_index(model, type))
         throw(ArgumentError("The type must be in the type space of the model."))
     end
@@ -49,12 +49,12 @@ end
 
 """
 ```julia
-γ(model::BranchingProcess, type)
+γ(model::AbstractBranchingProcess, type)
 ```
 
 Evaluates the `model`'s type change rate function at the given `type` (the rate of change out of `type`).
 """
-function γ(model::BranchingProcess, type)
+function γ(model::AbstractBranchingProcess, type)
     i = type_space_index(model, type)
 
     if isnothing(i)
@@ -66,12 +66,12 @@ end
 
 """
 ```julia
-γ(model::BranchingProcess, from_type, to_type)
+γ(model::AbstractBranchingProcess, from_type, to_type)
 ```
 
 Evaluates the `model`'s rate of type change from `from_type` to `to_type`.
 """
-function γ(model::BranchingProcess, from_type, to_type)
+function γ(model::AbstractBranchingProcess, from_type, to_type)
     if from_type == to_type
         return 0
     end
@@ -88,8 +88,8 @@ end
 
 """
 ```julia
-loglikelihood(model::BranchingProcess, tree::TreeNode; kw...)
-loglikelihood(model::BranchingProcess, trees; kw...)
+loglikelihood(model::AbstractBranchingProcess, tree::TreeNode; kw...)
+loglikelihood(model::AbstractBranchingProcess, trees; kw...)
 ```
 
 A slight deviation from StatsAPI, as observations are not stored in the model object, so they must be passed as an argument.
@@ -97,7 +97,7 @@ A slight deviation from StatsAPI, as observations are not stored in the model ob
 Keyword arguments `reltol` and `abstol` are passed to the ODE solver.
 """
 function StatsAPI.loglikelihood(
-    model::BranchingProcess,
+    model::AbstractBranchingProcess,
     tree::TreeNode;
     reltol = 1e-3,
     abstol = 1e-3,
@@ -233,7 +233,7 @@ function StatsAPI.loglikelihood(
 end
 
 function StatsAPI.loglikelihood(
-    model::BranchingProcess,
+    model::AbstractBranchingProcess,
     trees;
     reltol = 1e-3,
     abstol = 1e-3
@@ -246,7 +246,7 @@ See equation (1) of this paper:
 
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
-function dp_dt!(dp, p, model::BranchingProcess, t)
+function dp_dt!(dp, p, model::AbstractBranchingProcess, t)
     for (i, type) in enumerate(model.type_space)
         λₓ = λ(model, type)
         μₓ = μ(model, type)
@@ -297,7 +297,7 @@ Can optionally choose not to `reject_stubs`, equivalent to not conditioning on t
 See also [`TreeNode`](@ref), [`sample_child!`](@ref), [`mutate!`](@ref).
 """
 function rand_tree(
-    model::BranchingProcess,
+    model::AbstractBranchingProcess,
     n,
     init_type;
     reject_stubs=true
@@ -312,7 +312,7 @@ function rand_tree(
 end
 
 function rand_tree(
-    model::BranchingProcess,
+    model::AbstractBranchingProcess,
     init_type;
     reject_stubs=true
 )
@@ -376,7 +376,7 @@ mutate!(node, model)
 
 Change the type of the given node according to the transition probabilities or rates in the given model.
 """
-function mutate!(node::TreeNode, model::BranchingProcess)
+function mutate!(node::TreeNode, model::AbstractBranchingProcess)
     if node.type ∉ model.type_space
         throw(ArgumentError("The type of the node must be in the type space of the mutator."))
     end
@@ -397,7 +397,7 @@ Append a new child event to the given parent node, selecting between events from
 Note that the child will a time `t` larger than its parent.
 This aligns us with the branching process models, but contradicts the notion of time typically used in phylogenetics.
 """
-function sample_child!(parent::TreeNode, model::BranchingProcess)
+function sample_child!(parent::TreeNode, model::AbstractBranchingProcess)
     if length(parent.children) == 2
         throw(ArgumentError("Can only have 2 children max"))
     end

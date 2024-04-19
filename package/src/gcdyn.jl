@@ -11,7 +11,8 @@ using
     StatsBase
 
 export
-    BranchingProcess,
+    ConstantBranchingProcess,
+    SigmoidalBranchingProcess,
     TreeNode,
     LeafTraversal,
     PostOrderTraversal,
