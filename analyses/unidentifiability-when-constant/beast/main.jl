@@ -9,7 +9,7 @@
 # and unpredictable, which is making autodiff hard to do?
 # Using Nelder-Mead here has been totally fine
 
-using gcdyn, ADTypes, ForwardDiff, JLD2, Optim, Random, SciMLSensitivity, Turing, Zygote
+using gcdyn, ADTypes, FillArrays, JLD2, LinearAlgebra, Optim, Random, Turing
 
 @model function SigmoidalModel(trees, Γ, type_space, present_time)
 	# Keep priors on the same scale for NUTS
@@ -31,7 +31,7 @@ using gcdyn, ADTypes, ForwardDiff, JLD2, Optim, Random, SciMLSensitivity, Turing
 	if DynamicPPL.leafcontext(__context__) !== Turing.PriorContext()
 		for tree in trees
 			ρ = length(LeafTraversal(tree)) / 1000
-			sampled_model = BranchingProcess(
+			sampled_model = SigmoidalBranchingProcess(
 				λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, 0, type_space, present_time
 			)
 			
@@ -54,8 +54,31 @@ end
 	if DynamicPPL.leafcontext(__context__) !== Turing.PriorContext()
 		for tree in trees
 			ρ = length(LeafTraversal(tree)) / 1000
-			sampled_model = BranchingProcess(
-				0, 0, 0, λ, μ, δ, Γ, ρ, 0, type_space, present_time
+			sampled_model = ConstantBranchingProcess(
+				λ, μ, δ, Γ, ρ, 0, type_space, present_time
+			)
+			
+			Turing.@addlogprob! loglikelihood(sampled_model, tree)
+		end
+	end
+end
+
+@model function DiscreteModel(trees, Γ, type_space, present_time)
+	# Keep priors on the same scale for NUTS
+	log_λ_base ~ MvNormal(Fill(0, length(type_space)), I)
+	log_μ_base ~ Normal(0, 1)
+	log_δ_base ~ Normal(0, 1)
+
+	# Obtain our actual parameters from the proxies
+	λ = @. exp(log_λ_base * 0.5)
+	μ = exp(log_μ_base * 0.5)
+	δ = exp(log_δ_base * 0.5)
+
+	if DynamicPPL.leafcontext(__context__) !== Turing.PriorContext()
+		for tree in trees
+			ρ = length(LeafTraversal(tree)) / 1000
+			sampled_model = DiscreteBranchingProcess(
+				λ, μ, δ, Γ, ρ, 0, type_space, present_time
 			)
 			
 			Turing.@addlogprob! loglikelihood(sampled_model, tree)
@@ -82,7 +105,6 @@ function main(treeset_path, type_space_path, Γ_path)
 	display(round.(Γ; digits=3))
 
 	println()
-
 	println("MLE of constant rate model")
 	println("--------------------------")
 	model = ConstantModel([treeset[1]], Γ, type_space, present_time)
@@ -110,6 +132,35 @@ function main(treeset_path, type_space_path, Γ_path)
 	end
 
 	println()
+	println("MLE of discrete rate model")
+	println("--------------------------")
+	model = DiscreteModel([treeset[1]], Γ, type_space, present_time)
+
+	for i in 1:10
+		println("Run $i")
+		o = optimize(model, MLE(), NelderMead(), Optim.Options(g_tol=1e-4))
+		λ = round.(exp.(o.values[1:length(type_space)] .* 0.5); digits=3)
+		μ, δ = @. round(exp(o.values[end-1:end] * 0.5); digits=3)
+		println("\tλ: $λ")
+		println("\tμ: $μ")
+		println("\tδ: $δ")
+	end
+
+	println()
+	println("MAP of discrete rate model")
+	println("--------------------------")
+
+	for i in 1:10
+		println("Run $i")
+		o = optimize(model, MAP(), NelderMead(), Optim.Options(g_tol=1e-4))
+		λ = round.(exp.(o.values[1:length(type_space)] .* 0.5); digits=3)
+		μ, δ = @. round(exp(o.values[end-1:end] * 0.5); digits=3)
+		println("\tλ: $λ")
+		println("\tμ: $μ")
+		println("\tδ: $δ")
+	end
+
+	println()
 	println("MLE of sigmoidal rate model")
 	println("---------------------------")
 	model = SigmoidalModel([treeset[1]], Γ, type_space, present_time)
@@ -124,7 +175,7 @@ function main(treeset_path, type_space_path, Γ_path)
 		λ_yshift = exp(log_λ_yshift_base * 1.2 - 0.5);
 		μ        = exp(log_μ_base * 0.5);
 		δ        = exp(log_δ_base * 0.5);
-		sampled_model = BranchingProcess(
+		sampled_model = SigmoidalBranchingProcess(
 			λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, length(LeafTraversal(treeset[1])) / 1000, 0, type_space, present_time
 		);
 		println("\tλ_xscale: $(round(λ_xscale; digits=3))")
@@ -150,7 +201,7 @@ function main(treeset_path, type_space_path, Γ_path)
 		λ_yshift = exp(log_λ_yshift_base * 1.2 - 0.5);
 		μ        = exp(log_μ_base * 0.5);
 		δ        = exp(log_δ_base * 0.5);
-		sampled_model = BranchingProcess(
+		sampled_model = SigmoidalBranchingProcess(
 			λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, length(LeafTraversal(treeset[1])) / 1000, 0, type_space, present_time
 		);
 		println("\tλ_xscale: $(round(λ_xscale; digits=3))")
