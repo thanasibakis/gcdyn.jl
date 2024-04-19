@@ -12,6 +12,7 @@ using
 
 export
     ConstantBranchingProcess,
+    DiscreteBranchingProcess,
     SigmoidalBranchingProcess,
     TreeNode,
     LeafTraversal,

@@ -28,6 +28,16 @@ function λ(model::ConstantBranchingProcess, type)
     return model.λ
 end
 
+function λ(model::DiscreteBranchingProcess, type)
+    i = type_space_index(model, type)
+
+    if isnothing(i)
+        throw(ArgumentError("The type must be in the type space of the model."))
+    end
+
+    return model.λ[i]
+end
+
 function λ(model::SigmoidalBranchingProcess, type)
     return sigmoid(type, model.λ_xscale, model.λ_xshift, model.λ_yscale, model.λ_yshift)
 end

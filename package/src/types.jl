@@ -70,7 +70,7 @@ Base.eltype(::Type{<:TreeIterator{TreeNode}}) = TreeNode
 """
 An abstract type for branching processes.
 
-See also [`BranchingProcess`](@ref).
+See also [`SigmoidalBranchingProcess`](@ref), [`ConstantBranchingProcess`](@ref), [`DiscreteBranchingProcess`](@ref).
 """
 abstract type AbstractBranchingProcess end
 
@@ -191,4 +191,61 @@ function ConstantBranchingProcess(λ, μ, γ, ρ, σ, type_space, present_time)
     Γ[diagind(Γ)] .= -γ
 
     return ConstantBranchingProcess(λ, μ, 1, Γ, ρ, σ, type_space, present_time)
+end
+
+"""
+```julia
+DiscreteBranchingProcess(λ, μ, γ, ρ, σ, type_space, present_time)
+DiscreteBranchingProcess(λ, μ, δ, Γ, ρ, σ, type_space, present_time)
+```
+
+Constructs a multitype branching process with the given parameters.
+
+A `Vector` of birth rates `λ` is provided, with indices corresponding to `type_space`.
+The death rate parameter is notated as `μ`.
+
+`Γ` is the type change rate matrix, and `δ` is a scaling parameter for this matrix.
+Alternatively, a single type change rate `γ` can be provided for all types, in which case the model will assume uniform transitions between types.
+
+Sampling probabilities are notated as `ρ` (survival sampling probability) and `σ` (death sampling probability).
+Ensure that `present_time > 0`, since the process is defined to start at time `0`.
+
+"""
+struct DiscreteBranchingProcess{R <: Real, M <: AbstractMatrix{<:Real}, S <: AbstractVector{<:Real}} <: AbstractBranchingProcess
+    λ::Vector{R}
+    μ::R
+    δ::R
+    Γ::M
+    ρ::Float64
+    σ::Float64
+    type_space::S
+    present_time::Float64
+
+    function DiscreteBranchingProcess(λ, μ, δ, Γ, ρ, σ, type_space, present_time)
+        if ρ < 0 || ρ > 1
+            throw(ArgumentError("ρ must be between 0 and 1"))
+        elseif σ < 0 || σ > 1
+            throw(ArgumentError("σ must be between 0 and 1"))
+        elseif present_time < 0
+            throw(ArgumentError("Time must be positive"))
+        elseif length(type_space) != size(Γ, 1)
+            throw(DimensionMismatch("The number of types in the type space must match the number of rows in the rate matrix."))
+        elseif length(type_space) != size(Γ, 2)
+            throw(DimensionMismatch("The number of types in the type space must match the number of columns in the rate matrix."))
+        elseif any(≉(0; atol=1e-10), sum(Γ, dims=2))
+           throw(ArgumentError("The transition rate matrix must contain only rows that sum to 0."))
+        elseif any(>(0), Γ[i,i] for i in minimum(axes(Γ))) && length(type_space) > 1
+           throw(ArgumentError("The transition rate matrix must contain only negative or zero values on the diagonal."))
+        end
+
+        return new{typeof(μ), typeof(Γ), typeof(type_space)}(λ, μ, δ, Γ, ρ, σ, type_space, present_time)
+    end
+end
+
+function DiscreteBranchingProcess(λ, μ, γ, ρ, σ, type_space, present_time)
+    n = length(type_space)
+    Γ = ones(n, n) / (n-1) * γ
+    Γ[diagind(Γ)] .= -γ
+
+    return DiscreteBranchingProcess(λ, μ, 1, Γ, ρ, σ, type_space, present_time)
 end
