@@ -1,23 +1,5 @@
 # Methods involving `TreeNode` objects.
 
-# Implement AbstractTrees API
-
-AbstractTrees.ChildIndexing(::Type{<:TreeNode}) = IndexedChildren()
-AbstractTrees.children(node::TreeNode) = node.children
-AbstractTrees.childrentype(::Type{<:TreeNode}) = Vector{TreeNode}
-
-AbstractTrees.ParentLinks(::Type{<:TreeNode}) = StoredParents()
-AbstractTrees.parent(node::TreeNode) = node.up
-
-AbstractTrees.NodeType(::Type{<:TreeNode}) = HasNodeType()
-AbstractTrees.nodetype(::Type{<:TreeNode}) = TreeNode
-
-AbstractTrees.nodevalue(node::TreeNode) = node.name
-Base.show(io::IO, tree::TreeNode) = AbstractTrees.print_tree(io, tree)
-
-Base.IteratorEltype(::Type{<:TreeIterator{TreeNode}}) = Base.HasEltype()
-Base.eltype(::Type{<:TreeIterator{TreeNode}}) = TreeNode
-
 """
 ```julia
 TreeTraversal

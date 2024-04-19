@@ -4,8 +4,8 @@ import Random
 function test_rand_tree(n, λ, μ, present_time)
     # Assumes ρ = 1. σ should not matter
 
-    model = FixedTypeChangeRateBranchingProcess(λ, μ, 0, 1, 1, 1:3, present_time)
-    trees = rand_tree(model, n, 0; reject_stubs=false)
+    model = BranchingProcess(λ, μ, 0, 1, 1, 1:3, present_time)
+    trees = rand_tree(model, n, 1; reject_stubs=false)
     
     # Expected number of survivors should check out
     observed = map(trees) do tree
@@ -18,7 +18,7 @@ function test_rand_tree(n, λ, μ, present_time)
 end
 
 function test_fully_observed_likelihoods(n, λ, μ, γ, state_space, present_time)
-    model = FixedTypeChangeRateBranchingProcess(λ, μ, γ, 1, 1, state_space, present_time)
+    model = BranchingProcess(λ, μ, γ, 1, 1, state_space, present_time)
     trees = rand_tree(model, n, state_space[1])
 
     naive_ll = sum(gcdyn.naive_loglikelihood(model, tree) for tree in trees)
@@ -29,7 +29,7 @@ function test_fully_observed_likelihoods(n, λ, μ, γ, state_space, present_tim
 end
 
 function test_no_extinction_likelihoods(n, λ, μ, present_time)
-    model = FixedTypeChangeRateBranchingProcess(λ, μ, 0, 1, 0, 1:2, present_time)
+    model = BranchingProcess(λ, μ, 0, 1, 0, 1:2, present_time)
     trees = rand_tree(model, n, 1)
 
     appx_ll = sum(gcdyn.stadler_appx_loglikelihood(model, tree) for tree in trees)

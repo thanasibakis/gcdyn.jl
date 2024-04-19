@@ -49,14 +49,11 @@ function main()
         println(file, join(num_nodes, ", "))
     end
 
-    # println("Sampling from prior...")
-    # prior_samples = sample(model, Prior(), 100) |> DataFrame
-
     println("Computing initial MCMC state...")
-    max_a_posteriori = optimize(model, MAP())
+    max_a_posteriori = optimize(model, MAP(), NelderMead())
 
     println("Sampling from posterior...")
-    posterior_samples = sample(model, NUTS(), 1000, init_params=max_a_posteriori) |> DataFrame
+    posterior_samples = sample(model, NUTS(adtype=AutoForwardDiff(chunksize=6)), 1000, init_params=max_a_posteriori) |> DataFrame
 
     println("Exporting samples...")
     CSV.write("posterior-samples.csv", posterior_samples)
