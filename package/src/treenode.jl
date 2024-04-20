@@ -124,3 +124,67 @@ function Base.length(t::TreeTraversal)
 
     return count
 end
+
+# Implement AbstractTrees API
+
+AbstractTrees.ChildIndexing(::Type{<:TreeNode}) = IndexedChildren()
+AbstractTrees.children(node::TreeNode) = node.children
+AbstractTrees.childrentype(::Type{<:TreeNode}) = Vector{TreeNode}
+AbstractTrees.ParentLinks(::Type{<:TreeNode}) = StoredParents()
+AbstractTrees.parent(node::TreeNode) = node.up
+AbstractTrees.NodeType(::Type{<:TreeNode}) = HasNodeType()
+AbstractTrees.nodetype(::Type{<:TreeNode}) = TreeNode
+AbstractTrees.nodevalue(node::TreeNode) = node.type
+Base.IteratorEltype(::Type{<:TreeIterator{TreeNode}}) = Base.HasEltype()
+Base.eltype(::Type{<:TreeIterator{TreeNode}}) = TreeNode
+
+Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at time $(node.time) with type $(node.type)")
+Base.show(io::IO, ::MIME"text/plain", node::TreeNode) = show(io, MIME("text/plain"), D3Tree(node; detect_repeat=false))
+
+"""
+```julia
+visualize_tree(io::IO=stdout, tree::TreeNode)
+visualize_tree(path::String, tree::TreeNode)
+```
+
+Creates an HTML visualization of a `TreeNode` using D3Trees.
+"""
+function visualize_tree(io::IO, tree::TreeNode)
+    d3 = D3Tree(tree; detect_repeat=false)
+
+    # Color the tree
+    all_types = sort(unique(node.type for node in PreOrderTraversal(tree)))
+    scheme = map(ColorSchemes.tol_muted) do rgb
+        "rgb($(round(Int, 255 * rgb.r)), $(round(Int, 255 * rgb.g)), $(round(Int, 255 * rgb.b)))"
+    end
+
+    if length(all_types) > length(scheme)
+        throw(ArgumentError("Too many types to color"))
+    end
+
+    scheme_mapping = Dict(zip(all_types, scheme))
+
+    # D3Trees stores this information in a vector ordered by a DFS
+    style=["fill: $(scheme_mapping[node.type]); stroke: $(scheme_mapping[node.type]);" for node in PreOrderTraversal(tree)]
+    link_style=["stroke: $(scheme_mapping[node.up.type]);" for node in PreOrderTraversal(tree) if !isnothing(node.up)]
+
+    # Get tree depth
+    paths = map(LeafTraversal(tree)) do leaf
+        c = 0
+        while !isnothing(leaf.up)
+            c += 1
+            leaf = leaf.up
+        end
+        c
+    end
+    depth = maximum(paths)
+
+    d3 = D3Tree(d3, style=style, link_style=[""; link_style], init_expand=length(style), svg_height=120*depth)
+
+    show(io, MIME("text/html"), d3)
+end
+
+visualize_tree(tree::TreeNode) = visualize_tree(stdout, tree)
+visualize_tree(path::String, tree::TreeNode) = open(path, "w") do io
+    visualize_tree(io, tree)
+end

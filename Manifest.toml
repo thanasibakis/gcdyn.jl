@@ -478,6 +478,12 @@ git-tree-sha1 = "249fe38abf76d48563e2f4556bebd215aa317e15"
 uuid = "a8cc5b0e-0ffa-5ad4-8c14-923d3ee1735f"
 version = "4.1.1"
 
+[[deps.D3Trees]]
+deps = ["AbstractTrees", "HTTP", "JSON", "Random", "Sockets"]
+git-tree-sha1 = "cace6d05f71aeefe7ffd6f955a0725271f2b6cd5"
+uuid = "e3df1716-f71e-5df9-9e2d-98e193103c45"
+version = "0.3.3"
+
 [[deps.DataAPI]]
 git-tree-sha1 = "abe83f3a2f1b857aac70ef8b269080af17764bbe"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
@@ -2661,7 +2667,7 @@ uuid = "214eeab7-80f7-51ab-84ad-2988db7cef09"
 version = "0.43.0+0"
 
 [[deps.gcdyn]]
-deps = ["AbstractTrees", "CategoricalArrays", "DataFrames", "Distributions", "LinearAlgebra", "Memoize", "OrdinaryDiffEq", "Random", "StatsAPI", "StatsBase"]
+deps = ["AbstractTrees", "CategoricalArrays", "ColorSchemes", "D3Trees", "DataFrames", "Distributions", "LinearAlgebra", "Memoize", "OrdinaryDiffEq", "Random", "StatsAPI", "StatsBase"]
 path = "package"
 uuid = "a07aac68-cc84-4f07-aa24-bb38e7c3d1ae"
 version = "0.1.0"
