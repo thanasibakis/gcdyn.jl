@@ -99,7 +99,7 @@ end
 """
 ```julia
 loglikelihood(model::AbstractBranchingProcess, tree::TreeNode; kw...)
-loglikelihood(model::AbstractBranchingProcess, trees; kw...)
+loglikelihood(model::AbstractBranchingProcess, trees::Vector{TreeNode}; kw...)
 ```
 
 A slight deviation from StatsAPI, as observations are not stored in the model object, so they must be passed as an argument.
@@ -107,15 +107,13 @@ A slight deviation from StatsAPI, as observations are not stored in the model ob
 Keyword arguments `reltol` and `abstol` are passed to the ODE solver.
 """
 function StatsAPI.loglikelihood(
-    model::AbstractBranchingProcess,
+    model::AbstractBranchingProcess{T},
     tree::TreeNode;
     reltol = 1e-3,
     abstol = 1e-3,
     maxiters = 1e5
-)
-    # We may be using autodiff, so figure out what type the likelikihood value will be
-    T = typeof(λ(model, model.type_space[1]))
-
+) where T
+    # We may be using autodiff, so we need to know what type T the likelikihood value will be
     p_start = Dict{TreeNode, Vector{T}}()
     p_end = Dict{TreeNode, Vector{T}}()
     logq_start = Dict{TreeNode, T}()
@@ -243,11 +241,11 @@ function StatsAPI.loglikelihood(
 end
 
 function StatsAPI.loglikelihood(
-    model::AbstractBranchingProcess,
-    trees;
+    model::AbstractBranchingProcess{T},
+    trees::Vector{TreeNode};
     reltol = 1e-3,
     abstol = 1e-3
-)
+) where T
     return sum(StatsAPI.loglikelihood(model, tree; reltol=reltol, abstol=abstol) for tree in trees)
 end
 

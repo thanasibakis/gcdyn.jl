@@ -58,7 +58,7 @@ An abstract type for branching processes.
 
 See also [`SigmoidalBranchingProcess`](@ref), [`ConstantBranchingProcess`](@ref), [`DiscreteBranchingProcess`](@ref).
 """
-abstract type AbstractBranchingProcess end
+abstract type AbstractBranchingProcess{T <: Real} end
 
 # To allow us to broadcast the rate parameter functions over types
 Base.broadcastable(model::AbstractBranchingProcess) = Ref(model)
@@ -80,17 +80,17 @@ Alternatively, a single type change rate `γ` can be provided for all types, in 
 Sampling probabilities are notated as `ρ` (survival sampling probability) and `σ` (death sampling probability).
 Ensure that `present_time > 0`, since the process is defined to start at time `0`.
 """
-struct SigmoidalBranchingProcess{R <: Real, M <: AbstractMatrix{<:Real}, S <: AbstractVector{<:Real}} <: AbstractBranchingProcess
-    λ_xscale::R
-    λ_xshift::R
-    λ_yscale::R
-    λ_yshift::R
-    μ::R
-    δ::R
-    Γ::M
+struct SigmoidalBranchingProcess{T <: Real} <: AbstractBranchingProcess{T}
+    λ_xscale::T
+    λ_xshift::T
+    λ_yscale::T
+    λ_yshift::T
+    μ::T
+    δ::T
+    Γ::Matrix{Float64}
     ρ::Float64
     σ::Float64
-    type_space::S
+    type_space::Vector{Float64}
     present_time::Float64
 
     function SigmoidalBranchingProcess(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, σ, type_space, present_time)
@@ -110,7 +110,8 @@ struct SigmoidalBranchingProcess{R <: Real, M <: AbstractMatrix{<:Real}, S <: Ab
            throw(ArgumentError("The transition rate matrix must contain only negative or zero values on the diagonal."))
         end
 
-        return new{typeof(μ), typeof(Γ), typeof(type_space)}(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, σ, type_space, present_time)
+        # Types are parameterized in case autodiff is used. But if it's an Int, we really want a Float
+        return new{typeof(λ_xscale*1.0)}(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, σ, type_space, present_time)
     end
 end
 
@@ -140,14 +141,14 @@ Sampling probabilities are notated as `ρ` (survival sampling probability) and `
 Ensure that `present_time > 0`, since the process is defined to start at time `0`.
 
 """
-struct ConstantBranchingProcess{R <: Real, M <: AbstractMatrix{<:Real}, S <: AbstractVector{<:Real}} <: AbstractBranchingProcess
-    λ::R
-    μ::R
-    δ::R
-    Γ::M
+struct ConstantBranchingProcess{T <: Real} <: AbstractBranchingProcess{T}
+    λ::T
+    μ::T
+    δ::T
+    Γ::Matrix{Float64}
     ρ::Float64
     σ::Float64
-    type_space::S
+    type_space::Vector{Float64}
     present_time::Float64
 
     function ConstantBranchingProcess(λ, μ, δ, Γ, ρ, σ, type_space, present_time)
@@ -167,7 +168,7 @@ struct ConstantBranchingProcess{R <: Real, M <: AbstractMatrix{<:Real}, S <: Abs
            throw(ArgumentError("The transition rate matrix must contain only negative or zero values on the diagonal."))
         end
 
-        return new{typeof(λ), typeof(Γ), typeof(type_space)}(λ, μ, δ, Γ, ρ, σ, type_space, present_time)
+        return new{typeof(λ*1.0)}(λ, μ, δ, Γ, ρ, σ, type_space, present_time)
     end
 end
 
@@ -197,14 +198,14 @@ Sampling probabilities are notated as `ρ` (survival sampling probability) and `
 Ensure that `present_time > 0`, since the process is defined to start at time `0`.
 
 """
-struct DiscreteBranchingProcess{R <: Real, M <: AbstractMatrix{<:Real}, S <: AbstractVector{<:Real}} <: AbstractBranchingProcess
-    λ::Vector{R}
-    μ::R
-    δ::R
-    Γ::M
+struct DiscreteBranchingProcess{T <: Real} <: AbstractBranchingProcess{T}
+    λ::Vector{T}
+    μ::T
+    δ::T
+    Γ::Matrix{Float64}
     ρ::Float64
     σ::Float64
-    type_space::S
+    type_space::Vector{Float64}
     present_time::Float64
 
     function DiscreteBranchingProcess(λ, μ, δ, Γ, ρ, σ, type_space, present_time)
@@ -224,7 +225,7 @@ struct DiscreteBranchingProcess{R <: Real, M <: AbstractMatrix{<:Real}, S <: Abs
            throw(ArgumentError("The transition rate matrix must contain only negative or zero values on the diagonal."))
         end
 
-        return new{typeof(μ), typeof(Γ), typeof(type_space)}(λ, μ, δ, Γ, ρ, σ, type_space, present_time)
+        return new{typeof(λ[1]*1.0)}(λ, μ, δ, Γ, ρ, σ, type_space, present_time)
     end
 end
 
