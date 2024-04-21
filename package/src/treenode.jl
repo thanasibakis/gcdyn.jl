@@ -150,7 +150,7 @@ visualize_tree(path::String, tree::TreeNode)
 Creates an HTML visualization of a `TreeNode` using D3Trees.
 """
 function visualize_tree(io::IO, tree::TreeNode)
-    d3 = D3Tree(tree; detect_repeat=false)
+    nodes = collect(PreOrderTraversal(tree))
 
     # Color the tree
     all_types = sort(unique(node.type for node in PreOrderTraversal(tree)))
@@ -164,11 +164,16 @@ function visualize_tree(io::IO, tree::TreeNode)
 
     scheme_mapping = Dict(zip(all_types, scheme))
 
-    # D3Trees stores this information in a vector ordered by a DFS
-    style=["fill: $(scheme_mapping[node.type]); stroke: $(scheme_mapping[node.type]);" for node in PreOrderTraversal(tree)]
-    link_style=["stroke: $(scheme_mapping[node.up.type]);" for node in PreOrderTraversal(tree) if !isnothing(node.up)]
+    # Abbreviate labels if needed
+    if isa(tree.type, Real)
+        text = ["$(round(node.type; digits=2))" for node in nodes]
+        tooltip = ["$(node.type)" for node in nodes]
+    else
+        text = ["$(node.type)" for node in nodes]
+        tooltip = fill("", length(text))
+    end
 
-    # Get tree depth
+    # Get tree depth to compute SVG height
     paths = map(LeafTraversal(tree)) do leaf
         c = 0
         while !isnothing(leaf.up)
@@ -179,7 +184,19 @@ function visualize_tree(io::IO, tree::TreeNode)
     end
     depth = maximum(paths)
 
-    d3 = D3Tree(d3, style=style, link_style=[""; link_style], init_expand=length(style), svg_height=120*depth)
+    d3 = D3Tree(
+        # The inner D3 call converts to DFS vector form, the second one gives me access to the styling parameters
+        D3Tree(tree; detect_repeat=false),
+
+        style=["fill: $(scheme_mapping[node.type]); stroke: $(scheme_mapping[node.type]); r: 6px;" for node in nodes],
+        link_style=[""; ["stroke: $(scheme_mapping[node.up.type]);" for node in nodes if !isnothing(node.up)]],
+        text=text,
+        tooltip=tooltip,
+
+        init_expand=length(nodes),
+        svg_height=120*depth,
+        init_duration=0
+    )
 
     show(io, MIME("text/html"), d3)
 end
