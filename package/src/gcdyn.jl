@@ -5,7 +5,6 @@ using
     ColorSchemes,
     DataFrames,
     Distributions,
-    D3Trees,
     LinearAlgebra,
     Memoize,
     OrdinaryDiffEq,
@@ -25,7 +24,6 @@ export
     γ,
     loglikelihood,
     rand_tree,
-    visualize_tree,
     map_types!
 
 include("types.jl")
