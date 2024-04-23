@@ -25,6 +25,7 @@ export
     γ,
     loglikelihood,
     rand_tree,
+    map_types,
     map_types!,
     plot,
     attach!,

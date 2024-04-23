@@ -2,9 +2,9 @@ using gcdyn, JLD2
 import JSON
 
 # Returns TreeNode{String} with types corresponding to sequences
-function create_treenode(json)
+function create_treenode(json::Vector{Dict{String, Any}})
 	# For now, specify all event types to be root; we will correct this after the structure is built.
-	treenodes = Dict(node["name"] => TreeNode(:root, (isnothing(node["length"]) ? 0 : node["length"]), node["state"]) for node in json)
+	treenodes = Dict{Int, TreeNode{String}}(node["name"] => TreeNode(:root, (isnothing(node["length"]) ? 0 : node["length"]), node["state"]) for node in json)
 
 	for json_node in json
 		if !isnothing(json_node["parent"])
@@ -15,7 +15,7 @@ function create_treenode(json)
 		end
 	end
 
-	histories = Dict(treenodes[node["name"]] => node["history"] for node in json)
+	histories = Dict{TreeNode{String}, Vector{Dict{String, Any}}}(treenodes[node["name"]] => node["history"] for node in json)
 
 	# BEAST doesn't infer the length of the branch leading to the first birth event;
 	# this means `tree` is really a tuple of the two root-most subtrees.
@@ -63,18 +63,21 @@ function create_treenode(json)
 
 		sort!(history, by = mutation -> mutation["when-inverted"])
 
-		current_node = node.up
+		current_node::TreeNode{String} = node.up
 
 		for mutation in history
-			index = mutation["site"]
+			index::Int = mutation["site"]
+			time::Float64 = mutation["when-inverted"]
+			from_base::String = mutation["from_base"]
+			to_base::String = mutation["to_base"]
 
-			@assert current_node.time < mutation["when-inverted"] < node.time
-			@assert string(current_node.type[index]) == mutation["from_base"]
+			@assert current_node.time < time < node.time
+			@assert string(current_node.type[index]) == from_base
 
 			detach!(current_node, node)
 
-			new_sequence = current_node.type[1:index-1] * mutation["to_base"] * current_node.type[index+1:end]
-			new_node = TreeNode(:type_change, mutation["when-inverted"], new_sequence)
+			new_sequence = current_node.type[1:index-1] * to_base * current_node.type[index+1:end]
+			new_node = TreeNode(:type_change, time, new_sequence)
 
 			attach!(current_node, new_node)
 			attach!(new_node, node)
@@ -101,15 +104,34 @@ function main()
 		basename = split(filename, ".")[1]
 		mkpath("data/jld2/$basename")
 
-		json_treeset = JSON.parse(read("data/json/$filename", String))
+		json_treeset::Vector{Vector{Dict{String, Any}}} = JSON.parse(read("data/json/$filename", String))
+
+		trees = Vector{TreeNode{String}}(undef, length(json_treeset))
+		defined_i = Int[]
 
 		for (i, json_tree) in enumerate(json_treeset)
 			try
-				tree = create_treenode(json_tree)
-				save_object("data/jld2/$basename/tree-$i.jld2", tree)
+				trees[i] = create_treenode(json_tree)
+				push!(defined_i, i)
+				# save_object("data/jld2/$basename/tree-$i.jld2", tree)
 			catch e
 				println("Error in $basename tree $i: $e")
 			end
+		end
+
+		# Currently, node.type is the sequence of the node. Let's map these to affinities
+		sequences = unique(node.type for tree in trees[defined_i] for node in PreOrderTraversal(tree))
+		affinities = pipeline(`bin/get-affinity`; stdin=IOBuffer(join(sequences, "\n"))) |>
+			(command -> read(command, String)) |>
+			strip |>
+			(text -> split(text, "\n")) |>
+			(lines -> parse.(Float64, lines))
+
+		affinity_map = Dict(sequence => affinity for (sequence, affinity) in zip(sequences, affinities))
+
+		for i in defined_i
+			tree::TreeNode{Float64} = map_types(type -> affinity_map[type], trees[i])
+			save_object("data/jld2/$basename/tree-$i.jld2", tree)
 		end
 	end
 end

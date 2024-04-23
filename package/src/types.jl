@@ -24,8 +24,8 @@ mutable struct TreeNode{T}
     event::Symbol
     time::Float64
     type::T
-    const children::Vector{TreeNode}
-    up::Union{TreeNode, Nothing}
+    const children::Vector{TreeNode{T}}
+    up::Union{TreeNode{T}, Nothing}
 
     function TreeNode(event, time, type)
         if event ∉ EVENTS

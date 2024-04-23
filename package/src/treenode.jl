@@ -35,7 +35,7 @@ delete!(node::TreeNode)
 
 Removes this node from its place in the tree, attaching its children to its parent.
 """
-function delete!(node::TreeNode)
+function Base.delete!(node::TreeNode)
     parent = node.up
     children = collect(node.children) # not a pointer
 
@@ -46,6 +46,67 @@ function delete!(node::TreeNode)
         attach!(parent, child)
     end
 end
+
+"""
+```julia
+map_types(tree, mapping; prune_self_loops = true)
+```
+
+Returns a new tree like `tree`, but replaces the type attribute of each node with the result of the callable `mapping` applied to the type value.
+
+Optionally but by default, if the map results in a type change event with the same type as its parent,
+the type change event is pruned from the tree.
+"""
+function map_types(mapping, tree; prune_self_loops = true)
+    # The mapping may change the type T of a TreeNode, so we can't just traverse and update node.type
+
+    function helper!(mapping, new_node, old_node)
+        for old_child in old_node.children
+            new_child = TreeNode(old_child.event, old_child.time, mapping(old_child.type))
+            attach!(new_node, helper!(mapping, new_child, old_child))
+        end
+
+        return new_node
+    end
+
+    new_tree = TreeNode(tree.event, tree.time, mapping(tree.type))
+    helper!(mapping, new_tree, tree)
+
+    # If a type change resulted in an type of the same bin as the parent,
+    # that isn't a valid type change in the CTMC, so we prune it
+    for node in PreOrderTraversal(new_tree)
+        if prune_self_loops && node.event == :type_change && node.type == node.up.type
+            delete!(node)
+        end
+    end
+
+    return new_tree
+end
+
+"""
+```julia
+map_types!(tree, mapping; prune_self_loops = true)
+```
+
+Replaces the type attribute of all nodes in `tree` with the result of the callable `mapping` applied to the type value.
+
+Note that `TreeNode{T}` objects have a fixed `typeof(node.type) == T`, so the `mapping` must be compliant with this.
+
+Optionally but by default, if the map results in a type change event with the same type as its parent,
+the type change event is pruned from the tree.
+"""
+function map_types!(mapping, tree; prune_self_loops = true)
+    for node in PreOrderTraversal(tree)
+        node.type = mapping(node.type)
+
+        # If a type change resulted in an type of the same bin as the parent,
+        # that isn't a valid type change in the CTMC, so we prune it
+        if prune_self_loops && node.event == :type_change && node.type == node.up.type
+            delete!(node)
+        end
+    end
+end
+
 
 """
 ```julia

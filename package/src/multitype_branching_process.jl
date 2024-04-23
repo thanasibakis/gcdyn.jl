@@ -433,25 +433,3 @@ function sample_child!(parent::TreeNode, model::AbstractBranchingProcess)
 
     return child
 end
-
-"""
-```julia
-map_types(tree, mapping; prune_self_loops = true)
-```
-
-Replaces the type attribute of all nodes in `tree` with the result of the callable `mapping` applied to the type values.
-
-Optionally but by default, if the map results in a type change event with the same type as its parent,
-the type change event is pruned from the tree.
-"""
-function map_types!(mapping, tree; prune_self_loops = true)
-    for node in PreOrderTraversal(tree)
-        node.type = mapping(node.type)
-
-        # If a type change resulted in an type of the same bin as the parent,
-        # that isn't a valid type change in the CTMC, so we prune it
-        if prune_self_loops && node.event == :type_change && node.type == node.up.type
-            delete!(node)
-        end
-    end
-end
