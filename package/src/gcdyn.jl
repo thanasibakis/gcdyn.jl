@@ -8,6 +8,7 @@ using
     LinearAlgebra,
     Memoize,
     OrdinaryDiffEq,
+    Plots,
     StatsAPI,
     StatsBase
 
@@ -24,7 +25,8 @@ export
     γ,
     loglikelihood,
     rand_tree,
-    map_types!
+    map_types!,
+    plot
 
 include("types.jl")
 include("treenode.jl")

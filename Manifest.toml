@@ -2661,7 +2661,7 @@ uuid = "214eeab7-80f7-51ab-84ad-2988db7cef09"
 version = "0.43.0+0"
 
 [[deps.gcdyn]]
-deps = ["AbstractTrees", "CategoricalArrays", "ColorSchemes", "DataFrames", "Distributions", "LinearAlgebra", "Memoize", "OrdinaryDiffEq", "Random", "StatsAPI", "StatsBase"]
+deps = ["AbstractTrees", "CategoricalArrays", "ColorSchemes", "DataFrames", "Distributions", "LinearAlgebra", "Memoize", "OrdinaryDiffEq", "Plots", "Random", "StatsAPI", "StatsBase"]
 path = "package"
 uuid = "a07aac68-cc84-4f07-aa24-bb38e7c3d1ae"
 version = "0.1.0"

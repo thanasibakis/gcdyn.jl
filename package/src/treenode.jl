@@ -139,3 +139,69 @@ Base.IteratorEltype(::Type{<:TreeIterator{TreeNode}}) = Base.HasEltype()
 Base.eltype(::Type{<:TreeIterator{TreeNode}}) = TreeNode
 
 Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at time $(node.time) with type $(node.type)")
+
+
+# To enable Plots.plot(tree::TreeNode).
+# See ColorSchemes.colorschemes for all `colorscheme` options.
+@recipe function _(tree::TreeNode; colorscheme=:mk_15)
+    # Default series configuration
+    xlabel --> "Time"
+    yticks --> false
+    yaxis --> false
+
+    # First we must take note of the y-coordinate for each branch
+    y_offsets = Dict{TreeNode, Float64}()
+
+    # Set leaf y-coordinates
+    for (i, node) in enumerate(LeafTraversal(tree))
+        y_offsets[node] = i
+    end
+
+    # Determine internal node y-coordinates
+    for node in PostOrderTraversal(tree)
+        if node ∉ keys(y_offsets)
+            y_offsets[node] = mean(y_offsets[child] for child in node.children)
+        end
+    end
+
+    # Set up color palette
+    all_types = sort(unique(node.type for node in PreOrderTraversal(tree)))
+    num_colors = length(all_types)
+    colors = (num_colors == 1) ? colorschemes[colorscheme][0] : colorschemes[colorscheme][0:1/(num_colors-1):1]
+    palette = Dict(type => color for (type, color) in zip(all_types, colors))
+
+    # Compute line segments from each node's parent to the node itself,
+    # as well as connecting line segments for birth events.
+    # Also compute segment colors
+    for node in PreOrderTraversal(tree.children[1])
+        @series begin
+            x = [node.up.time, node.time]
+            y = [y_offsets[node], y_offsets[node]]
+
+            primary := false # Don't show up in legend
+            seriescolor := palette[node.up.type]
+            (x, y)
+        end
+
+        if node.event == :birth
+            @series begin
+                x = [node.time, node.time]
+                y = [y_offsets[child] for child in node.children]
+
+                primary := false # Don't show up in legend
+                seriescolor := palette[node.up.type]
+                (x, y)
+            end
+        end
+    end
+
+    # Create a dummy series to have a color legend
+    for (type, color) in sort(palette)
+        @series begin
+            label := round(type; digits=3) |> string
+            seriescolor := color
+            seriestype := :shape
+            ([], [])
+        end
+    end
+end
