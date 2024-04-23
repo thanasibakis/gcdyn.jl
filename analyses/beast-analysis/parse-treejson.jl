@@ -82,22 +82,34 @@ function create_treenode(json)
 			current_node = new_node
 		end
 		
-		@assert current_node.type == node.type
+		if current_node.type != node.type
+			if node.up.event == :root
+				throw(ArgumentError("Bad tree? Root sequence may not be the naive sequence."))
+			end
+
+			@assert current_node.type == node.type
+		end
 	end
 
 	return root
 end
 
 function main()
-	Threads.@threads for json_file in readdir("data/json/")
-		json = JSON.parse(read("data/json/$json_file", String))
-		trees = map(create_treenode, json)
+	mkpath("data/jld2")
 
-		basename = split(json_file, ".")[1]
+	Threads.@threads for filename in readdir("data/json/")
+		basename = split(filename, ".")[1]
 		mkpath("data/jld2/$basename")
 
-		for (i, tree) in enumerate(trees)
-			save_object("data/jld2/$basename/tree-$i.jld2", tree)
+		json_treeset = JSON.parse(read("data/json/$filename", String))
+
+		for (i, json_tree) in enumerate(json_treeset)
+			try
+				tree = create_treenode(json_tree)
+				save_object("data/jld2/$basename/tree-$i.jld2", tree)
+			catch e
+				println("Error in $basename tree $i: $e")
+			end
 		end
 	end
 end
