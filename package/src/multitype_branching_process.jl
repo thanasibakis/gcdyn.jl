@@ -324,7 +324,7 @@ function rand_tree(
     init_type;
     reject_stubs=true
 )
-    root = TreeNode(init_type)
+    root = TreeNode(:root, 0, init_type)
     needs_children = [root]
 
     # Evolve a fully-observed tree
@@ -359,12 +359,10 @@ function rand_tree(
     # Prune subtrees that don't have any sampled descendants
     for node in PostOrderDFS(root)
         if node.event ∈ (:birth, :root)
-            filter!(child -> child in has_sampled_descendant, node.children)
+            filter!(in(has_sampled_descendant), node.children)
 
             if node.event == :birth && length(node.children) == 1
-                filter!(child -> child != node, node.up.children)
-                push!(node.up.children, node.children[1])
-                node.children[1].up = node.up
+                delete!(node)
             end
         end
     end
@@ -431,8 +429,7 @@ function sample_child!(parent::TreeNode, model::AbstractBranchingProcess)
         end
     end
 
-    push!(parent.children, child)
-    child.up = parent
+    attach!(parent, child)
 
     return child
 end
@@ -454,9 +451,7 @@ function map_types!(mapping, tree; prune_self_loops = true)
         # If a type change resulted in an type of the same bin as the parent,
         # that isn't a valid type change in the CTMC, so we prune it
         if prune_self_loops && node.event == :type_change && node.type == node.up.type
-            filter!(child -> child != node, node.up.children)
-            push!(node.up.children, node.children[1])
-            node.children[1].up = node.up
+            delete!(node)
         end
     end
 end

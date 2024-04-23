@@ -7,53 +7,36 @@ const EVENTS = (:root, :birth, :sampled_death, :unsampled_death, :type_change, :
 
 """
 ```julia
-TreeNode(type)
 TreeNode(event, time, type)
-TreeNode(name, event, time, type, children)
 ```
 A data structure for building realizations of multitype branching processes.
 
 A "tree" is defined as a `TreeNode` with `event = :root` and optional `TreeNode` `children` of other non-root events.
-All nodes in the tree (including the root) have an integer `name`, a `time` at which the event occurred, and a `type` attribute whose meaning is left to the user.
-
-If only `type` is provided, the node defaults to being a root node at time 0.
-Node names default to `0` for root nodes, and `1` for all others.
-Child vectors always default to be empty.
+All nodes in the tree (including the root) also have:
+- a `time` at which the event occurred
+- a `type` attribute whose meaning is left to the user
 
 Note that if a `TreeNode` has the event of `:type_change`, the `type` attribute is the new type along the branch, not the old type.
 
-See also [`rand_tree`](@ref), [`EVENTS`](@ref).
+See also [`attach!`](@ref), [`detach!`](@ref), [`TreeTraversal`](@ref), [`rand_tree`](@ref), [`EVENTS`](@ref).
 """
-mutable struct TreeNode
-    name::Int
+mutable struct TreeNode{T}
     event::Symbol
     time::Float64
-    type::Float64
+    type::T
     const children::Vector{TreeNode}
     up::Union{TreeNode, Nothing}
 
-    # A not-so-type-stable way to store any extra info
-    info::Dict
-
-    function TreeNode(name, event, time, type, children)
+    function TreeNode(event, time, type)
         if event ∉ EVENTS
             throw(ArgumentError("Event must be one of $(EVENTS)"))
         elseif time < 0
             throw(ArgumentError("Time must be positive"))
         end
 
-        self = new(name, event, time, type, children, nothing, Dict())
-
-        for child in self.children
-            child.up = self
-        end
-
-        return self
+        return new{typeof(type)}(event, time, type, [], nothing)
     end
 end
-
-TreeNode(type) = TreeNode(0, :root, 0, type, [])
-TreeNode(event, time, type) = TreeNode(event == :root ? 0 : 1, event, time, type, [])
 
 """
 An abstract type for branching processes.

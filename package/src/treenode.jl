@@ -2,6 +2,53 @@
 
 """
 ```julia
+attach!(parent::TreeNode, child::TreeNode)
+```
+
+Adds `child` to `parent.children` and sets `child.up` to `parent`.
+"""
+function attach!(parent::TreeNode, child::TreeNode)
+    push!(parent.children, child)
+    child.up = parent
+
+    return nothing
+end
+
+"""
+```julia
+detach!(parent::TreeNode, child::TreeNode)
+```
+
+Removes `child` from `parent.children` and sets `child.up` to `nothing`.
+"""
+function detach!(parent::TreeNode, child::TreeNode)
+    filter!(!=(child), parent.children)
+    child.up = nothing
+
+    return nothing
+end
+
+"""
+```julia
+delete!(node::TreeNode)
+```
+
+Removes this node from its place in the tree, attaching its children to its parent.
+"""
+function delete!(node::TreeNode)
+    parent = node.up
+    children = collect(node.children) # not a pointer
+
+    detach!(parent, node)
+
+    for child in children
+        detach!(node, child)
+        attach!(parent, child)
+    end
+end
+
+"""
+```julia
 TreeTraversal
 ```
 Abstract supertype for iterators over `TreeNode`s.
@@ -167,7 +214,7 @@ Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at 
     # Set up color palette
     all_types = sort(unique(node.type for node in PreOrderTraversal(tree)))
     num_colors = length(all_types)
-    colors = (num_colors == 1) ? colorschemes[colorscheme][1] : colorschemes[colorscheme][0:1/(num_colors-1):1]
+    colors = (num_colors == 1) ? [colorschemes[colorscheme][1]] : colorschemes[colorscheme][0:1/(num_colors-1):1]
     palette = Dict(type => color for (type, color) in zip(all_types, colors))
 
     # Compute line segments from each node's parent to the node itself,
@@ -198,7 +245,7 @@ Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at 
     # Create a dummy series to have a color legend
     for (type, color) in sort(palette)
         @series begin
-            label := round(type; digits=3) |> string
+            label := string(type)
             seriescolor := color
             seriestype := :shape
             ([], [])

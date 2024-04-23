@@ -26,7 +26,10 @@ export
     loglikelihood,
     rand_tree,
     map_types!,
-    plot
+    plot,
+    attach!,
+    detach!,
+    delete!
 
 include("types.jl")
 include("treenode.jl")
