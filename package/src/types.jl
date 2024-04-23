@@ -20,6 +20,8 @@ If only `type` is provided, the node defaults to being a root node at time 0.
 Node names default to `0` for root nodes, and `1` for all others.
 Child vectors always default to be empty.
 
+Note that if a `TreeNode` has the event of `:type_change`, the `type` attribute is the new type along the branch, not the old type.
+
 See also [`rand_tree`](@ref), [`EVENTS`](@ref).
 """
 mutable struct TreeNode

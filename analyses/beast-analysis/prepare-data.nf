@@ -40,7 +40,7 @@ process treejson_to_julia {
     #!/usr/bin/env julia
 
     # Run this program as though it were invoked with `julia --project`
-    # to find the project in the `examples` directory
+    # to find the project in the repository root
     pushfirst!(LOAD_PATH, "@.")
     import Pkg; Pkg.activate()
 
@@ -116,31 +116,30 @@ process treejson_to_julia {
 
             sort!(history, by = mutation -> mutation["when"], rev = true)
 
+            parent = node.up
+            filter!(!=(node), parent.children)
+            # Removing current_node.up is done in the TreeNode constructor in the next step
+
             current_node = node
+            current_sequence = current_node.info[:sequence]
 
             for mutation in history
                 index = mutation["site"]
-                current_sequence = current_node.info[:sequence]
 
-                mutation_time = mutation["when"]
-
-                @assert current_node.up.time < mutation_time < current_node.time
+                @assert current_node.up.time < mutation["when"] < current_node.time "$(current_node.up.time) < $(mutation["when"]) < $(current_node.time)"
                 @assert string(current_sequence[index]) == mutation["to_base"]
 
-                new_sequence = current_sequence[1:index-1] * mutation["from_base"] * current_sequence[index+1:end]
-
-                parent = current_node.up
-                filter!(child -> child != current_node, parent.children)
-                # Removing current_node.up is done in the TreeNode constructor in the next step
-
                 new_node = TreeNode(node.name, :type_change, mutation["when"], -1, [current_node])
-                new_node.info[:sequence] = new_sequence
-
-                push!(parent.children, new_node)
                 new_node.up = parent
+                new_node.info[:sequence] = current_sequence
 
                 current_node = new_node
+                current_sequence = current_sequence[1:index-1] * mutation["from_base"] * current_sequence[index+1:end]
             end
+
+            push!(parent.children, current_node)
+            
+            @assert current_sequence == parent.info[:sequence]
         end
     end
 
