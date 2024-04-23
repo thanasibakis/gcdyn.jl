@@ -167,7 +167,7 @@ Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at 
     # Set up color palette
     all_types = sort(unique(node.type for node in PreOrderTraversal(tree)))
     num_colors = length(all_types)
-    colors = (num_colors == 1) ? colorschemes[colorscheme][0] : colorschemes[colorscheme][0:1/(num_colors-1):1]
+    colors = (num_colors == 1) ? colorschemes[colorscheme][1] : colorschemes[colorscheme][0:1/(num_colors-1):1]
     palette = Dict(type => color for (type, color) in zip(all_types, colors))
 
     # Compute line segments from each node's parent to the node itself,
