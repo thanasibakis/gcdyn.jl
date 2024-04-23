@@ -126,7 +126,7 @@ process treejson_to_julia {
             for mutation in history
                 index = mutation["site"]
 
-                @assert current_node.up.time < mutation["when"] < current_node.time "$(current_node.up.time) < $(mutation["when"]) < $(current_node.time)"
+                @assert current_node.up.time < mutation["when"] < current_node.time
                 @assert string(current_sequence[index]) == mutation["to_base"]
 
                 new_node = TreeNode(node.name, :type_change, mutation["when"], -1, [current_node])
