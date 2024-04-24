@@ -195,7 +195,6 @@ function main()
 			try
 				trees[i] = create_treenode(json_tree)
 				push!(defined_i, i)
-				# save_object("data/jld2/$basename/tree-$i.jld2", tree)
 			catch e
 				println("Error in $basename tree $i: $e")
 			end
