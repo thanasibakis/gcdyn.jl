@@ -30,8 +30,6 @@ mutable struct TreeNode{T}
     function TreeNode(event, time, type)
         if event ∉ EVENTS
             throw(ArgumentError("Event must be one of $(EVENTS)"))
-        elseif time < 0
-            throw(ArgumentError("Time must be positive"))
         end
 
         return new{typeof(type)}(event, time, type, [], nothing)
