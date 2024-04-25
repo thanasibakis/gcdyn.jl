@@ -252,6 +252,12 @@ Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at 
 # To enable Plots.plot(tree::TreeNode).
 # See ColorSchemes.colorschemes for all `colorscheme` options.
 @recipe function _(tree::TreeNode; colorscheme=:mk_15)
+    for node in PreOrderTraversal(tree)
+        if length(node.children) > 2
+            throw(ArgumentError("Only trees with at most binary branching are supported."))
+        end
+    end
+
     # Default series configuration
     xlabel --> "Time"
     yticks --> false
