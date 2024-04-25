@@ -41,8 +41,20 @@ function main()
 	treeset = map(readdir("data/jld2/"; join=true)) do germinal_center_dir
 		tree::TreeNode = load_object(joinpath(germinal_center_dir, "tree-5000.jld2"))
 
-		map_types!(tree) do type
-			get_discretization(type, discretization_table)
+		map_types!(tree) do affinity
+			for (bin, value) in discretization_table
+				if bin[1] <= affinity < bin[2]
+					return value
+				end
+			end
+		
+			if all(bin[2] <= affinity for bin in keys(discretization_table))
+				return maximum(values(discretization_table))
+			elseif all(affinity < bin[1] for bin in keys(discretization_table))
+				return minimum(values(discretization_table))
+			else
+				error("Affinity $affinity not in any bin!")
+			end
 		end
 
 		tree
