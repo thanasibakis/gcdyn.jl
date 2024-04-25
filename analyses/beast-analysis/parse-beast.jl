@@ -39,6 +39,7 @@ function main()
 				try
 					trees[name] = TreeNode(newick)
 					trees[name] = pivot_phony_subtree!(trees[name])
+					correct_present_time!(trees[name])
 					save_object("data/jld2-with-sequences/$germinal_center_name/tree-$name.jld2", trees[name])
 				catch e
 					println("$germinal_center_name\t ERROR for tree $name: $e")
@@ -134,6 +135,18 @@ function pivot_phony_subtree!(root::TreeNode)
 	validate_tree(root)
 
 	return root
+end
+
+# For our experimental trees, we know that all leaves were sampled at present time.
+# The leaf times in each tree were determined by summing up branch lengths, so there
+# might be minor floating point error for what should be the same time. We fix this here
+function correct_present_time!(tree::TreeNode)
+	present_time = maximum(node.time for node in LeafTraversal(tree))
+		
+	for leaf in LeafTraversal(tree)
+		@assert leaf.time ≈ present_time atol=1e-5
+		leaf.time = present_time
+	end
 end
 
 # Checks that basic tree structure is correct.

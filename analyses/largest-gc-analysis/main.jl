@@ -60,15 +60,6 @@ function main()
 		tree
 	end
 
-	# TODO: Why is this not already true
-	for tree in treeset
-		present_time = maximum(node.time for tree in treeset for node in LeafTraversal(tree))
-		
-		for leaf in LeafTraversal(tree)
-			leaf.time = present_time
-		end
-	end
-
 	sort!(treeset; by=tree -> length(LeafTraversal(tree)), rev=true)
 	treeset = treeset[1:23]
 
