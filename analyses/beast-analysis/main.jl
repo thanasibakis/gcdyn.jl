@@ -1,53 +1,40 @@
 println("Loading packages...")
-using CSV, gcdyn, DataFrames, Distributions, JLD2, JSON, LinearAlgebra, Optim, Turing
+using CSV, gcdyn, Distributions, JLD2, Optim, Turing
 
-include("estimate_type_change_rate_matrix.jl")
+@model function SigmoidalModel(trees, Γ, type_space, present_time)
+	# Keep priors on the same scale for NUTS
+	log_λ_xscale_base ~ Normal(0, 1)
+	λ_xshift_base     ~ Normal(0, 1)
+	log_λ_yscale_base ~ Normal(0, 1)
+	log_λ_yshift_base ~ Normal(0, 1)
+	log_μ_base        ~ Normal(0, 1)
+	log_δ_base        ~ Normal(0, 1)
 
-@model function Model(trees, Γ, type_space, present_time)
-    # Keep priors on the same scale for NUTS
-    log_λ_xscale_base ~ Normal(0, 1)
-    λ_xshift_base     ~ Normal(0, 1)
-    log_λ_yscale_base ~ Normal(0, 1)
-    log_λ_yshift_base ~ Normal(0, 1)
-    log_μ_base        ~ Normal(0, 1)
-    log_δ_base        ~ Normal(0, 1)
+	# Obtain our actual parameters from the proxies
+	λ_xscale = exp(log_λ_xscale_base * 0.75 + 0.5)
+	λ_xshift = λ_xshift_base * sqrt(2)
+	λ_yscale = exp(log_λ_yscale_base * 0.75 + 0.5)
+	λ_yshift = exp(log_λ_yshift_base * 1.2 - 0.5)
+	μ        = exp(log_μ_base * 0.5)
+	δ        = exp(log_δ_base * 0.5)
 
-    # Obtain our actual parameters from the proxies
-    λ_xscale = exp(log_λ_xscale_base * 0.75 + 0.5)
-    λ_xshift = λ_xshift_base * sqrt(2)
-    λ_yscale = exp(log_λ_yscale_base * 0.75 + 0.5)
-    λ_yshift = exp(log_λ_yshift_base * 1.2 - 0.5)
-    μ        = exp(log_μ_base * 0.5)
-    δ        = exp(log_δ_base * 0.5)
-
-    if DynamicPPL.leafcontext(__context__) !== Turing.PriorContext()
+	if DynamicPPL.leafcontext(__context__) !== Turing.PriorContext()
 		for tree in trees
 			ρ = length(LeafTraversal(tree)) / 1000
-			sampled_model = VaryingTypeChangeRateBranchingProcess(
+			sampled_model = SigmoidalBranchingProcess(
 				λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, 0, type_space, present_time
 			)
 			
 			Turing.@addlogprob! loglikelihood(sampled_model, tree)
 		end
-    end
+	end
 end
 
 function main()
-	# We will use the 10x sequences to determine the type bins and type change rate matrix.
-	# Note that the heavy and light chain sequences each have an extra character and need correcting
-	println("Computing type bins...")
-	tenx_data = CSV.read("../../lib/gcreplay/analysis/output/10x/data.csv", DataFrame)
-	tenx_data.sequence = chop.(tenx_data.nt_seq_H) .* chop.(tenx_data.nt_seq_L)
-	tenx_data.time = tenx_data.var"time (days)"
-
-	# Compute the type bins
-	discretization_table = compute_discretization_table(tenx_data.delta_bind_CGG)
-	type_space = values(discretization_table) |> collect |> sort
-
-	# Compute the type change rate matrix
-	println("Computing type change rate matrix...")
-	tc_rate_matrix = compute_rate_matrix(tenx_data.sequence, discretization_table, type_space)
-
+	# The type space and type change rate matrix are computed in a separate script
+	type_space = [-1.224171991580991, 0.0, 0.4104891647333908, 1.0158145231080074, 2.1957206408364116]
+	Γ = [-0.118959461717717 0.021572790787430626 0.05847104833335269 0.029935094305333598 0.008980528291600079; 0.46692888970327073 -0.9168729322281818 0.21740604388300436 0.157495855653881 0.07504214298802565; 0.3339074698602106 0.06008653715185837 -0.7759426942221336 0.2187766224503561 0.1631720647597086; 0.12640020164010704 0.03902621761552961 0.18717669977384585 -0.7137820629490017 0.36117894391951927; 0.01258581593526034 0.005465553533638952 0.03941215667376345 0.09747739513205618 -0.15494092127471892]
+	
 	# Read in the trees and do inference
 	println("Reading trees...")
 	treeset = map(readdir("data/jld2/"; join=true)) do germinal_center_dir
@@ -60,14 +47,23 @@ function main()
 		tree
 	end
 
+	# TODO: Why is this not already true
+	for tree in treeset
+		present_time = maximum(node.time for tree in treeset for node in LeafTraversal(tree))
+		
+		for leaf in LeafTraversal(tree)
+			leaf.time = present_time
+		end
+	end
+
 	println("Sampling from prior...")
-	prior_samples = sample(Model(nothing, tc_rate_matrix, type_space, nothing), Prior(), 5000) |> DataFrame
+	prior_samples = sample(SigmoidalModel(nothing, Γ, type_space, nothing), Prior(), 5000) |> DataFrame
 	mkpath("out")
 	CSV.write("out/samples-prior.csv", prior_samples)
 
 	println("Computing initial MCMC state...")
 	present_time = maximum(node.time for tree in treeset for node in LeafTraversal(tree))
-	model = Model(treeset, tc_rate_matrix, type_space, present_time)
+	model = SigmoidalModel(treeset, Γ, type_space, present_time)
 
 	max_a_posteriori = optimize(model, MAP())
 
