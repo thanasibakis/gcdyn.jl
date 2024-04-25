@@ -15,6 +15,7 @@ function main()
 	tc_rate_matrix = compute_rate_matrix(tenx_data.sequence, discretization_table, type_space)
 
 	println("type_space = ", repr(type_space))
+	println("discretization_table = ", repr(discretization_table))
 	println("Γ = ", repr(tc_rate_matrix))
 end
 
