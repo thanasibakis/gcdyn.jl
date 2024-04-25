@@ -1,6 +1,9 @@
+println("Loading packages...")
 using gcdyn, JLD2
 
 function main()
+	println("Starting parse loop...")
+
 	mkpath("data/jld2-with-sequences/")
 	mkpath("data/jld2-with-affinities/")
 
@@ -11,6 +14,8 @@ function main()
 
 		mkpath("data/jld2-with-sequences/$germinal_center_name/")
 		mkpath("data/jld2-with-affinities/$germinal_center_name/")
+
+		println("$germinal_center_name\t Reading BEAST trees...")
 
 		history_trees_file = filter(readdir("data/raw/$germinal_center_name"; join=true)) do filename
 			endswith(filename, ".history.trees")
@@ -25,6 +30,8 @@ function main()
 				line = readline(file)
 			end
 
+			println("$germinal_center_name\t Exporting sequence-level trees...")
+
 			while !startswith(line, "End;") || !eof(file)
 				name = match(r"tree (?<name>STATE_\d+)", line)[:name]
 				newick = split(line, " = [&R] ")[2]
@@ -34,12 +41,14 @@ function main()
 					trees[name] = pivot_phony_subtree!(trees[name])
 					save_object("data/jld2-with-sequences/$germinal_center_name/tree-$name.jld2", trees[name])
 				catch e
-					println("Error in $germinal_center_name tree $name: $e")
+					println("$germinal_center_name\t ERROR for tree $name: $e")
 				end
 
 				line = readline(file)
 			end
 		end
+
+		println("$germinal_center_name\t Computing affinities...")
 
 		# Currently, node.type is the sequence of the node. Let's map these to affinities
 		sequences = unique(node.type for tree in values(trees) for node in PreOrderTraversal(tree))
@@ -51,11 +60,17 @@ function main()
 
 		affinity_map = Dict(sequence => affinity for (sequence, affinity) in zip(sequences, affinities))
 
+		println("$germinal_center_name\t Exporting affinity-level trees...")
+
 		for (name, tree) in trees
 			tree_with_affinities::TreeNode{Float64} = map_types(type -> affinity_map[type], tree)
 			save_object("data/jld2-with-affinities/$germinal_center_name/tree-$name.jld2", tree_with_affinities)
 		end
+
+		println("$germinal_center_name\t Done.")
 	end
+
+	println("Parse loop complete. All done.")
 end
 
 # For the replay experiment, we tricked BEAST into "setting" the root sequence
