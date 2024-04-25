@@ -38,8 +38,8 @@ function main()
 
 	# Read in the trees and do inference
 	println("Reading trees...")
-	treeset = map(readdir("data/jld2/"; join=true)) do germinal_center_dir
-		tree::TreeNode = load_object(joinpath(germinal_center_dir, "tree-5000.jld2"))
+	treeset = map(readdir("data/jld2-with-affinities/"; join=true)) do germinal_center_dir
+		tree::TreeNode{Float64} = load_object(joinpath(germinal_center_dir, "tree-STATE_50000000.jld2"))
 
 		map_types!(tree) do affinity
 			for (bin, value) in discretization_table
