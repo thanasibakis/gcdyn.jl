@@ -251,7 +251,7 @@ Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at 
 
 # To enable Plots.plot(tree::TreeNode).
 # See ColorSchemes.colorschemes for all `colorscheme` options.
-@recipe function _(tree::TreeNode; colorscheme=:mk_15)
+@recipe function _(tree::TreeNode; colorscheme=:linear_kbc_5_95_c73_n256)
     for node in PreOrderTraversal(tree)
         if length(node.children) > 2
             throw(ArgumentError("Only trees with at most binary branching are supported."))
@@ -262,6 +262,7 @@ Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at 
     xlabel --> "Time"
     yticks --> false
     yaxis --> false
+    linewidth --> 1.5
 
     # First we must take note of the y-coordinate for each branch
     y_offsets = Dict{TreeNode, Float64}()
@@ -278,10 +279,10 @@ Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at 
         end
     end
 
-    # Set up color palette
+    # Set up color palette. We only use the first 80% of the colorscheme because the last 20% are too light.
     all_types = sort(unique(node.type for node in PreOrderTraversal(tree)))
     num_colors = length(all_types)
-    colors = (num_colors == 1) ? [colorschemes[colorscheme][1]] : colorschemes[colorscheme][0:1/(num_colors-1):1]
+    colors = (num_colors == 1) ? [colorschemes[colorscheme][1]] : colorschemes[colorscheme][0:0.8/(num_colors-1):0.8]
     palette = Dict(type => color for (type, color) in zip(all_types, colors))
 
     # Compute line segments from each node's parent to the node itself,
