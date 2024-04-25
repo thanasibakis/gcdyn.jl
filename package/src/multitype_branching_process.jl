@@ -120,43 +120,48 @@ function StatsAPI.loglikelihood(
     logq_end = Dict{TreeNode, T}()
 
     for leaf in LeafTraversal(tree)
-        # If σ>0, leaves may be at non-present times, so it's incorrect to initialize
-        # p to be 1-ρ for all leaf times
-        if leaf.time == model.present_time
+        if leaf.event == :sampled_survival
+            if leaf.time != model.present_time
+                throw(ArgumentError("Sampled survival events must all be at the present time."))
+            end
+
             p_end[leaf] = fill(1 - model.ρ, size(model.type_space))
+        elseif leaf.event == :sampled_death
+            if leaf.time == model.present_time
+                throw(ArgumentError("Sampled death events must not be at the present time."))
+            end
+
+            # Be sure to specify the iip=true of the ODEProblem for type stability
+            # and fewer memory allocations
+            p = solve(
+                ODEProblem{true}(
+                    dp_dt!,
+                    fill(1 - model.ρ, size(model.type_space)),
+                    (0, model.present_time - leaf.time),
+                    model
+                ),
+                Tsit5();
+                isoutofdomain = (p, args, t) -> any(x -> x < 0 || x > 1, p),
+                save_everystep = false,
+                save_start = false,
+                reltol = reltol,
+                abstol = abstol,
+                maxiters = maxiters
+            )
+
+            if !SciMLBase.successful_retcode(p)
+                @warn "Leaf initial condition could not be solved. Exit code $(p.retcode). The integration timespan was $(model.present_time - leaf.time). Density will evaluate to zero."
+
+                return -Inf
+            end
+
+            p_end[leaf] = p.u[end]
+        else
+            throw(ArgumentError("Leaf event must be either `:sampled_survival` or `:sampled_death`."))
         end
-
-        # Be sure to specify the iip=true of the ODEProblem for type stability
-        # and fewer memory allocations
-        p = solve(
-            ODEProblem{true}(
-                dp_dt!,
-                fill(1 - model.ρ, size(model.type_space)),
-                (0, model.present_time - leaf.time),
-                model
-            ),
-            Tsit5();
-            isoutofdomain = (p, args, t) -> any(x -> x < 0 || x > 1, p),
-            save_everystep = false,
-            save_start = false,
-            reltol = reltol,
-            abstol = abstol,
-            maxiters = maxiters
-        )
-
-        if !SciMLBase.successful_retcode(p)
-            @warn "Leaf initial condition could not be solved. Exit code $(p.retcode). The integration timespan was $(model.present_time - leaf.time). Density will evaluate to zero."
-
-            return -Inf
-        end
-
-        p_end[leaf] = p.u[end]
     end
 
     for event in PostOrderTraversal(tree.children[1])
-        t_start = model.present_time - event.up.time
-        t_end = model.present_time - event.time
-
         if event.event == :sampled_survival
             # event already has p_end
             logq_end[event] = log(model.ρ)
@@ -190,7 +195,7 @@ function StatsAPI.loglikelihood(
             ODEProblem{true}(
                 dp_logq_dt!,
                 [p_end[event]; logq_end[event]],
-                (t_end, t_start),
+                (event.up.time, event.time),
                 (model, event.up.type)
             ),
             Tsit5();
@@ -202,7 +207,7 @@ function StatsAPI.loglikelihood(
         )
 
         if !SciMLBase.successful_retcode(p_logq)
-            @warn "Density of branch could not be solved. Exit code $(p_logq.retcode). The integration timespan was $(t_start - t_end). Density of tree will evaluate to zero."
+            @warn "Density of branch could not be solved. Exit code $(p_logq.retcode). The integration timespan was $(event.time - event.up.time). Density of tree will evaluate to zero."
             return -Inf
         end
 
