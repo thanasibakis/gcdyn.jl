@@ -313,6 +313,7 @@ Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at 
     # Create a dummy series to have a color legend
     for (type, color) in sort(palette)
         @series begin
+            legendtitle := "Type"
             label := string(type)
             seriescolor := color
             seriestype := :shape
