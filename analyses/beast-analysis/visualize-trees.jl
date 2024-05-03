@@ -21,7 +21,7 @@ function main()
 						return value
 					end
 				end
-			
+
 				if all(bin[2] <= affinity for bin in keys(discretization_table))
 					return maximum(values(discretization_table))
 				elseif all(affinity < bin[1] for bin in keys(discretization_table))
@@ -31,7 +31,7 @@ function main()
 				end
 			end
 
-			plot(tree; title="$gc_name STATE_$i", dpi=500, size=(1000, 500), legendtitle="Affinity bin")
+			plot(tree; title="$gc_name STATE_$i", dpi=500, size=(1000, 700), legendtitle="Affinity bin")
 			png("$directory_name/tree-STATE_$i.png")
 		end
 	end
