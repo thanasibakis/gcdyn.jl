@@ -263,6 +263,9 @@ Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at 
     yticks --> false
     yaxis --> false
     linewidth --> 1.5
+    legend --> :outertop
+    legend_column --> -1
+    foreground_color_legend --> nothing
 
     # First we must take note of the y-coordinate for each branch
     y_offsets = Dict{TreeNode, Float64}()
@@ -285,16 +288,18 @@ Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at 
     colors = (num_colors == 1) ? [colorschemes[colorscheme][1]] : colorschemes[colorscheme][0:0.8/(num_colors-1):0.8]
     palette = Dict(type => color for (type, color) in zip(all_types, colors))
 
-    # Compute line segments from each node's parent to the node itself,
-    # as well as connecting line segments for birth events.
-    # Also compute segment colors
+    # Compute:
+    # - Line segments from each node's parent to the node itself
+    # - Connecting line segments, for birth events
+    # - Points, for type change events
+    # - Colors of branches corresponding to types
     for node in PreOrderTraversal(tree.children[1])
         @series begin
             x = [node.up.time, node.time]
             y = [y_offsets[node], y_offsets[node]]
-
             primary := false # Don't show up in legend
             seriescolor := palette[node.up.type]
+
             (x, y)
         end
 
@@ -302,9 +307,22 @@ Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at 
             @series begin
                 x = [node.time, node.time]
                 y = [y_offsets[child] for child in node.children]
-
                 primary := false # Don't show up in legend
                 seriescolor := palette[node.up.type]
+
+                (x, y)
+            end
+        elseif node.event == :type_change
+            @series begin
+                x = [node.time]
+                y = [y_offsets[node]]
+                primary := false # Don't show up in legend
+                seriescolor := palette[node.type]
+                seriestype := :scatter
+                marker := :circle
+                markersize := 2
+                markerstrokewidth := 0
+
                 (x, y)
             end
         end
@@ -314,9 +332,10 @@ Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at 
     for (type, color) in sort(palette)
         @series begin
             legendtitle := "Type"
-            label := string(type)
+            label := (type isa Real) ? string(round(type; digits=3)) : string(type)
             seriescolor := color
             seriestype := :shape
+
             ([], [])
         end
     end
