@@ -60,15 +60,6 @@ function main()
 		tree
 	end
 
-	# TODO: Why is this not already true
-	for tree in treeset
-		present_time = maximum(node.time for tree in treeset for node in LeafTraversal(tree))
-		
-		for leaf in LeafTraversal(tree)
-			leaf.time = present_time
-		end
-	end
-
 	println("Sampling from prior...")
 	prior_samples = sample(SigmoidalModel(nothing, Γ, type_space, nothing), Prior(), 5000) |> DataFrame
 	mkpath("out")
