@@ -64,7 +64,7 @@ function main()
 		println("$germinal_center_name\t Exporting affinity-level trees...")
 
 		for (name, tree) in trees
-			tree_with_affinities::TreeNode{Float64} = map_types(type -> affinity_map[type], tree)
+			tree_with_affinities::TreeNode{Float64} = map_types(type -> affinity_map[type], tree; prune_self_loops=false)
 			save_object("data/jld2-with-affinities/$germinal_center_name/tree-$name.jld2", tree_with_affinities)
 		end
 
@@ -142,7 +142,7 @@ end
 # might be minor floating point error for what should be the same time. We fix this here
 function correct_present_time!(tree::TreeNode)
 	present_time = maximum(node.time for node in LeafTraversal(tree))
-		
+
 	for leaf in LeafTraversal(tree)
 		@assert leaf.time ≈ present_time atol=1e-5
 		leaf.time = present_time
@@ -199,7 +199,7 @@ end
 # You will still need to set a state attribute in the Newick string, though. (History is optional.)
 #
 # Some examples to try out:
-# 
+#
 # newick = "(([&states=\"A\"]:0.1,[&states=\"G\"]:0.2)[&states=\"C\"]:0.3,([&states=\"G\"]:0.4,[&states=\"T\"]:0.5)[&states=\"C\"]:0.6)[&states=\"A\"]:1.0;"
 # newick = "(([&states=\"A\"]:0.1,[&states=\"G\"]:0.2)[&states=\"C\"]:0.3,([&states=\"G\"]:0.4,[&states=\"T\"]:0.5)[&states=\"C\"]:0.6)[&states=\"A\"];"
 function gcdyn.TreeNode(newick)
@@ -250,7 +250,7 @@ function gcdyn.TreeNode(newick)
 
 			current_node = pop!(ancestors)
 			current_label = ""
-		
+
 		elseif char == ';'
 			# End of the tree. The node info we have is for the first birth event.
 			# Here's the catch. BEAST trees do not infer a time to first birth event.
@@ -274,7 +274,7 @@ function gcdyn.TreeNode(newick)
 		else
 			# We are parsing a node
 			current_label *= char
-			
+
 			if char == '['
 				currently_inside_square_bracket = true
 			elseif char == ']'
@@ -343,7 +343,7 @@ function gcdyn.TreeNode(newick)
 
 			attach!(current_node, new_node)
 			attach!(new_node, node)
-			
+
 			current_node = new_node
 		end
 
