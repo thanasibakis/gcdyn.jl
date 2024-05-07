@@ -251,7 +251,9 @@ Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at 
 
 # To enable Plots.plot(tree::TreeNode).
 # See ColorSchemes.colorschemes for all `colorscheme` options.
-@recipe function _(tree::TreeNode; colorscheme=:linear_kbc_5_95_c73_n256)
+# The `midpoint` option decides which type is equivalent to the median of the colorscheme (useful for diverging colorschemes).
+# A good diverging scale is `:colorscheme=:diverging_bkr_55_10_c35_n256` with `reverse_colorscheme=true`.
+@recipe function _(tree::TreeNode; colorscheme=:linear_kbc_5_95_c73_n256, midpoint=nothing, reverse_colorscheme=false)
     for node in PreOrderTraversal(tree)
         if length(node.children) > 2
             throw(ArgumentError("Only trees with at most binary branching are supported."))
@@ -282,10 +284,32 @@ Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at 
         end
     end
 
-    # Set up color palette. We only use the first 80% of the colorscheme because the last 20% are too light.
+    # Set up color palette
     all_types = sort(unique(node.type for node in PreOrderTraversal(tree)))
     num_colors = length(all_types)
-    colors = (num_colors == 1) ? [colorschemes[colorscheme][1]] : colorschemes[colorscheme][0:0.8/(num_colors-1):0.8]
+
+    if isnothing(midpoint)
+        # Only use the first 80% of the colorscheme because the last 20% are too light
+        colors = (num_colors == 1) ? [colorschemes[colorscheme][1]] : colorschemes[colorscheme][0:0.8/(num_colors-1):0.8]
+    else
+        midpoint_index = findfirst(==(midpoint), all_types)
+        num_below, num_above = max(0, midpoint_index - 1), min(num_colors, num_colors - midpoint_index)
+
+        if reverse_colorscheme
+            num_below, num_above = num_above, num_below
+        end
+
+        colors = [
+            colorschemes[colorscheme][0:0.5/num_below:0.5];
+            colorschemes[colorscheme][0.5:0.5/num_above:1]
+        ]
+        unique!(colors) # The midpoint color (0.5) will show up in there twice
+    end
+
+    if reverse_colorscheme
+        reverse!(colors)
+    end
+    
     palette = Dict(type => color for (type, color) in zip(all_types, colors))
 
     # Compute:
