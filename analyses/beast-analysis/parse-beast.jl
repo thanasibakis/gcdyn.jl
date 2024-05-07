@@ -63,6 +63,9 @@ function main()
 
 		println("$germinal_center_name\t Exporting affinity-level trees...")
 
+		# Note that we're not pruning affinity-preserving mutations here. Thus, "type changes" are still on the nucleotide level,
+		# even though the tree type is now the affinity. This is for visualization purposes, and `validate_tree`/loglikelihoods will fail
+		# without later pruning.
 		for (name, tree) in trees
 			tree_with_affinities::TreeNode{Float64} = map_types(type -> affinity_map[type], tree; prune_self_loops=false)
 			save_object("data/jld2-with-affinities/$germinal_center_name/tree-$name.jld2", tree_with_affinities)
