@@ -1,3 +1,5 @@
+ENV["GKSwstype"] = "100" # Headless plotting mode
+
 using gcdyn, JLD2, Plots, Random, StatsBase
 
 function main()
@@ -6,7 +8,7 @@ function main()
 	
 	mkpath("out/tree-visualizations") # Make this before we multithread
 
-	Threads.@threads for germinal_center_dir in readdir("data/jld2-with-affinities/"; join=true)
+	for germinal_center_dir in readdir("data/jld2-with-affinities/"; join=true)
 		gc_name = basename(germinal_center_dir)
 		directory_name = "out/tree-visualizations/$gc_name"
 		mkpath(directory_name)
@@ -31,7 +33,7 @@ function main()
 				end
 			end
 
-			plot(
+			p = plot(
 				tree;
 				colorscheme=:diverging_bkr_55_10_c35_n256,
 				midpoint=0,
@@ -41,7 +43,8 @@ function main()
 				size=(1000, 700),
 				legendtitle="Affinity bin"
 			)
-			png("$directory_name/tree-STATE_$i.png")
+
+			png(p, "$directory_name/tree-STATE_$i.png")
 		end
 	end
 end
