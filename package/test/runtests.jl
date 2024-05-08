@@ -4,8 +4,8 @@ import Random
 function test_rand_tree(n, λ, μ, present_time)
     # Assumes ρ = 1. σ should not matter
 
-    model = ConstantBranchingProcess(λ, μ, 0, 1, 1, 1:3, present_time)
-    trees = rand_tree(model, n, 1; reject_stubs=false)
+    model = ConstantBranchingProcess(λ, μ, 0, 1, 1, 1:3)
+    trees = rand_tree(model, present_time, 1, n; reject_stubs=false)
     
     # Expected number of survivors should check out
     observed = map(trees) do tree
@@ -18,23 +18,23 @@ function test_rand_tree(n, λ, μ, present_time)
 end
 
 function test_fully_observed_likelihoods(n, λ, μ, γ, state_space, present_time)
-    model = ConstantBranchingProcess(λ, μ, γ, 1, 1, state_space, present_time)
-    trees = rand_tree(model, n, state_space[1])
+    model = ConstantBranchingProcess(λ, μ, γ, 1, 1, state_space)
+    trees = rand_tree(model, present_time, state_space[1], n)
 
     naive_ll = sum(gcdyn.naive_loglikelihood(model, tree) for tree in trees)
-    appx_ll = sum(gcdyn.stadler_appx_loglikelihood(model, tree) for tree in trees)
+    appx_ll = sum(gcdyn.stadler_appx_loglikelihood(model, tree, present_time) for tree in trees)
 
-    @test naive_ll ≈ loglikelihood(model, trees) rtol=1e-1
-    @test naive_ll ≈ appx_ll                     rtol=1e-1
+    @test naive_ll ≈ loglikelihood(model, trees, present_time) rtol=1e-1
+    @test naive_ll ≈ appx_ll                                   rtol=1e-1
 end
 
 function test_no_extinction_likelihoods(n, λ, μ, present_time)
-    model = ConstantBranchingProcess(λ, μ, 0, 1, 0, 1:2, present_time)
-    trees = rand_tree(model, n, 1)
+    model = ConstantBranchingProcess(λ, μ, 0, 1, 0, 1:2)
+    trees = rand_tree(model, present_time, 1, n)
 
-    appx_ll = sum(gcdyn.stadler_appx_loglikelihood(model, tree) for tree in trees)
+    appx_ll = sum(gcdyn.stadler_appx_loglikelihood(model, tree, present_time) for tree in trees)
 
-    @test appx_ll ≈ loglikelihood(model, trees) rtol=1e-1
+    @test appx_ll ≈ loglikelihood(model, trees, present_time) rtol=1e-1
 end
 
 @testset "gcdyn" begin

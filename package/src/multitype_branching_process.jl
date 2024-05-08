@@ -98,17 +98,19 @@ end
 
 """
 ```julia
-loglikelihood(model::AbstractBranchingProcess, tree::TreeNode; kw...)
-loglikelihood(model::AbstractBranchingProcess, trees::Vector{TreeNode}; kw...)
+loglikelihood(model::AbstractBranchingProcess, tree::TreeNode, present_time; kw...)
+loglikelihood(model::AbstractBranchingProcess, trees::Vector{TreeNode}, present_time; kw...)
 ```
 
 A slight deviation from StatsAPI, as observations are not stored in the model object, so they must be passed as an argument.
 
+Ensure that `present_time > 0`, since the process is defined to start at time `0`.
 Keyword arguments `reltol` and `abstol` are passed to the ODE solver.
 """
 function StatsAPI.loglikelihood(
     model::AbstractBranchingProcess{T},
-    tree::TreeNode;
+    tree::TreeNode,
+    present_time;
     reltol = 1e-3,
     abstol = 1e-3,
     maxiters = 1e5
@@ -121,13 +123,13 @@ function StatsAPI.loglikelihood(
 
     for leaf in LeafTraversal(tree)
         if leaf.event == :sampled_survival
-            if leaf.time != model.present_time
+            if leaf.time != present_time
                 throw(ArgumentError("Sampled survival events must all be at the present time."))
             end
 
             p_end[leaf] = fill(1 - model.ρ, size(model.type_space))
         elseif leaf.event == :sampled_death
-            if leaf.time == model.present_time
+            if leaf.time == present_time
                 throw(ArgumentError("Sampled death events must not be at the present time."))
             end
 
@@ -137,7 +139,7 @@ function StatsAPI.loglikelihood(
                 ODEProblem{true}(
                     dp_dt!,
                     fill(1 - model.ρ, size(model.type_space)),
-                    (0, model.present_time - leaf.time),
+                    (0, present_time - leaf.time),
                     model
                 ),
                 Tsit5();
@@ -150,7 +152,7 @@ function StatsAPI.loglikelihood(
             )
 
             if !SciMLBase.successful_retcode(p)
-                @warn "Leaf initial condition could not be solved. Exit code $(p.retcode). The integration timespan was $(model.present_time - leaf.time). Density will evaluate to zero."
+                @warn "Leaf initial condition could not be solved. Exit code $(p.retcode). The integration timespan was $(present_time - leaf.time). Density will evaluate to zero."
 
                 return -Inf
             end
@@ -222,7 +224,7 @@ function StatsAPI.loglikelihood(
         ODEProblem{true}(
             dp_dt!,
             fill(1 - model.ρ, size(model.type_space)),
-            (0, model.present_time),
+            (0, present_time),
             model
         ),
         Tsit5();
@@ -234,7 +236,7 @@ function StatsAPI.loglikelihood(
     )
 
     if !SciMLBase.successful_retcode(p)
-        @warn "Non-observation probability of tree could not be solved. Exit code $(p.retcode). The integration timespan was $(model.present_time). Density will evaluate to zero."
+        @warn "Non-observation probability of tree could not be solved. Exit code $(p.retcode). The integration timespan was $(present_time). Density will evaluate to zero."
         return -Inf
     end
 
@@ -246,12 +248,14 @@ function StatsAPI.loglikelihood(
 end
 
 function StatsAPI.loglikelihood(
-    model::AbstractBranchingProcess{T},
-    trees::Vector{TreeNode};
+    model::AbstractBranchingProcess,
+    trees::Vector{TreeNode{T}},
+    present_time;
     reltol = 1e-3,
-    abstol = 1e-3
+    abstol = 1e-3,
+    maxiters = 1e5
 ) where T
-    return sum(StatsAPI.loglikelihood(model, tree; reltol=reltol, abstol=abstol) for tree in trees)
+    return sum(StatsAPI.loglikelihood(model, tree, present_time; reltol=reltol, abstol=abstol, maxiters=maxiters) for tree in trees)
 end
 
 """
@@ -297,10 +301,10 @@ end
 
 """
 ```julia
-rand_tree(model, [n,] init_type; reject_stubs=true)
+rand_tree(model, present_time, init_type [,n]; reject_stubs=true)
 ```
 
-Generate `n` random trees from the given model (optional parameter, default is `1`), each starting at the given initial type.
+Generate `n` random trees from the given model (optional parameter, default is `n=1`), each starting at the given initial type.
 
 Note that trees will have root time `0`, with time increasing toward the tips.
 This aligns us with the branching process models, but contradicts the notion of time typically used in phylogenetics.
@@ -311,21 +315,17 @@ See also [`TreeNode`](@ref), [`sample_child!`](@ref), [`mutate!`](@ref).
 """
 function rand_tree(
     model::AbstractBranchingProcess,
-    n,
-    init_type;
+    present_time,
+    init_type,
+    n;
     reject_stubs=true
 )
-    trees = Vector{TreeNode}(undef, n)
-
-    for i in 1:n
-        trees[i] = rand_tree(model, init_type; reject_stubs=reject_stubs)
-    end
-
-    return trees
+    return [rand_tree(model, present_time, init_type; reject_stubs=reject_stubs) for _ in 1:n]
 end
 
 function rand_tree(
     model::AbstractBranchingProcess,
+    present_time,
     init_type;
     reject_stubs=true
 )
@@ -335,7 +335,7 @@ function rand_tree(
     # Evolve a fully-observed tree
     while length(needs_children) > 0
         node = pop!(needs_children)
-        child = sample_child!(node, model)
+        child = sample_child!(node, model, present_time)
 
         if child.event == :birth
             push!(needs_children, child)
@@ -374,7 +374,7 @@ function rand_tree(
 
     # If we're rejecting stubs and have one, try again
     if reject_stubs && length(root.children) == 0
-        return rand_tree(model, init_type; reject_stubs = true)
+        return rand_tree(model, present_time, init_type; reject_stubs = true)
     end
 
     return root
@@ -400,7 +400,7 @@ end
 
 """
 ```julia
-sample_child!(parent, model)
+sample_child!(parent, model, present_time)
 ```
 
 Append a new child event to the given parent node, selecting between events from [`EVENTS`](@ref) according to the given model's rate parameters.
@@ -408,7 +408,7 @@ Append a new child event to the given parent node, selecting between events from
 Note that the child will a time `t` larger than its parent.
 This aligns us with the branching process models, but contradicts the notion of time typically used in phylogenetics.
 """
-function sample_child!(parent::TreeNode, model::AbstractBranchingProcess)
+function sample_child!(parent::TreeNode, model::AbstractBranchingProcess, present_time)
     if length(parent.children) == 2
         throw(ArgumentError("Can only have 2 children max"))
     end
@@ -417,9 +417,9 @@ function sample_child!(parent::TreeNode, model::AbstractBranchingProcess)
 
     waiting_time = rand(Exponential(1 / (λₓ + μₓ + γₓ)))
 
-    if parent.time + waiting_time > model.present_time
+    if parent.time + waiting_time > present_time
         event = sample([:sampled_survival, :unsampled_survival], Weights([model.ρ, 1 - model.ρ]))
-        child = TreeNode(event, model.present_time, parent.type)
+        child = TreeNode(event, present_time, parent.type)
     else
         event = sample([:birth, :unsampled_death, :type_change], Weights([λₓ, μₓ, γₓ]))
 

@@ -64,8 +64,8 @@ function main()
     Γ = [-1 0.5 0.25 0.25; 2 -4 1 1; 2 2 -5 1; 0.125 0.125 0.25 -0.5]
     present_time = 3
 
-    truth = BranchingProcess(0, 0, 0, 2, 1.3, 1, Γ, 0.5, 0, type_space, present_time)
-    treeset = rand_tree(truth, 10, truth.type_space[1])
+    truth = BranchingProcess(0, 0, 0, 2, 1.3, 1, Γ, 0.5, 0, type_space)
+    treeset = rand_tree(truth, present_time, truth.type_space[1], 10)
     
     println("Type space: $(round.(type_space; digits=3))")
 	println("Γ:")

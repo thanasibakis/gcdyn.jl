@@ -11,11 +11,11 @@ using gcdyn, CSV, DataFrames, Optim, Random, Turing
     δ       ~ LogNormal(0, 0.5)
 
     if DynamicPPL.leafcontext(__context__) !== Turing.PriorContext()
-        sampled_model = VaryingTypeChangeRateBranchingProcess(
-            λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, 1, 0, type_space, present_time
+        sampled_model = SigmoidalBranchingProcess(
+            λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, 1, 0, type_space
         )
 
-        Turing.@addlogprob! loglikelihood(sampled_model, trees)
+        Turing.@addlogprob! loglikelihood(sampled_model, trees, present_time)
     end
 end
 
@@ -24,11 +24,13 @@ function main()
 
     println("Setting up model...")
 
+    type_space = [2, 4, 6, 8]
     Γ = [-1 0.5 0.25 0.25; 2 -4 1 1; 2 2 -5 1; 0.125 0.125 0.25 -0.5]
-    truth = VaryingTypeChangeRateBranchingProcess(1, 5, 1.5, 1, 1.3, 1, Γ, 1, 0, [2, 4, 6, 8], 3)
-    trees = rand_tree(truth, 15, truth.type_space[1])
+    present_time = 3
+    truth = SigmoidalBranchingProcess(1, 5, 1.5, 1, 1.3, 1, Γ, 1, 0, type_space)
+    trees = rand_tree(truth, present_time, type_space[1], 15)
 
-    model = Model(trees, truth.Γ, truth.type_space, truth.present_time)
+    model = Model(trees, Γ, type_space, present_time)
 
     num_leaves = sort([length(LeafTraversal(tree)) for tree in trees])
     num_nodes = sort([length(PostOrderTraversal(tree)) for tree in trees])
@@ -39,9 +41,6 @@ function main()
         println(file, "Node count distribution:")
         println(file, join(num_nodes, ", "))
     end
-
-    # println("Sampling from prior...")
-    # prior_samples = sample(model, Prior(), 100) |> DataFrame
 
     println("Computing initial MCMC state...")
     max_a_posteriori = optimize(model, MAP())

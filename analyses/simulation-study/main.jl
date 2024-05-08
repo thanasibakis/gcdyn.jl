@@ -20,11 +20,11 @@ using gcdyn, CSV, DataFrames, Optim, Random, Turing
     δ        = exp(log_δ * 0.5)
 
     if DynamicPPL.leafcontext(__context__) !== Turing.PriorContext()
-        sampled_model = VaryingTypeChangeRateBranchingProcess(
-            λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, 1, 0, type_space, present_time
+        sampled_model = SigmoidalBranchingProcess(
+            λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, 1, 0, type_space
         )
 
-        Turing.@addlogprob! loglikelihood(sampled_model, trees)
+        Turing.@addlogprob! loglikelihood(sampled_model, trees, present_time)
     end
 end
 
@@ -33,8 +33,10 @@ function main()
     
 	println("Setting up model...")
 
+    type_space = [2, 4, 6, 8]
     Γ = [-1 0.5 0.25 0.25; 2 -4 1 1; 2 2 -5 1; 0.125 0.125 0.25 -0.5]
-    truth = VaryingTypeChangeRateBranchingProcess(1, 5, 1.5, 1, 1.3, 1, Γ, 1, 0, [2, 4, 6, 8], 3)
+    present_time = 3
+    truth = SigmoidalBranchingProcess(1, 5, 1.5, 1, 1.3, 1, Γ, 1, 0, type_space)
 
 	println("Sampling from posterior...")
     num_treesets = 100
@@ -42,8 +44,8 @@ function main()
     dfs = Vector{DataFrame}(undef, num_treesets)
 
     Threads.@threads for i in 1:num_treesets
-        treeset = rand_tree(truth, num_trees_per_set, truth.type_space[1]);
-        model = Model(treeset, truth.Γ, truth.type_space, truth.present_time)
+        treeset = rand_tree(truth, present_time, truth.type_space[1], num_trees_per_set);
+        model = Model(treeset, Γ, type_space, present_time)
 
         dfs[i] = sample(
             model,
