@@ -1,19 +1,26 @@
 using gcdyn, Turing, StatsPlots
 
-@model function ConditionedModel(trees, truth, present_time)
+function main()
+    truth = ConstantBranchingProcess(1.8, 1, 0, 1, 0, [1])
+    chns = run_simulations(truth, 2)
+    visualize_original(chns, truth)
+    visualize_both(chns, truth)
+end
+
+@model function ConditionedModel(trees, present_time)
     λ ~ LogNormal(1.5, 1)
     μ ~ LogNormal(0, 0.5)
 
-    sampled_model = ConstantBranchingProcess(λ, μ, truth.γ, truth.ρ, truth.σ, truth.type_space)
+    sampled_model = ConstantBranchingProcess(λ, μ, 0, 1, 0, [1])
 
     Turing.@addlogprob! sum(gcdyn.stadler_appx_loglikelihood(sampled_model, tree, present_time) for tree in trees)
 end
 
-@model function OriginalModel(trees, truth, present_time)
+@model function OriginalModel(trees, present_time)
     λ ~ LogNormal(1.5, 1)
     μ ~ LogNormal(0, 0.5)
 
-    sampled_model = ConstantBranchingProcess(λ, μ, truth.γ, truth.ρ, truth.σ, truth.type_space, truth.present_time)
+    sampled_model = ConstantBranchingProcess(λ, μ, 0, 1, 0, [1])
 
     Turing.@addlogprob! sum(gcdyn.stadler_appx_unconditioned_loglikelihood(sampled_model, tree, present_time) for tree in trees)
 end
@@ -46,7 +53,7 @@ function run_simulations(truth, present_time)
             trees = rand_tree(truth, present_time, truth.type_space[1], num_trees)
 
             chns_dict[:corrected][i] = sample(
-                CorrectedModel(trees, truth),
+                ConditionedModel(trees, present_time),
                 Gibbs(
                     MH(:λ => x -> LogNormal(log(x), 0.2)),
                     MH(:μ => x -> LogNormal(log(x), 0.2))
@@ -55,10 +62,10 @@ function run_simulations(truth, present_time)
             )
 
             chns_dict[:original][i] = sample(
-                OriginalModel(trees, truth),
-                MH(
-                    :λ => x -> LogNormal(log(x), 0.2),
-                    :μ => x -> LogNormal(log(x), 0.2)
+                OriginalModel(trees, present_time),
+                Gibbs(
+                    MH(:λ => x -> LogNormal(log(x), 0.2)),
+                    MH(:μ => x -> LogNormal(log(x), 0.2))
                 ),
                 2000
             )
@@ -81,7 +88,7 @@ function visualize_original(chns, truth)
         end
 
         plt = histogram(medians_original; alpha=0.7, label="Original", normalize=:pdf, fill="grey")
-        vline!([truth.λ_yshift]; label="Truth", linewidth=4, color="orange")
+        vline!([truth.λ]; label="Truth", linewidth=4, color="orange")
         xlims!(0, 3)
         title!("$n trees", titlefontsize=10)
 
@@ -101,10 +108,10 @@ function visualize_original(chns, truth)
     end
 
     plot(λ_plts...; layout=(1, 4), thickness_scaling=0.75, dpi=300, size=(1000, 300), plot_title="Birth rate sampling distributions", plot_titlefontsize=12)
-    svg("birth-rate-errors-original-only.svg")
+    savefig("birth-rate-bias-original-only.svg")
 
     plot(μ_plts...; layout=(1, 4), thickness_scaling=0.75, dpi=300, size=(1000, 300), plot_title="Death rate sampling distributions", plot_titlefontsize=12)
-    svg("death-rate-errors-original-only.svg")
+    savefig("death-rate-bias-original-only.svg")
 end
 
 function visualize_both(chns, truth)
@@ -123,8 +130,8 @@ function visualize_both(chns, truth)
         end
 
         plt = histogram(medians_original; alpha=0.7, label="Original", normalize=:pdf, fill="grey")
-        histogram!(medians_corrected; alpha=0.7, label="Corrected", normalize=:pdf, fill="lightblue")
-        vline!([truth.λ_yshift]; label="Truth", linewidth=4, color="orange")
+        histogram!(medians_corrected; alpha=0.7, label="Conditioned", normalize=:pdf, fill="lightblue")
+        vline!([truth.λ]; label="Truth", linewidth=4, color="orange")
         xlims!(0, 3)
         title!("$n trees", titlefontsize=10)
 
@@ -139,7 +146,7 @@ function visualize_both(chns, truth)
         end
 
         plt = histogram(medians_original; alpha=0.7, label="Original", normalize=:pdf, fill="grey")
-        histogram!(medians_corrected; alpha=0.7, label="Corrected", normalize=:pdf, fill="lightblue")
+        histogram!(medians_corrected; alpha=0.7, label="Conditioned", normalize=:pdf, fill="lightblue")
         vline!([truth.μ]; label="Truth", linewidth=4, color="orange")
         xlims!(0, 3)
         title!("$n trees", titlefontsize=10)
@@ -148,17 +155,10 @@ function visualize_both(chns, truth)
     end
 
     plot(λ_plts...; layout=(1, 4), thickness_scaling=0.75, dpi=300, size=(1000, 300), plot_title="Birth rate sampling distributions", plot_titlefontsize=12)
-    svg("birth-rate-errors.svg")
+    savefig("birth-rate-bias.svg")
 
     plot(μ_plts...; layout=(1, 4), thickness_scaling=0.75, dpi=300, size=(1000, 300), plot_title="Death rate sampling distributions", plot_titlefontsize=12)
-    svg("death-rate-errors.svg")
-end
-
-function main()
-    truth = FixedTypeChangeRateBranchingProcess(1.8, 1, 0, 1, 0, [1])
-    chns = run_simulations(truth, 2)
-    visualize_original(chns, truth)
-    visualize_both(chns, truth)
+    savefig("death-rate-bias.svg")
 end
 
 main()
