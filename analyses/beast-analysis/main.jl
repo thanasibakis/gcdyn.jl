@@ -1,7 +1,7 @@
 println("Loading packages...")
-using CSV, gcdyn, Distributions, JLD2, Optim, Turing
+using CSV, gcdyn, DataFrames, Distributions, JLD2, Optim, Turing
 
-@model function SigmoidalModel(trees, Γ, type_space, present_time)
+@model function SigmoidalModel(trees, Γ, type_space)
 	# Keep priors on the same scale for NUTS
 	log_λ_xscale_base ~ Normal(0, 1)
 	λ_xshift_base     ~ Normal(0, 1)
@@ -21,6 +21,8 @@ using CSV, gcdyn, Distributions, JLD2, Optim, Turing
 	if DynamicPPL.leafcontext(__context__) !== Turing.PriorContext()
 		for tree in trees
 			ρ = length(LeafTraversal(tree)) / 1000
+			present_time = maximum(node.time for node in LeafTraversal(tree))
+
 			sampled_model = SigmoidalBranchingProcess(
 				λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, 0, type_space, present_time
 			)
@@ -30,16 +32,16 @@ using CSV, gcdyn, Distributions, JLD2, Optim, Turing
 	end
 end
 
-function main()
+function main(i)
 	# These are computed in a separate script
-	type_space = [-1.224171991580991, 0.0, 0.4104891647333908, 1.0158145231080074, 2.1957206408364116]
-	discretization_table = Dict([0.7118957155228802, 1.414021615333377] => 1.0158145231080074, [1.414021615333377, 4.510046694952103] => 2.1957206408364116, [0.09499050830860184, 0.7118957155228802] => 0.4104891647333908, [-0.07325129835947444, 0.09499050830860184] => 0.0, [-8.4036117593617, -0.07325129835947444] => -1.224171991580991)
-	Γ = [-0.118959461717717 0.021572790787430626 0.05847104833335269 0.029935094305333598 0.008980528291600079; 0.46692888970327073 -0.9168729322281818 0.21740604388300436 0.157495855653881 0.07504214298802565; 0.3339074698602106 0.06008653715185837 -0.7759426942221336 0.2187766224503561 0.1631720647597086; 0.12640020164010704 0.03902621761552961 0.18717669977384585 -0.7137820629490017 0.36117894391951927; 0.01258581593526034 0.005465553533638952 0.03941215667376345 0.09747739513205618 -0.15494092127471892]
-	
+	type_space = [-0.4568874976254108, 0.0, 0.35395573620012577, 0.8642148598083795, 1.4959713153479637]
+	discretization_table = Dict([1.1973728522068754, 3.1370222155629772] => 1.4959713153479637, [-0.0002917189005149, 0.09106099779661217] => 0.0, [0.5796933611135875, 1.1973728522068754] => 0.8642148598083795, [-5.7429821755606145, -0.0002917189005149] => -0.4568874976254108, [0.09106099779661217, 0.5796933611135875] => 0.35395573620012577)
+	Γ = [-0.1413269484969319 0.014424334397623277 0.06274191355468922 0.043509467691191524 0.02065123285342786; 0.45826534761167814 -0.9318887771433151 0.1842969830395073 0.1644801031427861 0.12484634334934366; 0.3675105675562578 0.03143787246229119 -0.7945876303042252 0.20572502506025636 0.18991416522541987; 0.18531601882676527 0.02491133367835205 0.15843000625927553 -0.7575172015484248 0.388859842784032; 0.025285884854612837 0.006042798468735782 0.03807549714766527 0.0996768407609912 -0.16908102123200508]
+			
 	# Read in the trees and do inference
 	println("Reading trees...")
 	treeset = map(readdir("data/jld2-with-affinities/"; join=true)) do germinal_center_dir
-		tree::TreeNode{Float64} = load_object(joinpath(germinal_center_dir, "tree-STATE_50000000.jld2"))
+		tree::TreeNode{Float64} = load_object(joinpath(germinal_center_dir, "tree-STATE_$i.jld2"))
 
 		map_types!(tree) do affinity
 			for (bin, value) in discretization_table
@@ -61,21 +63,24 @@ function main()
 	end
 
 	println("Sampling from prior...")
-	prior_samples = sample(SigmoidalModel(nothing, Γ, type_space, nothing), Prior(), 5000) |> DataFrame
+	prior_samples = sample(SigmoidalModel(nothing, Γ, type_space), Prior(), 5000) |> DataFrame
 	mkpath("out")
-	CSV.write("out/samples-prior.csv", prior_samples)
+	CSV.write("out/samples-prior-$i.csv", prior_samples)
 
 	println("Computing initial MCMC state...")
-	present_time = maximum(node.time for tree in treeset for node in LeafTraversal(tree))
-	model = SigmoidalModel(treeset, Γ, type_space, present_time)
+	model = SigmoidalModel(treeset, Γ, type_space)
 
 	max_a_posteriori = optimize(model, MAP())
 
+	open("out/map-$i.txt", "w") do f
+		println(f, max_a_posteriori)
+	end
+
 	println("Sampling from posterior...")
 	posterior_samples = sample(model, NUTS(), 1000, init_params=max_a_posteriori) |> DataFrame
-	CSV.write("out/samples-posterior.csv", posterior_samples)
+	CSV.write("out/samples-posterior-$i.csv", posterior_samples)
 
 	println("Done!")
 end
 
-main()
+main(50_000_000)

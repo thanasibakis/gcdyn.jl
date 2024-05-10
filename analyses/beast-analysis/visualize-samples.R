@@ -11,7 +11,7 @@ sigmoid <- function(x, t1, t2, t3, t4) {
 # Read data
 
 cat("Reading data...\n")
-prior_samples <- read_csv("out/samples-prior.csv", show_col_types = FALSE) |>
+prior_samples <- read_csv("out/samples-prior-50000000.csv", show_col_types = FALSE) |>
 	mutate(
 		λ_xscale = exp(log_λ_xscale_base * 0.75 + 0.5),
 		λ_yscale = exp(log_λ_yscale_base * 0.75 + 0.5),
@@ -23,9 +23,8 @@ prior_samples <- read_csv("out/samples-prior.csv", show_col_types = FALSE) |>
 	select(iteration, chain, λ_xscale, λ_yscale, λ_xshift, λ_yshift, μ, δ)
 
 arg <- commandArgs(trailingOnly = TRUE)
-filename <- ifelse(length(arg) > 0, arg[1], "out/samples-posterior.csv")
+filename <- ifelse(length(arg) > 0, arg[1], "out/samples-posterior-50000000.csv")
 posterior_samples <- read_csv(filename, show_col_types = FALSE) |>
-	filter(iteration > 1000) |>
 	mutate(
 		λ_xscale = exp(log_λ_xscale_base * 0.75 + 0.5),
 		λ_yscale = exp(log_λ_yscale_base * 0.75 + 0.5),
