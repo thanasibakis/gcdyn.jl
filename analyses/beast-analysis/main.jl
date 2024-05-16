@@ -24,10 +24,10 @@ using CSV, gcdyn, DataFrames, Distributions, JLD2, Optim, Turing
 			present_time = maximum(node.time for node in LeafTraversal(tree))
 
 			sampled_model = SigmoidalBranchingProcess(
-				λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, 0, type_space, present_time
+				λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, 0, type_space
 			)
 			
-			Turing.@addlogprob! loglikelihood(sampled_model, tree)
+			Turing.@addlogprob! loglikelihood(sampled_model, tree, present_time)
 		end
 	end
 end
@@ -83,4 +83,4 @@ function main(i)
 	println("Done!")
 end
 
-main(50_000_000)
+main(10_000_000)
