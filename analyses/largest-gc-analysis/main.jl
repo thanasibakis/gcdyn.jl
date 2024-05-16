@@ -22,10 +22,10 @@ using CSV, gcdyn, Distributions, JLD2, Optim, Turing
 		for tree in trees
 			ρ = length(LeafTraversal(tree)) / 1000
 			sampled_model = SigmoidalBranchingProcess(
-				λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, 0, type_space, present_time
+				λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ, Γ, ρ, 0, type_space
 			)
 			
-			Turing.@addlogprob! loglikelihood(sampled_model, tree)
+			Turing.@addlogprob! loglikelihood(sampled_model, tree, present_time)
 		end
 	end
 end
