@@ -1,6 +1,4 @@
-.nextflow/
 data/
-work/
+out/tree-visualizations/
 
-.nextflow.log*
 Rplots.pdf

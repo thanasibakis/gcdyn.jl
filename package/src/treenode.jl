@@ -2,6 +2,114 @@
 
 """
 ```julia
+attach!(parent::TreeNode, child::TreeNode)
+```
+
+Adds `child` to `parent.children` and sets `child.up` to `parent`.
+"""
+function attach!(parent::TreeNode, child::TreeNode)
+    push!(parent.children, child)
+    child.up = parent
+
+    return nothing
+end
+
+"""
+```julia
+detach!(parent::TreeNode, child::TreeNode)
+```
+
+Removes `child` from `parent.children` and sets `child.up` to `nothing`.
+"""
+function detach!(parent::TreeNode, child::TreeNode)
+    filter!(!=(child), parent.children)
+    child.up = nothing
+
+    return nothing
+end
+
+"""
+```julia
+delete!(node::TreeNode)
+```
+
+Removes this node from its place in the tree, attaching its children to its parent.
+"""
+function Base.delete!(node::TreeNode)
+    parent = node.up
+    children = collect(node.children) # not a pointer
+
+    detach!(parent, node)
+
+    for child in children
+        detach!(node, child)
+        attach!(parent, child)
+    end
+end
+
+"""
+```julia
+map_types(tree, mapping; prune_self_loops = true)
+```
+
+Returns a new tree like `tree`, but replaces the type attribute of each node with the result of the callable `mapping` applied to the type value.
+
+Optionally but by default, if the map results in a type change event with the same type as its parent,
+the type change event is pruned from the tree.
+"""
+function map_types(mapping, tree; prune_self_loops = true)
+    # The mapping may change the type T of a TreeNode, so we can't just traverse and update node.type
+
+    function helper!(mapping, new_node, old_node)
+        for old_child in old_node.children
+            new_child = TreeNode(old_child.event, old_child.time, mapping(old_child.type))
+            attach!(new_node, helper!(mapping, new_child, old_child))
+        end
+
+        return new_node
+    end
+
+    new_tree = TreeNode(tree.event, tree.time, mapping(tree.type))
+    helper!(mapping, new_tree, tree)
+
+    # If a type change resulted in an type of the same bin as the parent,
+    # that isn't a valid type change in the CTMC, so we prune it
+    for node in PreOrderTraversal(new_tree)
+        if prune_self_loops && node.event == :type_change && node.type == node.up.type
+            delete!(node)
+        end
+    end
+
+    return new_tree
+end
+
+"""
+```julia
+map_types!(tree, mapping; prune_self_loops = true)
+```
+
+Replaces the type attribute of all nodes in `tree` with the result of the callable `mapping` applied to the type value.
+
+Note that `TreeNode{T}` objects have a fixed `typeof(node.type) == T`, so the `mapping` must be compliant with this.
+
+Optionally but by default, if the map results in a type change event with the same type as its parent,
+the type change event is pruned from the tree.
+"""
+function map_types!(mapping, tree; prune_self_loops = true)
+    for node in PreOrderTraversal(tree)
+        node.type = mapping(node.type)
+
+        # If a type change resulted in an type of the same bin as the parent,
+        # that isn't a valid type change in the CTMC, so we prune it
+        if prune_self_loops && node.event == :type_change && node.type == node.up.type
+            delete!(node)
+        end
+    end
+end
+
+
+"""
+```julia
 TreeTraversal
 ```
 Abstract supertype for iterators over `TreeNode`s.
@@ -123,4 +231,136 @@ function Base.length(t::TreeTraversal)
     end
 
     return count
+end
+
+# Implement AbstractTrees API
+
+AbstractTrees.ChildIndexing(::Type{<:TreeNode}) = IndexedChildren()
+AbstractTrees.children(node::TreeNode) = node.children
+AbstractTrees.childrentype(::Type{<:TreeNode}) = Vector{TreeNode}
+AbstractTrees.ParentLinks(::Type{<:TreeNode}) = StoredParents()
+AbstractTrees.parent(node::TreeNode) = node.up
+AbstractTrees.NodeType(::Type{<:TreeNode}) = HasNodeType()
+AbstractTrees.nodetype(::Type{<:TreeNode}) = TreeNode
+AbstractTrees.nodevalue(node::TreeNode) = node.type
+Base.IteratorEltype(::Type{<:TreeIterator{TreeNode}}) = Base.HasEltype()
+Base.eltype(::Type{<:TreeIterator{TreeNode}}) = TreeNode
+
+Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at time $(node.time) with type $(node.type)")
+
+
+# To enable Plots.plot(tree::TreeNode).
+# See ColorSchemes.colorschemes for all `colorscheme` options.
+# The `midpoint` option decides which type is equivalent to the median of the colorscheme (useful for diverging colorschemes).
+# A good diverging scale is `:colorscheme=:diverging_bkr_55_10_c35_n256` with `reverse_colorscheme=true`.
+@recipe function _(tree::TreeNode; colorscheme=:linear_kbc_5_95_c73_n256, midpoint=nothing, reverse_colorscheme=false)
+    for node in PreOrderTraversal(tree)
+        if length(node.children) > 2
+            throw(ArgumentError("Only trees with at most binary branching are supported."))
+        end
+    end
+
+    # Default series configuration
+    xlabel --> "Time"
+    yticks --> false
+    yaxis --> false
+    linewidth --> 1.5
+    legend --> :outertop
+    legend_column --> -1
+    foreground_color_legend --> nothing
+
+    # First we must take note of the y-coordinate for each branch
+    y_offsets = Dict{TreeNode, Float64}()
+
+    # Set leaf y-coordinates
+    for (i, node) in enumerate(LeafTraversal(tree))
+        y_offsets[node] = i
+    end
+
+    # Determine internal node y-coordinates
+    for node in PostOrderTraversal(tree)
+        if node ∉ keys(y_offsets)
+            y_offsets[node] = mean(y_offsets[child] for child in node.children)
+        end
+    end
+
+    # Set up color palette
+    all_types = sort(unique(node.type for node in PreOrderTraversal(tree)))
+    num_colors = length(all_types)
+
+    if isnothing(midpoint)
+        # Only use the first 80% of the colorscheme because the last 20% are too light
+        colors = (num_colors == 1) ? [colorschemes[colorscheme][1]] : colorschemes[colorscheme][0:0.8/(num_colors-1):0.8]
+    else
+        midpoint_index = findfirst(==(midpoint), all_types)
+        num_below, num_above = max(0, midpoint_index - 1), min(num_colors, num_colors - midpoint_index)
+
+        if reverse_colorscheme
+            num_below, num_above = num_above, num_below
+        end
+
+        colors = [
+            colorschemes[colorscheme][0:0.5/num_below:0.5];
+            colorschemes[colorscheme][0.5:0.5/num_above:1]
+        ]
+        unique!(colors) # The midpoint color (0.5) will show up in there twice
+    end
+
+    if reverse_colorscheme
+        reverse!(colors)
+    end
+    
+    palette = Dict(type => color for (type, color) in zip(all_types, colors))
+
+    # Compute:
+    # - Line segments from each node's parent to the node itself
+    # - Connecting line segments, for birth events
+    # - Points, for type change events
+    # - Colors of branches corresponding to types
+    for node in PreOrderTraversal(tree.children[1])
+        @series begin
+            x = [node.up.time, node.time]
+            y = [y_offsets[node], y_offsets[node]]
+            primary := false # Don't show up in legend
+            seriescolor := palette[node.up.type]
+
+            (x, y)
+        end
+
+        if node.event == :birth
+            @series begin
+                x = [node.time, node.time]
+                y = [y_offsets[child] for child in node.children]
+                primary := false # Don't show up in legend
+                seriescolor := palette[node.up.type]
+
+                (x, y)
+            end
+        elseif node.event == :type_change
+            @series begin
+                x = [node.time]
+                y = [y_offsets[node]]
+                primary := false # Don't show up in legend
+                seriescolor := palette[node.type]
+                seriestype := :scatter
+                marker := :circle
+                markersize := 2
+                markerstrokewidth := 0
+
+                (x, y)
+            end
+        end
+    end
+
+    # Create a dummy series to have a color legend
+    for (type, color) in sort(palette)
+        @series begin
+            legendtitle := "Type"
+            label := (type isa Real) ? string(round(type; digits=3)) : string(type)
+            seriescolor := color
+            seriestype := :shape
+
+            ([], [])
+        end
+    end
 end

@@ -8,38 +8,48 @@ sigmoid(x, xscale, xshift, yscale, yshift) = yscale * expit(xscale * (x - xshift
 
 """
 ```julia
-type_space_index(model::BranchingProcess, type)
+type_space_index(model::AbstractBranchingProcess, type)
 ```
 
 Returns the index of `type` in the given `model`'s type space, or `nothing` if not found.
 """
-@memoize function type_space_index(model::BranchingProcess, type)
+@memoize function type_space_index(model::AbstractBranchingProcess, type)
     return findfirst(==(type), model.type_space)
 end
 
 """
 ```julia
-λ(model::BranchingProcess, type)
+λ(model::AbstractBranchingProcess, type)
 ```
 
 Evaluates the `model`'s birth rate function at the given `type`.
 """
-function λ(model::BranchingProcess, type)
-    if isnothing(type_space_index(model, type))
+function λ(model::ConstantBranchingProcess, type)
+    return model.λ
+end
+
+function λ(model::DiscreteBranchingProcess, type)
+    i = type_space_index(model, type)
+
+    if isnothing(i)
         throw(ArgumentError("The type must be in the type space of the model."))
     end
 
+    return model.λ[i]
+end
+
+function λ(model::SigmoidalBranchingProcess, type)
     return sigmoid(type, model.λ_xscale, model.λ_xshift, model.λ_yscale, model.λ_yshift)
 end
 
 """
 ```julia
-μ(model::BranchingProcess, type)
+μ(model::AbstractBranchingProcess, type)
 ```
 
 Evaluates the `model`'s death rate function at the given `type`.
 """
-function μ(model::BranchingProcess, type)
+function μ(model::AbstractBranchingProcess, type)
     if isnothing(type_space_index(model, type))
         throw(ArgumentError("The type must be in the type space of the model."))
     end
@@ -49,12 +59,12 @@ end
 
 """
 ```julia
-γ(model::BranchingProcess, type)
+γ(model::AbstractBranchingProcess, type)
 ```
 
 Evaluates the `model`'s type change rate function at the given `type` (the rate of change out of `type`).
 """
-function γ(model::BranchingProcess, type)
+function γ(model::AbstractBranchingProcess, type)
     i = type_space_index(model, type)
 
     if isnothing(i)
@@ -66,12 +76,12 @@ end
 
 """
 ```julia
-γ(model::BranchingProcess, from_type, to_type)
+γ(model::AbstractBranchingProcess, from_type, to_type)
 ```
 
 Evaluates the `model`'s rate of type change from `from_type` to `to_type`.
 """
-function γ(model::BranchingProcess, from_type, to_type)
+function γ(model::AbstractBranchingProcess, from_type, to_type)
     if from_type == to_type
         return 0
     end
@@ -88,67 +98,72 @@ end
 
 """
 ```julia
-loglikelihood(model::BranchingProcess, tree::TreeNode; kw...)
-loglikelihood(model::BranchingProcess, trees; kw...)
+loglikelihood(model::AbstractBranchingProcess, tree::TreeNode, present_time; kw...)
+loglikelihood(model::AbstractBranchingProcess, trees::Vector{TreeNode}, present_time; kw...)
 ```
 
 A slight deviation from StatsAPI, as observations are not stored in the model object, so they must be passed as an argument.
 
+Ensure that `present_time > 0`, since the process is defined to start at time `0`.
 Keyword arguments `reltol` and `abstol` are passed to the ODE solver.
 """
 function StatsAPI.loglikelihood(
-    model::BranchingProcess,
-    tree::TreeNode;
+    model::AbstractBranchingProcess{T},
+    tree::TreeNode,
+    present_time;
     reltol = 1e-3,
     abstol = 1e-3,
     maxiters = 1e5
-)
-    # We may be using autodiff, so figure out what type the likelikihood value will be
-    T = typeof(λ(model, model.type_space[1]))
-
+) where T
+    # We may be using autodiff, so we need to know what type T the likelikihood value will be
     p_start = Dict{TreeNode, Vector{T}}()
     p_end = Dict{TreeNode, Vector{T}}()
     logq_start = Dict{TreeNode, T}()
     logq_end = Dict{TreeNode, T}()
 
     for leaf in LeafTraversal(tree)
-        # If σ>0, leaves may be at non-present times, so it's incorrect to initialize
-        # p to be 1-ρ for all leaf times
-        if leaf.time == model.present_time
+        if leaf.event == :sampled_survival
+            if leaf.time != present_time
+                throw(ArgumentError("Sampled survival events must all be at the present time."))
+            end
+
             p_end[leaf] = fill(1 - model.ρ, size(model.type_space))
+        elseif leaf.event == :sampled_death
+            if leaf.time == present_time
+                throw(ArgumentError("Sampled death events must not be at the present time."))
+            end
+
+            # Be sure to specify the iip=true of the ODEProblem for type stability
+            # and fewer memory allocations
+            p = solve(
+                ODEProblem{true}(
+                    dp_dt!,
+                    fill(1 - model.ρ, size(model.type_space)),
+                    (0, present_time - leaf.time),
+                    model
+                ),
+                Tsit5();
+                isoutofdomain = (p, args, t) -> any(x -> x < 0 || x > 1, p),
+                save_everystep = false,
+                save_start = false,
+                reltol = reltol,
+                abstol = abstol,
+                maxiters = maxiters
+            )
+
+            if !SciMLBase.successful_retcode(p)
+                @warn "Leaf initial condition could not be solved. Exit code $(p.retcode). The integration timespan was $(present_time - leaf.time). Density will evaluate to zero."
+
+                return -Inf
+            end
+
+            p_end[leaf] = p.u[end]
+        else
+            throw(ArgumentError("Leaf event must be either `:sampled_survival` or `:sampled_death`."))
         end
-
-        # Be sure to specify the iip=true of the ODEProblem for type stability
-        # and fewer memory allocations
-        p = solve(
-            ODEProblem{true}(
-                dp_dt!,
-                fill(1 - model.ρ, size(model.type_space)),
-                (0, model.present_time - leaf.time),
-                model
-            ),
-            Tsit5();
-            isoutofdomain = (p, args, t) -> any(x -> x < 0 || x > 1, p),
-            save_everystep = false,
-            save_start = false,
-            reltol = reltol,
-            abstol = abstol,
-            maxiters = maxiters
-        )
-
-        if !SciMLBase.successful_retcode(p)
-            @warn "Leaf initial condition could not be solved. Exit code $(p.retcode). The integration timespan was $(model.present_time - leaf.time). Density will evaluate to zero."
-
-            return -Inf
-        end
-
-        p_end[leaf] = p.u[end]
     end
 
     for event in PostOrderTraversal(tree.children[1])
-        t_start = model.present_time - event.up.time
-        t_end = model.present_time - event.time
-
         if event.event == :sampled_survival
             # event already has p_end
             logq_end[event] = log(model.ρ)
@@ -182,7 +197,7 @@ function StatsAPI.loglikelihood(
             ODEProblem{true}(
                 dp_logq_dt!,
                 [p_end[event]; logq_end[event]],
-                (t_end, t_start),
+                (event.up.time, event.time),
                 (model, event.up.type)
             ),
             Tsit5();
@@ -194,7 +209,7 @@ function StatsAPI.loglikelihood(
         )
 
         if !SciMLBase.successful_retcode(p_logq)
-            @warn "Density of branch could not be solved. Exit code $(p_logq.retcode). The integration timespan was $(t_start - t_end). Density of tree will evaluate to zero."
+            @warn "Density of branch could not be solved. Exit code $(p_logq.retcode). The integration timespan was $(event.time - event.up.time). Density of tree will evaluate to zero."
             return -Inf
         end
 
@@ -209,7 +224,7 @@ function StatsAPI.loglikelihood(
         ODEProblem{true}(
             dp_dt!,
             fill(1 - model.ρ, size(model.type_space)),
-            (0, model.present_time),
+            (0, present_time),
             model
         ),
         Tsit5();
@@ -221,7 +236,7 @@ function StatsAPI.loglikelihood(
     )
 
     if !SciMLBase.successful_retcode(p)
-        @warn "Non-observation probability of tree could not be solved. Exit code $(p.retcode). The integration timespan was $(model.present_time). Density will evaluate to zero."
+        @warn "Non-observation probability of tree could not be solved. Exit code $(p.retcode). The integration timespan was $(present_time). Density will evaluate to zero."
         return -Inf
     end
 
@@ -233,12 +248,14 @@ function StatsAPI.loglikelihood(
 end
 
 function StatsAPI.loglikelihood(
-    model::BranchingProcess,
-    trees;
+    model::AbstractBranchingProcess,
+    trees::Vector{TreeNode{T}},
+    present_time;
     reltol = 1e-3,
-    abstol = 1e-3
-)
-    return sum(StatsAPI.loglikelihood(model, tree; reltol=reltol, abstol=abstol) for tree in trees)
+    abstol = 1e-3,
+    maxiters = 1e5
+) where T
+    return sum(StatsAPI.loglikelihood(model, tree, present_time; reltol=reltol, abstol=abstol, maxiters=maxiters) for tree in trees)
 end
 
 """
@@ -246,7 +263,7 @@ See equation (1) of this paper:
 
 Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
 """
-function dp_dt!(dp, p, model::BranchingProcess, t)
+function dp_dt!(dp, p, model::AbstractBranchingProcess, t)
     for (i, type) in enumerate(model.type_space)
         λₓ = λ(model, type)
         μₓ = μ(model, type)
@@ -284,10 +301,10 @@ end
 
 """
 ```julia
-rand_tree(model, [n,] init_type; reject_stubs=true)
+rand_tree(model, present_time, init_type [,n]; reject_stubs=true)
 ```
 
-Generate `n` random trees from the given model (optional parameter, default is `1`), each starting at the given initial type.
+Generate `n` random trees from the given model (optional parameter, default is `n=1`), each starting at the given initial type.
 
 Note that trees will have root time `0`, with time increasing toward the tips.
 This aligns us with the branching process models, but contradicts the notion of time typically used in phylogenetics.
@@ -297,32 +314,28 @@ Can optionally choose not to `reject_stubs`, equivalent to not conditioning on t
 See also [`TreeNode`](@ref), [`sample_child!`](@ref), [`mutate!`](@ref).
 """
 function rand_tree(
-    model::BranchingProcess,
-    n,
-    init_type;
+    model::AbstractBranchingProcess,
+    present_time,
+    init_type,
+    n;
     reject_stubs=true
 )
-    trees = Vector{TreeNode}(undef, n)
-
-    for i in 1:n
-        trees[i] = rand_tree(model, init_type; reject_stubs=reject_stubs)
-    end
-
-    return trees
+    return [rand_tree(model, present_time, init_type; reject_stubs=reject_stubs) for _ in 1:n]
 end
 
 function rand_tree(
-    model::BranchingProcess,
+    model::AbstractBranchingProcess,
+    present_time,
     init_type;
     reject_stubs=true
 )
-    root = TreeNode(init_type)
+    root = TreeNode(:root, 0, init_type)
     needs_children = [root]
 
     # Evolve a fully-observed tree
     while length(needs_children) > 0
         node = pop!(needs_children)
-        child = sample_child!(node, model)
+        child = sample_child!(node, model, present_time)
 
         if child.event == :birth
             push!(needs_children, child)
@@ -351,19 +364,17 @@ function rand_tree(
     # Prune subtrees that don't have any sampled descendants
     for node in PostOrderDFS(root)
         if node.event ∈ (:birth, :root)
-            filter!(child -> child in has_sampled_descendant, node.children)
+            filter!(in(has_sampled_descendant), node.children)
 
             if node.event == :birth && length(node.children) == 1
-                filter!(child -> child != node, node.up.children)
-                push!(node.up.children, node.children[1])
-                node.children[1].up = node.up
+                delete!(node)
             end
         end
     end
 
     # If we're rejecting stubs and have one, try again
     if reject_stubs && length(root.children) == 0
-        return rand_tree(model, init_type; reject_stubs = true)
+        return rand_tree(model, present_time, init_type; reject_stubs = true)
     end
 
     return root
@@ -376,7 +387,7 @@ mutate!(node, model)
 
 Change the type of the given node according to the transition probabilities or rates in the given model.
 """
-function mutate!(node::TreeNode, model::BranchingProcess)
+function mutate!(node::TreeNode, model::AbstractBranchingProcess)
     if node.type ∉ model.type_space
         throw(ArgumentError("The type of the node must be in the type space of the mutator."))
     end
@@ -389,7 +400,7 @@ end
 
 """
 ```julia
-sample_child!(parent, model)
+sample_child!(parent, model, present_time)
 ```
 
 Append a new child event to the given parent node, selecting between events from [`EVENTS`](@ref) according to the given model's rate parameters.
@@ -397,7 +408,7 @@ Append a new child event to the given parent node, selecting between events from
 Note that the child will a time `t` larger than its parent.
 This aligns us with the branching process models, but contradicts the notion of time typically used in phylogenetics.
 """
-function sample_child!(parent::TreeNode, model::BranchingProcess)
+function sample_child!(parent::TreeNode, model::AbstractBranchingProcess, present_time)
     if length(parent.children) == 2
         throw(ArgumentError("Can only have 2 children max"))
     end
@@ -406,9 +417,9 @@ function sample_child!(parent::TreeNode, model::BranchingProcess)
 
     waiting_time = rand(Exponential(1 / (λₓ + μₓ + γₓ)))
 
-    if parent.time + waiting_time > model.present_time
+    if parent.time + waiting_time > present_time
         event = sample([:sampled_survival, :unsampled_survival], Weights([model.ρ, 1 - model.ρ]))
-        child = TreeNode(event, model.present_time, parent.type)
+        child = TreeNode(event, present_time, parent.type)
     else
         event = sample([:birth, :unsampled_death, :type_change], Weights([λₓ, μₓ, γₓ]))
 
@@ -423,32 +434,7 @@ function sample_child!(parent::TreeNode, model::BranchingProcess)
         end
     end
 
-    push!(parent.children, child)
-    child.up = parent
+    attach!(parent, child)
 
     return child
-end
-
-"""
-```julia
-map_types(tree, mapping; prune_self_loops = true)
-```
-
-Replaces the type attribute of all nodes in `tree` with the result of the callable `mapping` applied to the type values.
-
-Optionally but by default, if the map results in a type change event with the same type as its parent,
-the type change event is pruned from the tree.
-"""
-function map_types!(mapping, tree; prune_self_loops = true)
-    for node in PreOrderTraversal(tree)
-        node.type = mapping(node.type)
-
-        # If a type change resulted in an type of the same bin as the parent,
-        # that isn't a valid type change in the CTMC, so we prune it
-        if prune_self_loops && node.event == :type_change && node.type == node.up.type
-            filter!(child -> child != node, node.up.children)
-            push!(node.up.children, node.children[1])
-            node.children[1].up = node.up
-        end
-    end
 end

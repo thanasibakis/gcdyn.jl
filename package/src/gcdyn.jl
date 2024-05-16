@@ -2,16 +2,20 @@ module gcdyn
 
 using
     AbstractTrees,
+    ColorSchemes,
     DataFrames,
     Distributions,
     LinearAlgebra,
     Memoize,
     OrdinaryDiffEq,
+    Plots,
     StatsAPI,
     StatsBase
 
 export
-    BranchingProcess,
+    ConstantBranchingProcess,
+    DiscreteBranchingProcess,
+    SigmoidalBranchingProcess,
     TreeNode,
     LeafTraversal,
     PostOrderTraversal,
@@ -21,7 +25,12 @@ export
     γ,
     loglikelihood,
     rand_tree,
-    map_types!
+    map_types,
+    map_types!,
+    plot,
+    attach!,
+    detach!,
+    delete!
 
 include("types.jl")
 include("treenode.jl")
