@@ -11,7 +11,7 @@ sigmoid <- function(x, t1, t2, t3, t4) {
 # Read data
 
 cat("Reading data...\n")
-prior_samples <- read_csv("out/samples-prior-50000000.csv", show_col_types = FALSE) |>
+prior_samples <- read_csv("out/samples-prior-10000000.csv", show_col_types = FALSE) |>
 	mutate(
 		λ_xscale = exp(log_λ_xscale_base * 0.75 + 0.5),
 		λ_yscale = exp(log_λ_yscale_base * 0.75 + 0.5),
@@ -23,7 +23,7 @@ prior_samples <- read_csv("out/samples-prior-50000000.csv", show_col_types = FAL
 	select(iteration, chain, λ_xscale, λ_yscale, λ_xshift, λ_yshift, μ, δ)
 
 arg <- commandArgs(trailingOnly = TRUE)
-filename <- ifelse(length(arg) > 0, arg[1], "out/samples-posterior-50000000.csv")
+filename <- ifelse(length(arg) > 0, arg[1], "out/samples-posterior-10000000.csv")
 posterior_samples <- read_csv(filename, show_col_types = FALSE) |>
 	mutate(
 		λ_xscale = exp(log_λ_xscale_base * 0.75 + 0.5),
@@ -99,7 +99,7 @@ bind_rows(prior_q, posterior_q) |>
 	theme(legend.position = "bottom") +
 	facet_wrap(vars(Dist))
 
-ggsave("out/sigmoids-posterior.png", width = 15, height = 9, dpi = 300)
+ggsave("out/sigmoids-posterior-10000000.png", width = 15, height = 9, dpi = 300)
 
 # Plot histograms
 
@@ -136,7 +136,7 @@ ggplot() +
 	labs(title = "Posterior histograms")
 
 ggsave(
-	"out/histograms-posterior.png",
+	"out/histograms-posterior-10000000.png",
 	width = 18,
 	height = 12,
 	dpi = 300
@@ -153,7 +153,7 @@ posterior_samples |>
 	labs(title = "Posterior traceplots")
 
 ggsave(
-	"out/traceplots-posterior.png",
+	"out/traceplots-posterior-10000000.png",
 	width = 22,
 	height = 12,
 	dpi = 300
