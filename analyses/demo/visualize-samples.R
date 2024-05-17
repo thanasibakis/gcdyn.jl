@@ -2,46 +2,51 @@
 
 suppressPackageStartupMessages(library(tidyverse))
 
-posterior_samples <- read_csv("posterior-samples.csv") |>
-	rename(λ_xshift_ = "λ_xshift⁻") |>
-	mutate(
-		θ1 = exp(log_λ_yscale * 0.75 + 0.5),
-		θ2 = exp(log_λ_xscale * 0.75 + 0.5),
-		θ3 = λ_xshift_ + 5,
-		θ4 = exp(log_λ_yshift * 1.2 - 0.5),
-	)
+posterior_samples <- read_csv("posterior-samples.csv")
 
 prior_samples <- tibble(
-	θ1 = rlnorm(1000, 0.5, 0.75),
-	θ2 = rlnorm(1000, 0.5, 0.75),
-	θ3 = rnorm(1000, 5, 1),
-	θ4 = rlnorm(1000, -0.5, 1.2),
+	λ_yscale = rlnorm(1000, 0.5, 0.75),
+	λ_xscale = rlnorm(1000, 0.5, 0.75),
+	λ_xshift = rnorm(1000, 5, 1),
+	λ_yshift = rlnorm(1000, -0.5, 1.2),
 )
 
 truth <- tibble(
-	θ1 = 1.5,
-	θ2 = 1,
-	θ3 = 5,
-	θ4 = 1,
+	λ_yscale = 1.5,
+	λ_xscale = 1,
+	λ_xshift = 5,
+	λ_yshift = 1,
 )
 
-sigmoid <- function(x, t1, t2, t3, t4) {
-	t1 / (1 + exp(-t2 * (x - t3))) + t4
+sigmoid <- function(x, λ_yscale, λ_xscale, λ_xshift, λ_yshift) {
+	λ_yscale / (1 + exp(-λ_xscale * (x - λ_xshift))) + λ_yshift
 }
 
 prior_q <- prior_samples |>
-	pmap(\(θ1, θ2, θ3, θ4) tibble(x = seq(0, 10, 0.05), sig = sigmoid(x, θ1, θ2, θ3, θ4))) |>
+	pmap(sigmoid, x = seq(0, 10, 0.05)) |>
+	map(\(l) tibble(x = seq(0, 10, 0.05), sig = l)) |>
 	bind_rows(.id = "Curve") |>
 	group_by(x) |>
-	summarise(q05 = quantile(sig, 0.05), q20 = quantile(sig, 0.2), q80 = quantile(sig, 0.8), q95 = quantile(sig, 0.95)) |>
+	summarise(
+		q05 = quantile(sig, 0.05),
+		q20 = quantile(sig, 0.2),
+		q80 = quantile(sig, 0.8),
+		q95 = quantile(sig, 0.95)
+	) |>
 	mutate(Dist = "Prior")
 
 posterior_q <- posterior_samples |>
-	select(starts_with("θ")) |>
-	pmap(\(θ1, θ2, θ3, θ4) tibble(x = seq(0, 10, 0.05), sig = sigmoid(x, θ1, θ2, θ3, θ4))) |>
+	select(λ_yscale, λ_xscale, λ_xshift, λ_yshift) |>
+	pmap(sigmoid, x = seq(0, 10, 0.05)) |>
+	map(\(l) tibble(x = seq(0, 10, 0.05), sig = l)) |>
 	bind_rows(.id = "Curve") |>
 	group_by(x) |>
-	summarise(q05 = quantile(sig, 0.05), q20 = quantile(sig, 0.2), q80 = quantile(sig, 0.8), q95 = quantile(sig, 0.95)) |>
+	summarise(
+		q05 = quantile(sig, 0.05),
+		q20 = quantile(sig, 0.2),
+		q80 = quantile(sig, 0.8),
+		q95 = quantile(sig, 0.95)
+	) |>
 	mutate(Dist = "Posterior")
 
 y_max <- 8
@@ -49,14 +54,17 @@ y_max <- 8
 plt <- bind_rows(prior_q, posterior_q) |>
 	mutate(Dist = factor(Dist, levels = c("Prior", "Posterior"))) |>
 	ggplot(aes(x)) +
-	geom_ribbon(aes(ymin = q05, ymax = pmin(q95, y_max), fill = "95% CI"), alpha = 0.5) +
+	geom_ribbon(
+		aes(ymin = q05, ymax = pmin(q95, y_max), fill = "95% CI"),
+		alpha = 0.5
+	) +
 	geom_ribbon(aes(ymin = q20, ymax = q80, fill = "80% CI"), alpha = 0.5) +
 	geom_function(
 		aes(fill = "Truth"),
 		color = "dodgerblue4",
 		fun = sigmoid,
-		args = list(t1 = truth$θ1, t2 = truth$θ2, t3 = truth$θ3, t4 = truth$θ4),
-		linewidth=1.5
+		args = truth,
+		linewidth = 1.5
 	) +
 	scale_fill_manual(
 		values = c("95% CI" = "grey", "80% CI" = "#979696", "Truth" = "dodgerblue4"),
@@ -71,7 +79,7 @@ plt <- bind_rows(prior_q, posterior_q) |>
 ggsave("sigmoids.png", width = 15, height = 7)
 
 plt <- posterior_samples |>
-	select(iteration, starts_with("log"), λ_xshift_) |>
+	select(iteration, starts_with("λ"), μ, δ) |>
 	pivot_longer(-iteration, names_to = "Parameter", values_to = "Value") |>
 	ggplot() +
 	geom_line(aes(iteration, Value)) +
