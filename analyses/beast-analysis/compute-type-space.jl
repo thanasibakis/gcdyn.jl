@@ -28,6 +28,7 @@ function main()
 	type_space = values(discretization_table) |> collect |> sort
 	tc_rate_matrix = compute_rate_matrix(tenx_data.sequence, discretization_table, type_space)
 
+	println()
 	println("7 types")
 	println("--------------")
 	println("type_space = ", repr(type_space))
