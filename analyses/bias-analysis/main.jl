@@ -1,10 +1,28 @@
-using gcdyn, JLD2, Turing
+using gcdyn, CSV, DataFrames, Turing
 
 function main()
     truth = ConstantBranchingProcess(1.8, 1, 0, 1, 0, [1])
     chns = run_simulations(truth, 2)
     
-    save_object("chns.jld2", chns)
+    dfs = map(chns |> collect) do (num_trees, chns_dict)
+        DataFrame(
+            num_trees = num_trees,
+            corrected_λ = map(chns_dict[:corrected]) do chn
+                median(chn[:λ])
+            end,
+            original_λ = map(chns_dict[:original]) do chn
+                median(chn[:λ])
+            end,
+            corrected_μ = map(chns_dict[:corrected]) do chn
+                median(chn[:μ])
+            end,
+            original_μ = map(chns_dict[:original]) do chn
+                median(chn[:μ])
+            end
+        )
+    end
+
+    CSV.write("posterior-medians.csv", vcat(dfs...))
 end
 
 @model function ConditionedModel(trees, present_time)
