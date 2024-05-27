@@ -268,6 +268,7 @@ Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at 
     legend --> :outertop
     legend_column --> -1
     foreground_color_legend --> nothing
+    fontfamily --> "helvetica"  # this ensures SVGs export with text as text, not shapes
 
     # First we must take note of the y-coordinate for each branch
     y_offsets = Dict{TreeNode, Float64}()
