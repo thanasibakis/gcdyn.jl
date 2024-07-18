@@ -31,3 +31,11 @@ This analysis requires the following setup:
 - `pip install -e lib/gcdyn`
 - Install R 4.2
 - Install nextflow
+
+## simulations-study-misspec
+
+Generalizes the simulation study to sample trees under a more complex mutation process that the branching process assumptions violate.
+
+This analysis requires the following setup:
+
+- `pip install -e lib/gcdyn`
