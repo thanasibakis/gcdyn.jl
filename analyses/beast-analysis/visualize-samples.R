@@ -11,11 +11,11 @@ sigmoid <- function(x, t1, t2, t3, t4) {
 # Read data
 
 cat("Reading data...\n")
-prior_samples <- read_csv("out/inference-with-5-types/samples-prior.csv", show_col_types = FALSE) |>
+prior_samples <- read_csv("out/inference-with-7-types/samples-prior.csv", show_col_types = FALSE) |>
 	select(iteration, chain, starts_with("λ"), μ, δ)
 
 arg <- commandArgs(trailingOnly = TRUE)
-filename <- ifelse(length(arg) > 0, arg[1], "out/inference-with-5-types/samples-posterior.csv")
+filename <- ifelse(length(arg) > 0, arg[1], "out/inference-with-7-types/samples-posterior.csv")
 posterior_samples <- read_csv(filename, show_col_types = FALSE) |>
 	select(iteration, chain, starts_with("λ"), μ, δ)
 
@@ -83,7 +83,7 @@ cat("Visualizing...\n")
 # 	theme(legend.position = "bottom") +
 # 	facet_wrap(vars(Dist))
 
-# ggsave("out/inference-with-5-types/sigmoids-posterior.png", width = 15, height = 9, dpi = 300)
+# ggsave("out/inference-with-7-types/sigmoids-posterior.png", width = 15, height = 9, dpi = 300)
 
 # Plot histograms
 
@@ -120,7 +120,7 @@ ggplot() +
 	labs(title = "Posterior histograms")
 
 ggsave(
-	"out/inference-with-5-types/histograms-posterior.png",
+	"out/inference-with-7-types/histograms-posterior.png",
 	width = 18,
 	height = 12,
 	dpi = 300
@@ -137,7 +137,7 @@ posterior_samples |>
 	labs(title = "Posterior traceplots")
 
 ggsave(
-	"out/inference-with-5-types/traceplots-posterior.png",
+	"out/inference-with-7-types/traceplots-posterior.png",
 	width = 22,
 	height = 12,
 	dpi = 300
