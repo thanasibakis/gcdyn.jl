@@ -18,11 +18,7 @@ A simple demo of inference on a single set of trees simulated from the branching
 
 A systematic study of the branching process, conducting inference on many sets of simulated trees and understanding the model's frequentist properties.
 
-## simulation-study-misspecification
-
-Similar to `simulation-study`, but instead of simulating trees from the branching process, they are simulated according to mutations on the genotype and subject to a carrying capacity.
-
-## error-analysis
+## bias-analysis
 
 An exploration of how inference can be biased if we exclude extinct trees from our datasets but do not condition on non-extinction in the model.
 
