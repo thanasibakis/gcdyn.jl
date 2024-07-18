@@ -11,108 +11,92 @@ sigmoid <- function(x, t1, t2, t3, t4) {
 # Read data
 
 cat("Reading data...\n")
-prior_samples <- read_csv("out/samples-prior-10000000.csv", show_col_types = FALSE) |>
-	mutate(
-		λ_xscale = exp(log_λ_xscale_base * 0.75 + 0.5),
-		λ_yscale = exp(log_λ_yscale_base * 0.75 + 0.5),
-		λ_xshift = λ_xshift_base * sqrt(2),
-		λ_yshift = exp(log_λ_yshift_base * 1.2 - 0.5),
-		μ        = exp(log_μ_base * 0.5),
-		δ        = exp(log_δ_base * 0.5)
-	) |>
-	select(iteration, chain, λ_xscale, λ_yscale, λ_xshift, λ_yshift, μ, δ)
+prior_samples <- read_csv("out/inference-with-7-types/samples-prior.csv", show_col_types = FALSE) |>
+	select(iteration, chain, starts_with("λ"), μ, δ)
 
 arg <- commandArgs(trailingOnly = TRUE)
-filename <- ifelse(length(arg) > 0, arg[1], "out/samples-posterior-10000000.csv")
+filename <- ifelse(length(arg) > 0, arg[1], "out/inference-with-7-types/samples-posterior.csv")
 posterior_samples <- read_csv(filename, show_col_types = FALSE) |>
-	mutate(
-		λ_xscale = exp(log_λ_xscale_base * 0.75 + 0.5),
-		λ_yscale = exp(log_λ_yscale_base * 0.75 + 0.5),
-		λ_xshift = λ_xshift_base * sqrt(2),
-		λ_yshift = exp(log_λ_yshift_base * 1.2 - 0.5),
-		μ        = exp(log_μ_base * 0.5),
-		δ        = exp(log_δ_base * 0.5)
-	) |>
-	select(iteration, chain, λ_xscale, λ_yscale, λ_xshift, λ_yshift, μ, δ)
+	select(iteration, chain, starts_with("λ"), μ, δ)
 
 cat("Visualizing...\n")
 
 # Plot sigmoids
 
-prior_q <- prior_samples |>
-	select(starts_with("λ_")) |>
-	pmap(
-		\(λ_xscale, λ_yscale, λ_xshift, λ_yshift)
-		tibble(x = seq(-5, 5, 0.05), sig = sigmoid(x, λ_xscale, λ_yscale, λ_xshift, λ_yshift))
-	) |>
-	bind_rows(.id = "Curve") |>
-	group_by(x) |>
-	summarise(
-		median = quantile(sig, 0.5),
-		q05 = quantile(sig, 0.05),
-		q20 = quantile(sig, 0.2),
-		q80 = quantile(sig, 0.8),
-		q95 = quantile(sig, 0.95)
-	) |>
-	mutate(Dist = "Prior")
+# prior_q <- prior_samples |>
+# 	select(starts_with("λ_")) |>
+# 	pmap(
+# 		\(λ_xscale, λ_yscale, λ_xshift, λ_yshift)
+# 		tibble(x = seq(-5, 5, 0.05), sig = sigmoid(x, λ_xscale, λ_yscale, λ_xshift, λ_yshift))
+# 	) |>
+# 	bind_rows(.id = "Curve") |>
+# 	group_by(x) |>
+# 	summarise(
+# 		median = quantile(sig, 0.5),
+# 		q05 = quantile(sig, 0.05),
+# 		q20 = quantile(sig, 0.2),
+# 		q80 = quantile(sig, 0.8),
+# 		q95 = quantile(sig, 0.95)
+# 	) |>
+# 	mutate(Dist = "Prior")
 
-posterior_q <- posterior_samples |>
-	select(starts_with("λ_")) |>
-	pmap(
-		\(λ_xscale, λ_yscale, λ_xshift, λ_yshift)
-		tibble(x = seq(-5, 5, 0.05), sig = sigmoid(x, λ_xscale, λ_yscale, λ_xshift, λ_yshift))
-	) |>
-	bind_rows(.id = "Curve") |>
-	group_by(x) |>
-	summarise(
-		median = quantile(sig, 0.5),
-		q05 = quantile(sig, 0.05),
-		q20 = quantile(sig, 0.2),
-		q80 = quantile(sig, 0.8),
-		q95 = quantile(sig, 0.95)
-	) |>
-	mutate(Dist = "Posterior")
+# posterior_q <- posterior_samples |>
+# 	select(starts_with("λ_")) |>
+# 	pmap(
+# 		\(λ_xscale, λ_yscale, λ_xshift, λ_yshift)
+# 		tibble(x = seq(-5, 5, 0.05), sig = sigmoid(x, λ_xscale, λ_yscale, λ_xshift, λ_yshift))
+# 	) |>
+# 	bind_rows(.id = "Curve") |>
+# 	group_by(x) |>
+# 	summarise(
+# 		median = quantile(sig, 0.5),
+# 		q05 = quantile(sig, 0.05),
+# 		q20 = quantile(sig, 0.2),
+# 		q80 = quantile(sig, 0.8),
+# 		q95 = quantile(sig, 0.95)
+# 	) |>
+# 	mutate(Dist = "Posterior")
 
-y_max <- 8
+# y_max <- 8
 
-bind_rows(prior_q, posterior_q) |>
-	mutate(Dist = factor(Dist, levels = c("Prior", "Posterior"))) |>
-	ggplot(aes(x)) +
-	geom_ribbon(
-		aes(ymin = q05, ymax = pmin(q95, y_max), fill = "95% CI"),
-		alpha = 0.5
-	) +
-	geom_ribbon(aes(ymin = q20, ymax = q80, fill = "80% CI"), alpha = 0.5) +
-	geom_line(
-		aes(y = median, fill = "Median"),
-		color = "dodgerblue4",
-		linewidth = 1.5
-	) +
-	scale_fill_manual(
-		values = c("95% CI" = "grey", "80% CI" = "#979696", "Median" = "dodgerblue4"),
-		name = NULL
-	) +
-	ylim(0, y_max) +
-	ylab(expression(lambda[x])) +
-	ggtitle("Birth rate sigmoid distribution") +
-	theme_bw(base_size = 32) +
-	theme(legend.position = "bottom") +
-	facet_wrap(vars(Dist))
+# bind_rows(prior_q, posterior_q) |>
+# 	mutate(Dist = factor(Dist, levels = c("Prior", "Posterior"))) |>
+# 	ggplot(aes(x)) +
+# 	geom_ribbon(
+# 		aes(ymin = q05, ymax = pmin(q95, y_max), fill = "95% CI"),
+# 		alpha = 0.5
+# 	) +
+# 	geom_ribbon(aes(ymin = q20, ymax = q80, fill = "80% CI"), alpha = 0.5) +
+# 	geom_line(
+# 		aes(y = median, fill = "Median"),
+# 		color = "dodgerblue4",
+# 		linewidth = 1.5
+# 	) +
+# 	scale_fill_manual(
+# 		values = c("95% CI" = "grey", "80% CI" = "#979696", "Median" = "dodgerblue4"),
+# 		name = NULL
+# 	) +
+# 	ylim(0, y_max) +
+# 	ylab(expression(lambda[x])) +
+# 	ggtitle("Birth rate sigmoid distribution") +
+# 	theme_bw(base_size = 32) +
+# 	theme(legend.position = "bottom") +
+# 	facet_wrap(vars(Dist))
 
-ggsave("out/sigmoids-posterior-10000000.png", width = 15, height = 9, dpi = 300)
+# ggsave("out/inference-with-7-types/sigmoids-posterior.png", width = 15, height = 9, dpi = 300)
 
 # Plot histograms
 
 prior_samples <- prior_samples |>
 	pivot_longer(
-		c(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ),
+		c(starts_with("λ"), μ, δ),
 		names_to = "Parameter",
 		values_to = "Sample"
 	)
 
 posterior_samples <- posterior_samples |>
 	pivot_longer(
-		c(λ_xscale, λ_xshift, λ_yscale, λ_yshift, μ, δ),
+		c(starts_with("λ"), μ, δ),
 		names_to = "Parameter",
 		values_to = "Sample"
 	)
@@ -136,7 +120,7 @@ ggplot() +
 	labs(title = "Posterior histograms")
 
 ggsave(
-	"out/histograms-posterior-10000000.png",
+	"out/inference-with-7-types/histograms-posterior.png",
 	width = 18,
 	height = 12,
 	dpi = 300
@@ -153,7 +137,7 @@ posterior_samples |>
 	labs(title = "Posterior traceplots")
 
 ggsave(
-	"out/traceplots-posterior-10000000.png",
+	"out/inference-with-7-types/traceplots-posterior.png",
 	width = 22,
 	height = 12,
 	dpi = 300

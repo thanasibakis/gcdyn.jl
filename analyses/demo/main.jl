@@ -1,22 +1,17 @@
 println("Loading packages...")
-using gcdyn, CSV, DataFrames, Optim, Random, Turing
+using gcdyn, CSV, DataFrames, LinearAlgebra, Optim, Random, Turing
 
 @model function Model(trees, Γ, type_space, present_time)
     # Keep priors on the same scale for NUTS
-    log_λ_xscale ~ Normal(0, 1)
-    λ_xshift⁻    ~ Normal(0, 1)
-    log_λ_yscale ~ Normal(0, 1)
-    log_λ_yshift ~ Normal(0, 1)
-    log_μ        ~ Normal(0, 1)
-    log_δ        ~ Normal(0, 1)
+    θ ~ MvNormal(zeros(6), I)
 
     # Obtain our actual parameters from the proxies
-    λ_xscale = exp(log_λ_xscale * 0.75 + 0.5)
-    λ_xshift = λ_xshift⁻ + 5
-    λ_yscale = exp(log_λ_yscale * 0.75 + 0.5)
-    λ_yshift = exp(log_λ_yshift * 1.2 - 0.5)
-    μ        = exp(log_μ * 0.5)
-    δ        = exp(log_δ * 0.5)
+    λ_xscale := exp(θ[1] * 0.75 + 0.5)
+    λ_xshift := θ[2] + 5
+    λ_yscale := exp(θ[3] * 0.75 + 0.5)
+    λ_yshift := exp(θ[4] * 1.2 - 0.5)
+    μ        := exp(θ[5] * 0.5)
+    δ        := exp(θ[6] * 0.5)
 
     if DynamicPPL.leafcontext(__context__) !== Turing.PriorContext()
         sampled_model = SigmoidalBranchingProcess(

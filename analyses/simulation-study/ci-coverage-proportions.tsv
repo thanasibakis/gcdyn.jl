@@ -1,7 +1,7 @@
 Parameter	Coverage
 δ	0.96
-λ_xscale	1
-λ_xshift	1
-λ_yscale	1
-λ_yshift	0.96
-μ	0.9
+μ	0.94
+φ[1]	0.99
+φ[2]	1
+φ[3]	0.99
+φ[4]	0.99
