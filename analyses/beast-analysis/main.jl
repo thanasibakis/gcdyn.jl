@@ -101,26 +101,31 @@ function main()
 
 	println("Sampling from posterior...")
 
-	# Load the tree likelihoods from BEAST
+	# Load the tree densities from BEAST
 
-	beast_loglikelihoods = map(germinal_center_dirs) do germinal_center_dir
+	beast_logdensities = map(germinal_center_dirs) do germinal_center_dir
 		beast_logfile = filter(
 			endswith(".log"),	
 			readdir(joinpath("data/raw", basename(germinal_center_dir)); join=true)
 		) |> first
 
-		df = CSV.read(beast_logfile, DataFrame; header=5, select = [:state, :likelihood])
-		states, loglikelihoods = df.state::AbstractVector{Int}, df.likelihood::AbstractVector{Float64}
+		df = CSV.read(beast_logfile, DataFrame; header=5, select = [:state, :skyline])
+		states, logdensities = df.state::AbstractVector{Int}, df.skyline::AbstractVector{Float64}
 
-		germinal_center_dir => (state -> loglikelihoods[findfirst(==(state), states)])
+		germinal_center_dir => (state -> logdensities[findfirst(==(state), states)])
 	end |> Dict
 
 	# Main SIR loop
+	
 	num_mcmc_iterations = 1000
 	chain = Matrix{Float64}(undef, num_mcmc_iterations+1, 7)
 	chain[1, :] = max_a_posteriori.values[8:14]
 
 	for mcmc_iteration in 1:num_mcmc_iterations
+		if mcmc_iteration % 10 == 0
+			println("INFO: Starting SIR iteration $mcmc_iteration")
+		end
+
 		treeset = map(germinal_center_dirs) do germinal_center_dir
 			treefiles = readdir(germinal_center_dir; join=true)[2:end] # Skip the initial tree
 			weights = Vector{Float64}(undef, length(treefiles))
@@ -135,8 +140,9 @@ function main()
 					chain[mcmc_iteration, 1:5], chain[mcmc_iteration, 6], chain[mcmc_iteration, 7], Γ, ρ, 0, type_space
 				)
 
-				# TODO: these all come out to infinity because the beast likelihoods are so small
-				weights[i] = exp(loglikelihood(current_model, tree, present_time) - beast_loglikelihoods[germinal_center_dir](state))
+				weights[i] = exp(
+					loglikelihood(current_model, tree, present_time) - beast_logdensities[germinal_center_dir](state)
+				)
 			end
 
 			load_tree(sample(treefiles, Weights(weights)), discretization_table)
@@ -146,7 +152,7 @@ function main()
 			DiscreteModel(treeset, Γ, type_space),
 			NUTS(adtype=AutoForwardDiff(chunksize=2+length(type_space))),
 			10,
-			init_params=current_parameters
+			init_params=chain[mcmc_iteration, :]
 		)
 
 		chain[mcmc_iteration+1, :] = parameter_samples.value[end, 8:14, 1]
