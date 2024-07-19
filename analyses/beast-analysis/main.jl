@@ -71,14 +71,36 @@ function load_tree(path, discretization_table)
 	tree
 end
 
+function resample_tree(germinal_center_dir, discretization_table, current_parameters, beast_logdensities, Γ, type_space)
+	treefiles = readdir(germinal_center_dir; join=true)[2:end] # Skip the initial tree
+	weights = Vector{Float64}(undef, length(treefiles))
+
+	Threads.@threads for i in eachindex(treefiles)
+		tree = load_tree(treefiles[i], discretization_table)
+		state = parse(Int, match(r"tree-STATE_(\d+)", basename(treefiles[i])).captures[1])
+		present_time = maximum(node.time for node in LeafTraversal(tree))
+		ρ = length(LeafTraversal(tree)) / 1000
+
+		current_model = DiscreteBranchingProcess(
+			current_parameters[1:5], current_parameters[6], current_parameters[7], Γ, ρ, 0, type_space
+		)
+
+		weights[i] = exp(
+			loglikelihood(current_model, tree, present_time) - beast_logdensities[germinal_center_dir][state]
+		)
+	end
+
+	load_tree(sample(treefiles, Weights(weights)), discretization_table)
+end
+
 function main()
 	out_path = "out/inference/"
 
 	# These are computed in a separate script
 	type_space = [-0.47337548031309196, 0.0, 0.3890161743465148, 0.8772905477925974, 1.5050315480924654]
 	discretization_table = Dict([-0.0019916536956188, 0.1112097799378943] => 0.0, [1.2169193081838328, 3.1370222155629772] => 1.5050315480924654, [0.1112097799378943, 0.6232833274714342] => 0.3890161743465148, [-5.7429821755606145, -0.0019916536956188] => -0.47337548031309196, [0.6232833274714342, 1.2169193081838328] => 0.8772905477925974)
-	Γ = [-0.13920078945911146 0.0189548320216946 0.06020245390538222 0.039379954996853976 0.020663548535180695; 0.5163595766457914 -0.967454374087282 0.1905155687066721 0.1607625075988291 0.09981672113598941; 0.36330813246625304 0.040048301304979946 -0.7864193336973415 0.19467425387712223 0.18838864604898636; 0.17596705572231539 0.03200893271068237 0.17219164314618363 -0.774452023225638 0.3942843916464567; 0.022957787990039946 0.006690906125439449 0.04382850434462171 0.09017377154376652 -0.16365097000386764]
-	
+	Γ = [-0.00907740029763729 0.005242981206393951 0.0028171242303012276 0.0009651258937143094 5.216896722780051e-5; 0.38650148502736853 -0.43123014353201944 0.0364137155775043 0.008314942927146652 0.0; 0.23740643055347962 0.03255759055032893 -0.2951301586643331 0.023230280825099564 0.0019358567354249635; 0.13084433221239158 0.018610659734128263 0.10995481618428841 -0.2861863695850132 0.026776561454204952; 0.09805142650302406 0.0024718847017569092 0.03460638582459673 0.1095868884445563 -0.24471658547393402]
+
 	# Read in the trees used to compute the MAP
 	println("Reading trees...")
 	germinal_center_dirs = readdir("data/jld2-with-affinities/"; join=true)
@@ -110,9 +132,8 @@ function main()
 		) |> first
 
 		df = CSV.read(beast_logfile, DataFrame; header=5, select = [:state, :skyline])
-		states, logdensities = df.state::AbstractVector{Int}, df.skyline::AbstractVector{Float64}
 
-		germinal_center_dir => (state -> logdensities[findfirst(==(state), states)])
+		germinal_center_dir => Dict{Int, Float64}(zip(df.state, df.skyline))
 	end |> Dict
 
 	# Main SIR loop
@@ -127,28 +148,10 @@ function main()
 		end
 
 		treeset = map(germinal_center_dirs) do germinal_center_dir
-			treefiles = readdir(germinal_center_dir; join=true)[2:end] # Skip the initial tree
-			weights = Vector{Float64}(undef, length(treefiles))
-
-			Threads.@threads for i in eachindex(treefiles)
-				tree = load_tree(treefiles[i], discretization_table)
-				state = parse(Int, match(r"tree-STATE_(\d+)", basename(treefiles[i])).captures[1])
-				present_time = maximum(node.time for node in LeafTraversal(tree))
-				ρ = length(LeafTraversal(tree)) / 1000
-
-				current_model = DiscreteBranchingProcess(
-					chain[mcmc_iteration, 1:5], chain[mcmc_iteration, 6], chain[mcmc_iteration, 7], Γ, ρ, 0, type_space
-				)
-
-				weights[i] = exp(
-					loglikelihood(current_model, tree, present_time) - beast_logdensities[germinal_center_dir](state)
-				)
-			end
-
-			load_tree(sample(treefiles, Weights(weights)), discretization_table)
+			resample_tree(germinal_center_dir, discretization_table, chain[mcmc_iteration, :], beast_logdensities, Γ, type_space)
 		end
 
-		parameter_samples = sample(
+		parameter_samples::Chains = sample(
 			DiscreteModel(treeset, Γ, type_space),
 			NUTS(adtype=AutoForwardDiff(chunksize=2+length(type_space))),
 			10,
