@@ -18,7 +18,9 @@ survivor_sampling_prob = 0.8
 
 dms = replay.dms(Path(__file__).parent / "bin" / "support" / "final_variant_scores.csv")
 
-gp_map = AdditiveGPMap(dms["affinity"], nonsense_phenotype=dms["affinity"].min())
+gp_map = AdditiveGPMap(
+    dms["affinity"], nonsense_phenotype=dms["affinity"].min(axis=None)
+)
 mutator = SequencePhenotypeMutator(
     ContextMutator(mutability=replay.mutability(), substitution=replay.substitution()),
     gp_map,
@@ -56,9 +58,7 @@ def generate_tree():
             return generate_tree()
 
         return root
-    except ValueError:
-        # TODO: why do we get this error
-        return generate_tree()
+
     except TreeError:
         # Tree went extinct, try again
         return generate_tree()
