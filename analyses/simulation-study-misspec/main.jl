@@ -79,15 +79,16 @@ function main()
 	end |> Dict
 
 	
-    num_treesets = 100
+    num_treesets = 80
 	num_trees_per_set = floor(Int, length(trees["quantile-6"]) / num_treesets)
 	present_time = 4 # Fixed in a separate script
 
 	for (name, config) in TYPE_SPACES
-		println("Sampling from posterior for $name trees...")
     	dfs = Vector{DataFrame}(undef, num_treesets)
 
 		Threads.@threads for i in 1:num_treesets
+			println("Sampling from posterior for $name trees (set $i)...")
+
 			# Select the slice of trees
 			treeset = trees[name][1 + (i - 1) * num_trees_per_set : i * num_trees_per_set]
 			model = Model(treeset, config[:Γ], config[:type_space], present_time)
@@ -95,7 +96,7 @@ function main()
 			dfs[i] = sample(
 				model,
 				NUTS(adtype=AutoForwardDiff(chunksize=6)),
-				1000,
+				500,
 				init_params=optimize(model, MAP(), NelderMead())
 			) |> DataFrame
 
