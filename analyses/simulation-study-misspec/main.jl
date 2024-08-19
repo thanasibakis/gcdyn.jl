@@ -83,6 +83,8 @@ function main()
 	num_trees_per_set = floor(Int, length(trees["quantile-6"]) / num_treesets)
 	present_time = 4 # Fixed in a separate script
 
+	mkpath("out/")
+
 	for (name, config) in TYPE_SPACES
     	dfs = Vector{DataFrame}(undef, num_treesets)
 
@@ -105,7 +107,7 @@ function main()
 
 		println("Exporting samples for $name trees...")
 		posterior_samples = vcat(dfs...)
-		CSV.write("posterior-samples-$name.csv", posterior_samples)
+		CSV.write("out/posterior-samples-$name.csv", posterior_samples)
 	end
 
 	println("Done!")
