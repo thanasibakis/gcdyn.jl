@@ -34,7 +34,7 @@ TYPE_SPACES = Dict(
     φ := [
         exp(θ[3] * 0.75 + 0.5),  # yscale
         exp(θ[1] * 0.75 + 0.5),  # xscale
-        θ[2] + 5,                # xshift
+        θ[2] * sqrt(2),          # xshift
         exp(θ[4] * 1.2 - 0.5),   # yshift
     ]
     μ := exp(θ[5] * 0.5)
