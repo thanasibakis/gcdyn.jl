@@ -10,7 +10,7 @@ posterior_samples <- read_csv(args[1])
 prior_samples <- tibble(
 	`φ[1]` = rlnorm(1000, 0.5, 0.75),
 	`φ[2]` = rlnorm(1000, 0.5, 0.75),
-	`φ[3]` = rnorm(1000, 5, 1),
+	`φ[3]` = rnorm(1000, 0, sqrt(2)),
 	`φ[4]` = rlnorm(1000, -0.5, 1.2),
 	μ      = rlnorm(1000, 0, 0.5),
 	δ      = rlnorm(1000, 0, 0.5)
