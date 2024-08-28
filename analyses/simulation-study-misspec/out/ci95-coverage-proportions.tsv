@@ -1,0 +1,21 @@
+Parameter	Type space	Coverage
+μ	manual-6	0.9
+μ	manual-8	0.9
+μ	quantile-6	0.925
+μ	quantile-8	0.9125
+φ[1]	manual-6	1
+φ[1]	manual-8	1
+φ[1]	quantile-6	1
+φ[1]	quantile-8	1
+φ[2]	manual-6	1
+φ[2]	manual-8	1
+φ[2]	quantile-6	1
+φ[2]	quantile-8	1
+φ[3]	manual-6	0.9875
+φ[3]	manual-8	1
+φ[3]	quantile-6	0.9875
+φ[3]	quantile-8	1
+φ[4]	manual-6	0.9875
+φ[4]	manual-8	0.9875
+φ[4]	quantile-6	1
+φ[4]	quantile-8	0.975
