@@ -104,47 +104,56 @@ prior_λ_quantiles <-
 	pivot_wider(names_from = Quantile, values_from = λ) |>
 	mutate(Dist = "Prior")
 
-p <- bind_rows(prior_λ_quantiles, posterior_median_λ_quantiles) |>
-	ggplot(aes(x)) +
-	facet_wrap(vars(Dist)) +
-	geom_ribbon(
-		aes(ymin = q05, ymax = q95), alpha = 0.15, fill = "dodgerblue4"
-	) +
-	geom_ribbon(
-		aes(ymin = q10, ymax = q90), alpha = 0.15, fill = "dodgerblue4"
-	) +
-	geom_ribbon(
-		aes(ymin = q20, ymax = q80), alpha = 0.15, fill = "dodgerblue4"
-	) +
-	geom_ribbon(
-		aes(ymin = q30, ymax = q70), alpha = 0.15, fill = "dodgerblue4"
-	) +
-	geom_ribbon(
-		aes(ymin = q40, ymax = q60), alpha = 0.15, fill = "dodgerblue4"
-	) +
-	geom_function(
-		aes(color = "Truth"),
-		fun = sigmoid,
-		args = with(truth, list(
-			φ1 = Truth[Parameter == "φ[1]"],
-			φ2 = Truth[Parameter == "φ[2]"],
-			φ3 = Truth[Parameter == "φ[3]"],
-			φ4 = Truth[Parameter == "φ[4]"]
-		)),
-		linewidth = 1.5
-	) +
-	scale_color_manual(values = "black") +
-	labs(
-		title = "Posterior median sigmoid sampling distribution",
-		y = expression(lambda(x))
-	) +
-	expand_limits(y = 0) +
-	theme_bw(base_size = 16) +
-	theme(legend.position = "bottom", legend.title = element_blank())
+plot_sigmoid <- function(quantiles) {
+	ggplot(quantiles, aes(x)) +
+		facet_wrap(vars(Dist)) +
+		geom_ribbon(
+			aes(ymin = q05, ymax = q95), alpha = 0.15, fill = "dodgerblue4"
+		) +
+		geom_ribbon(
+			aes(ymin = q10, ymax = q90), alpha = 0.15, fill = "dodgerblue4"
+		) +
+		geom_ribbon(
+			aes(ymin = q20, ymax = q80), alpha = 0.15, fill = "dodgerblue4"
+		) +
+		geom_ribbon(
+			aes(ymin = q30, ymax = q70), alpha = 0.15, fill = "dodgerblue4"
+		) +
+		geom_ribbon(
+			aes(ymin = q40, ymax = q60), alpha = 0.15, fill = "dodgerblue4"
+		) +
+		geom_function(
+			aes(color = "Truth"),
+			fun = sigmoid,
+			args = with(truth, list(
+				φ1 = Truth[Parameter == "φ[1]"],
+				φ2 = Truth[Parameter == "φ[2]"],
+				φ3 = Truth[Parameter == "φ[3]"],
+				φ4 = Truth[Parameter == "φ[4]"]
+			)),
+			linewidth = 1.5
+		) +
+		scale_color_manual(values = "black") +
+		labs(
+			title = "Posterior median sigmoid sampling distribution",
+			y = expression(lambda(x))
+		) +
+		expand_limits(y = c(0, 2)) +
+		theme_bw(base_size = 16) +
+		theme(legend.position = "bottom", legend.title = element_blank())
+}
 
 ggsave(
 	paste0("out/posterior-median-sigmoids.png"),
-	p,
+	bind_rows(prior_λ_quantiles, posterior_median_λ_quantiles) |> plot_sigmoid(),
+	width = 15,
+	height = 12,
+	dpi = 300
+)
+
+ggsave(
+	paste0("out/posterior-median-sigmoids-no-prior.png"),
+	posterior_median_λ_quantiles |> plot_sigmoid(),
 	width = 15,
 	height = 12,
 	dpi = 300
