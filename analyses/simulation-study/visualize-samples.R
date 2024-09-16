@@ -35,6 +35,7 @@ truth <- tribble(
 # Plot posterior median sigmoid sampling distribution
 
 X <- seq(0, 10, 0.1)
+TYPE_SPACE <- c(2, 4, 6, 8)
 
 sigmoid <- \(x, φ1, φ2, φ3, φ4) φ1 / (1 + exp(-φ2 * (x - φ3))) + φ4
 
@@ -123,6 +124,7 @@ plot_sigmoid <- function(quantiles) {
 			)),
 			linewidth = 1.5
 		) +
+		geom_vline(xintercept = TYPE_SPACE, linewidth = 1.5, linetype = "dashed") +
 		scale_color_manual(values = "black") +
 		labs(
 			title = "Posterior median sigmoid sampling distribution",

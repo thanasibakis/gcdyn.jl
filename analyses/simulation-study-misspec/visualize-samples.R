@@ -41,9 +41,19 @@ truth <- tribble(
 	"μ",        1.3
 )
 
+type_space <- tibble(
+	`Type space` = c(rep("manual-6", 6), rep("quantile-6", 6), rep("manual-8", 8), rep("quantile-8", 8)),
+	values = c(
+		c(-2.4270176906430416, -1.4399117849363843, -0.2222600419251854, 0.28914500662573894, 1.3526378568771724, 2.1758707012574643),
+		c(-0.6226600904206516, 0.0, 0.133576566862604, 0.5585342340982945, 1.013324787303958, 1.592738844284043),
+		c(-2.4270176906430416, -1.4399117849363843, -0.6588015552361666, -0.13202968692343608, 0.08165101396850624, 0.7981793588605735, 1.3526378568771724, 2.1758707012574643),
+		c(-0.9515369147366288, -0.07374813752966955, 0.0, 0.18401735874506064, 0.4942458884730887, 0.8592308603857539, 1.2483670286684694, 1.6914877080237338)
+	)
+)
+
 # Plot posterior median sigmoid sampling distribution
 
-X <- seq(-2, 2, 0.05)
+X <- seq(-3, 3, 0.05)
 
 sigmoid <- \(x, φ1, φ2, φ3, φ4) φ1 / (1 + exp(-φ2 * (x - φ3))) + φ4
 
@@ -132,6 +142,12 @@ plot_sigmoid <- function(quantiles) {
 				φ4 = Truth[Parameter == "φ[4]"]
 			)),
 			linewidth = 1.5
+		) +
+		geom_vline(
+			aes(xintercept = values),
+			data = type_space |> mutate(Dist = paste("Posterior medians,", `Type space`)),
+			linewidth = 1,
+			linetype = "dashed"
 		) +
 		scale_color_manual(values = "black") +
 		labs(
