@@ -4,100 +4,205 @@ library(tidyverse)
 
 posterior_samples <- read_csv("posterior-samples.csv")
 
-prior_samples <- tibble(
-	`φ[1]` = rlnorm(1000, 0.5, 0.75),
-	`φ[2]` = rlnorm(1000, 0.5, 0.75),
-	`φ[3]` = rnorm(1000, 5, 1),
-	`φ[4]` = rlnorm(1000, -0.5, 1.2),
-	μ      = rlnorm(1000, 0, 0.5),
-	δ      = rlnorm(1000, 0, 0.5)
-) |>
-	pivot_longer(
-		c(starts_with("φ"), μ, δ),
-		names_to = "Parameter",
-		values_to = "Sample"
-	) |>
-	# Remove extreme samples to keep the histograms readable.
-	# I should really start plotting prior density curves instead
-	filter(Sample < quantile(Sample, 0.95), .by = Parameter)
+prior_densities <- list(
+	`φ[1]` = \(x) dlnorm(x, 0.5, 0.75),
+	`φ[2]` = \(x) dlnorm(x, 0.5, 0.75),
+	`φ[3]` = \(x) dnorm(x, 5, 1),
+	`φ[4]` = \(x) dlnorm(x, -0.5, 1.2),
+	μ      = \(x) dlnorm(x, 0, 0.5),
+	δ      = \(x) dlnorm(x, 0, 0.5)
+)
 
-truth <- tibble(
-	`φ[1]` = 1.5,
-	`φ[2]` = 1,
-	`φ[3]` = 5,
-	`φ[4]` = 1,
-	μ      = 1.3,
-	δ      = 1
-) |>
+prior_quantiles <- list(
+	`φ[1]` = \(x) qlnorm(x, 0.5, 0.75),
+	`φ[2]` = \(x) qlnorm(x, 0.5, 0.75),
+	`φ[3]` = \(x) qnorm(x, 5, 1),
+	`φ[4]` = \(x) qlnorm(x, -0.5, 1.2),
+	μ      = \(x) qlnorm(x, 0, 0.5),
+	δ      = \(x) qlnorm(x, 0, 0.5)
+)
+
+truth <- tribble(
+	~Parameter, ~Truth,
+	"φ[1]", 1.5,
+	"φ[2]", 1,
+	"φ[3]", 5,
+	"φ[4]", 1,
+	"μ",    1.3,
+	"δ",    1
+)
+
+# Plot posterior median sigmoid sampling distribution
+
+X <- seq(0, 10, 0.1)
+
+sigmoid <- \(x, φ1, φ2, φ3, φ4) φ1 / (1 + exp(-φ2 * (x - φ3))) + φ4
+
+posterior_median_λ_quantiles <-
+	posterior_samples |>
+	summarize(
+		across(starts_with("φ"), median),
+		.by = run
+	) |>
+	expand_grid(x = X) |>
+	mutate(λ = sigmoid(x, `φ[1]`, `φ[2]`, `φ[3]`, `φ[4]`)) |>
+	summarise(
+		q05 = quantile(λ, 0.05),
+		q10 = quantile(λ, 0.1),
+		q20 = quantile(λ, 0.2),
+		q30 = quantile(λ, 0.3),
+		q40 = quantile(λ, 0.4),
+		q60 = quantile(λ, 0.6),
+		q70 = quantile(λ, 0.7),
+		q80 = quantile(λ, 0.8),
+		q90 = quantile(λ, 0.9),
+		q95 = quantile(λ, 0.95),
+		.by = x
+	) |>
+	mutate(Dist = "Posterior medians")
+
+prior_λ_quantiles <-
+	map(
+		truth$Parameter,
+		\(param) tibble(
+			Parameter = param,
+			q05 = prior_quantiles[[param]](0.05),
+			q10 = prior_quantiles[[param]](0.1),
+			q20 = prior_quantiles[[param]](0.2),
+			q30 = prior_quantiles[[param]](0.3),
+			q40 = prior_quantiles[[param]](0.4),
+			q60 = prior_quantiles[[param]](0.6),
+			q70 = prior_quantiles[[param]](0.7),
+			q80 = prior_quantiles[[param]](0.8),
+			q90 = prior_quantiles[[param]](0.9),
+			q95 = prior_quantiles[[param]](0.95),
+		)
+	) |>
+	list_rbind() |>
 	pivot_longer(
-		c(starts_with("φ"), μ, δ),
-		names_to = "Parameter",
-		values_to = "Truth"
-	)
+		c(starts_with("q")),
+		names_to = "Quantile",
+		values_to = "Value"
+	) |>
+	pivot_wider(
+		names_from = Parameter,
+		values_from = Value
+	) |>
+	expand_grid(x = X) |>
+	mutate(λ = sigmoid(x, `φ[1]`, `φ[2]`, `φ[3]`, `φ[4]`)) |>
+	select(x, λ, Quantile) |>
+	pivot_wider(names_from = Quantile, values_from = λ) |>
+	mutate(Dist = "Prior")
+
+plot_sigmoid <- function(quantiles) {
+	ggplot(quantiles, aes(x)) +
+		facet_wrap(vars(Dist)) +
+		geom_ribbon(
+			aes(ymin = q05, ymax = q95), alpha = 0.15, fill = "dodgerblue4"
+		) +
+		geom_ribbon(
+			aes(ymin = q10, ymax = q90), alpha = 0.15, fill = "dodgerblue4"
+		) +
+		geom_ribbon(
+			aes(ymin = q20, ymax = q80), alpha = 0.15, fill = "dodgerblue4"
+		) +
+		geom_ribbon(
+			aes(ymin = q30, ymax = q70), alpha = 0.15, fill = "dodgerblue4"
+		) +
+		geom_ribbon(
+			aes(ymin = q40, ymax = q60), alpha = 0.15, fill = "dodgerblue4"
+		) +
+		geom_function(
+			aes(color = "Truth"),
+			fun = sigmoid,
+			args = with(truth, list(
+				φ1 = Truth[Parameter == "φ[1]"],
+				φ2 = Truth[Parameter == "φ[2]"],
+				φ3 = Truth[Parameter == "φ[3]"],
+				φ4 = Truth[Parameter == "φ[4]"]
+			)),
+			linewidth = 1.5
+		) +
+		scale_color_manual(values = "black") +
+		labs(
+			title = "Posterior median sigmoid sampling distribution",
+			y = expression(lambda(x))
+		) +
+		expand_limits(y = c(0, 2)) +
+		theme_bw(base_size = 16) +
+		theme(legend.position = "bottom", legend.title = element_blank())
+}
+
+ggsave(
+	paste0("out/posterior-median-sigmoids.png"),
+	bind_rows(prior_λ_quantiles, posterior_median_λ_quantiles) |> plot_sigmoid(),
+	width = 15,
+	height = 12,
+	dpi = 300
+)
+
+ggsave(
+	paste0("out/posterior-median-sigmoids-no-prior.png"),
+	posterior_median_λ_quantiles |> plot_sigmoid(),
+	width = 15,
+	height = 12,
+	dpi = 300
+)
+
+# Plot histograms
 
 posterior_summaries <- posterior_samples |>
 	pivot_longer(
-		c(starts_with("φ"), μ, δ),
+		c(starts_with("φ"), μ),
 		names_to = "Parameter",
 		values_to = "Sample"
 	) |>
-	group_by(run, Parameter) |>
 	summarise(
 		Median = median(Sample),
 		Q_025 = quantile(Sample, 0.025),
 		Q_975 = quantile(Sample, 0.975),
-		CI_Length = Q_975 - Q_025
-	) |>
-	ungroup()
+		CI_Length = Q_975 - Q_025,
+		.by = c(run, Parameter)
+	)
 
-ggplot() +
-	geom_histogram(
-		aes(Median, after_stat(density), fill = "Posterior medians"),
-		data = posterior_summaries,
-		alpha = 0.7
-	) +
-	geom_histogram(
-		aes(Sample, after_stat(density), fill = "Prior"),
-		data = prior_samples,
-		alpha = 0.7
-	) +
-	geom_vline(
-		aes(xintercept = Truth),
-		data = truth,
-		color = "black",
-		size = 1.5
-	) +
-	scale_fill_manual(
-		values = c("Posterior medians" = "dodgerblue4", "Prior" = "grey")
-	) +
-	facet_wrap(vars(Parameter), scales = "free") +
-	labs(title = "Posterior median sampling distribution")
+for (parameter in truth$Parameter) {
+	p <- ggplot() +
+		stat_function(
+			aes(fill = "Prior"),
+			fun = prior_densities[[parameter]],
+			geom = "area",
+		) +
+		geom_histogram(
+			aes(Median, after_stat(density), fill = "Posterior medians"),
+			data = filter(posterior_summaries, Parameter == parameter),
+			alpha = 0.5
+		) +
+		geom_vline(
+			xintercept = with(truth, Truth[Parameter == parameter]),
+			color = "black",
+			linewidth = 1.5
+		) +
+		scale_fill_manual(
+			values = c("Prior" = "grey", "Posterior medians" = "dodgerblue4")
+		) +
+		expand_limits(x = c(0, 3)) +
+		theme_bw(base_size = 16) +
+		theme(legend.position = "bottom", legend.title = element_blank()) +
+		labs(title = "Posterior median sampling distribution", x = "Parameter")
 
-ggsave("posterior-medians.png", width = 15, height = 8, dpi = 300)
+	ggsave(
+		paste0("out/posterior-medians-", parameter, ".png"),
+		p,
+		width = 15,
+		height = 8,
+		dpi = 300
+	)
+}
 
-posterior_summaries |>
-	full_join(truth, by = "Parameter") |>
-	mutate(Relative_Error = (Median - Truth) / Truth) |>
-	ggplot() +
-	geom_histogram(aes(Relative_Error), fill = "dodgerblue4", alpha = 0.7) +
-	xlim(-3, 3) +
-	facet_wrap(vars(Parameter), scales = "free") +
-	labs(title = "Relative error distribution for posterior medians")
-
-ggsave("relative-errors.png", width = 15, height = 8, dpi = 300)
-
-posterior_summaries |>
-	full_join(truth, by = "Parameter") |>
-	ggplot() +
-	geom_histogram(aes(CI_Length / Truth), fill = "dodgerblue4", alpha = 0.7) +
-	expand_limits(x = 0) +
-	facet_wrap(vars(Parameter), scales = "free") +
-	labs(title = "Length distribution of 95% CIs (normalized)")
-
-ggsave("ci-lengths.png", width = 15, height = 8, dpi = 300)
+# Export coverage proportions
 
 posterior_summaries |>
 	full_join(truth, by = "Parameter") |>
 	group_by(Parameter) |>
 	summarise(Coverage = mean((Truth >= Q_025) & (Truth <= Q_975))) |>
-	write_tsv("ci-coverage-proportions.tsv")
+	write_tsv("out/ci95-coverage-proportions.tsv")
