@@ -50,6 +50,8 @@ type_space <- tibble(
 		c(-0.9515369147366288, -0.07374813752966955, 0.0, 0.18401735874506064, 0.4942458884730887, 0.8592308603857539, 1.2483670286684694, 1.6914877080237338)
 	)
 )
+# read affinities.txt with newlines as separators
+affinities <- readLines("affinities.txt") |> parse_double()
 
 # Plot posterior median sigmoid sampling distribution
 
@@ -225,6 +227,33 @@ for (parameter in truth$Parameter) {
 		dpi = 300
 	)
 }
+
+p <- ggplot() +
+	facet_wrap(vars(`Type space`)) +
+	geom_histogram(
+		aes(affinity),
+		data = tibble(affinity = affinities),
+	) +
+	geom_vline(
+		aes(xintercept = values),
+		data = type_space,
+		linewidth = 1,
+		linetype = "dashed"
+	) +
+	labs(
+		title = "Tree affinity distribution"
+	) +
+	expand_limits(y = c(0, 2)) +
+	theme_bw(base_size = 16) +
+	theme(legend.position = "bottom", legend.title = element_blank())
+
+ggsave(
+	paste0("out/tree-affinity-distribution.png"),
+	p,
+	width = 15,
+	height = 8,
+	dpi = 300
+)
 
 # Export coverage proportions
 
