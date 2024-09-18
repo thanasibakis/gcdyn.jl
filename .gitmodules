@@ -1,6 +1,0 @@
-[submodule "lib/gcdyn"]
-	path = lib/gcdyn
-	url = git@github.com:matsengrp/gcdyn.git
-[submodule "lib/gcreplay"]
-	path = lib/gcreplay
-	url = git@github.com:matsengrp/gcreplay.git
