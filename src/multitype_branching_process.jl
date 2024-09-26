@@ -310,6 +310,8 @@ Note that trees will have root time `0`, with time increasing toward the tips.
 This aligns us with the branching process models, but contradicts the notion of time typically used in phylogenetics.
 
 Can optionally choose not to `reject_stubs`, equivalent to not conditioning on the root node having at least one sampled descendant.
+Alternatively, can specify a minimum number of sampled descendants `min_leaves` that the tree must have.
+If the number of rejections exceeds `max_rejections`, an error is thrown.
 
 See also [`TreeNode`](@ref), [`sample_child!`](@ref), [`mutate!`](@ref).
 """
@@ -318,66 +320,85 @@ function rand_tree(
     present_time,
     init_type,
     n;
-    reject_stubs=true
+    reject_stubs=true,
+    min_leaves=0,
+    max_rejections=500
 )
-    return [rand_tree(model, present_time, init_type; reject_stubs=reject_stubs) for _ in 1:n]
+    return [rand_tree(model, present_time, init_type; reject_stubs=reject_stubs, min_leaves=min_leaves, max_rejections=max_rejections) for _ in 1:n]
 end
 
 function rand_tree(
     model::AbstractBranchingProcess,
     present_time,
     init_type;
-    reject_stubs=true
+    reject_stubs=true,
+    min_leaves=0,
+    max_rejections=500
 )
-    root = TreeNode(:root, 0, init_type)
-    needs_children = [root]
+    # Track how many times a tree is rejected
+    num_rejections = 0
 
-    # Evolve a fully-observed tree
-    while length(needs_children) > 0
-        node = pop!(needs_children)
-        child = sample_child!(node, model, present_time)
+    while true
+        root = TreeNode(:root, 0, init_type)
+        needs_children = [root]
 
-        if child.event == :birth
-            push!(needs_children, child)
-            push!(needs_children, child)
-        elseif child.event == :type_change
-            push!(needs_children, child)
+        # Evolve a fully-observed tree
+        while length(needs_children) > 0
+            node = pop!(needs_children)
+            child = sample_child!(node, model, present_time)
+
+            if child.event == :birth
+                push!(needs_children, child)
+                push!(needs_children, child)
+            elseif child.event == :type_change
+                push!(needs_children, child)
+            end
         end
-    end
 
-    # Flag every node that has a sampled descendant
-    has_sampled_descendant = Set{TreeNode}()
+        # Flag every node that has a sampled descendant
+        has_sampled_descendant = Set{TreeNode}()
 
-    for leaf in Leaves(root)
-        if leaf.event ∉ (:sampled_survival, :sampled_death)
+        for leaf in LeafTraversal(root)
+            if leaf.event ∉ (:sampled_survival, :sampled_death)
+                continue
+            end
+
+            node = leaf
+
+            while !isnothing(node)
+                push!(has_sampled_descendant, node)
+                node = node.up
+            end
+        end
+
+        # Prune subtrees that don't have any sampled descendants
+        for node in PostOrderTraversal(root)
+            if node.event ∈ (:birth, :root)
+                filter!(in(has_sampled_descendant), node.children)
+
+                if node.event == :birth && length(node.children) == 1
+                    delete!(node)
+                end
+            end
+        end
+
+        # If we're rejecting trees and have an unsatisfactory one, try again
+        if reject_stubs && length(root.children) == 0 || length(LeafTraversal(root)) < min_leaves
+            num_rejections += 1
+
+            if num_rejections > max_rejections
+                throw(ArgumentError("$max_rejections trees rejected."))
+            end
+
             continue
         end
 
-        node = leaf
-
-        while !isnothing(node)
-            push!(has_sampled_descendant, node)
-            node = node.up
+        if num_rejections > 0
+            @info "Rejected $num_rejections trees"
         end
+
+        return root
     end
-
-    # Prune subtrees that don't have any sampled descendants
-    for node in PostOrderDFS(root)
-        if node.event ∈ (:birth, :root)
-            filter!(in(has_sampled_descendant), node.children)
-
-            if node.event == :birth && length(node.children) == 1
-                delete!(node)
-            end
-        end
-    end
-
-    # If we're rejecting stubs and have one, try again
-    if reject_stubs && length(root.children) == 0
-        return rand_tree(model, present_time, init_type; reject_stubs = true)
-    end
-
-    return root
 end
 
 """
