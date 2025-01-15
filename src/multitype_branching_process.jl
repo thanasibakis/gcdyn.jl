@@ -1,9 +1,21 @@
 # Methods involving `BranchingProcess` objects.
 
-"``\\frac{1}{1 + exp(-x)}``"
+"""
+```julia
+expit(x)
+```
+
+``\\frac{1}{1 + exp(-x)}``
+"""
 expit(x) = 1 / (1 + exp(-x))
 
-"``\\frac{\\text{yscale}}{1 + exp(-(\\text{xscale} * (x - \text{{xshift}})))} + \\text{yshift}``"
+"""
+```julia
+sigmoid(x, xscale, xshift, yscale, yshift)
+```
+
+``\\frac{\\text{yscale}}{1 + exp(-(\\text{xscale} * (x - \text{{xshift}})))} + \\text{yshift}``
+"""
 sigmoid(x, xscale, xshift, yscale, yshift) = yscale * expit(xscale * (x - xshift)) + yshift
 
 """

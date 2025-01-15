@@ -249,11 +249,25 @@ Base.eltype(::Type{<:TreeIterator{TreeNode}}) = TreeNode
 Base.show(io::IO, node::TreeNode) = print(io, "TreeNode: $(node.event) event at time $(node.time) with type $(node.type)")
 
 
-# To enable Plots.plot(tree::TreeNode).
-# See ColorSchemes.colorschemes for all `colorscheme` options.
-# The `midpoint` option decides which type is equivalent to the median of the colorscheme (useful for diverging colorschemes).
-# A good diverging scale is `:colorscheme=:diverging_bkr_55_10_c35_n256` with `reverse_colorscheme=true`.
+@doc """
+```julia
+plot(tree::TreeNode)
+```
+
+Visualizes the tree.
+
+The optional `colorscheme` keyword sets the color scheme to use (`:linear_kbc_5_95_c73_n256` by default).
+See [`ColorSchemes.findcolorscheme`](@extref) for more options.
+
+The optional `midpoint` keyword sets the type that is equivalent to the median of the colorscheme.
+Useful for diverging color schemes (`:diverging_bkr_55_10_c35_n256` is one recommendation).
+
+The optional `reverse_colorscheme` keyword reverses the color scheme.
+""" plot(::TreeNode)
+
 @recipe function _(tree::TreeNode; colorscheme=:linear_kbc_5_95_c73_n256, midpoint=nothing, reverse_colorscheme=false)
+    # A good diverging scale is `:colorscheme=:diverging_bkr_55_10_c35_n256` with `reverse_colorscheme=true`.
+
     for node in PreOrderTraversal(tree)
         if length(node.children) > 2
             throw(ArgumentError("Only trees with at most binary branching are supported."))

@@ -1,7 +1,7 @@
 name = "gcdyn"
 uuid = "a07aac68-cc84-4f07-aa24-bb38e7c3d1ae"
 authors = ["Thanasi Bakis <abakis@uci.edu>"]
-version = "0.1.0"
+version = "1.0.0"
 
 [deps]
 AbstractTrees = "1520ce14-60c1-5f80-bbc7-55ef81b5835c"

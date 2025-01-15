@@ -1,7 +1,5 @@
-# Bayesian inference of antibody evolutionary dynamics
+# gcdyn.jl
 
 This package implements the branching process models used for the analyses in the paper, *Bayesian inference of antibody evolutionary dynamics using multitype branching processes*.
 
 To see the analyses, please visit [this repository](https://github.com/thanasibakis/gcdyn-analyses).
-
-To see the package API, please visit [this page](https://thanasibakis.github.io/gcdyn.jl).
