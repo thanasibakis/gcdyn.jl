@@ -271,9 +271,7 @@ function StatsAPI.loglikelihood(
 end
 
 """
-See equation (1) of this paper:
-
-Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
+See equation (1) of the paper.
 """
 function dp_dt!(dp, p, model::AbstractBranchingProcess, t)
     for (i, type) in enumerate(model.type_space)
@@ -290,9 +288,7 @@ function dp_dt!(dp, p, model::AbstractBranchingProcess, t)
 end
 
 """
-See equations (1) and (2) of this paper:
-
-Barido-Sottani, Joëlle, Timothy G Vaughan, and Tanja Stadler. “A Multitype Birth–Death Model for Bayesian Inference of Lineage-Specific Birth and Death Rates.” Edited by Adrian Paterson. Systematic Biology 69, no. 5 (September 1, 2020): 973–86. https://doi.org/10.1093/sysbio/syaa016.
+See equations (1) and (2) of the paper.
 """
 function dp_logq_dt!(dp_logq, p_logq, args, t)
     p = view(p_logq, 1:lastindex(p_logq)-1)
